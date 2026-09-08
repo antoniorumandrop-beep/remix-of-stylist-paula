@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
-import { readStored, useStored, writeStored } from './wardrobe';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { backend, qk } from '@/lib/backend';
 import type { BodyPoint } from './fit/types';
 
 /**
@@ -7,8 +8,10 @@ import type { BodyPoint } from './fit/types';
  * whether the garment was tight, fine or loose. This is the one signal that
  * makes Fit Score falsifiable — and the dataset nobody else on the market has.
  *
- * localStorage for now, like everything else; the database migration takes it
- * along with the profile and the wardrobe.
+ * History note: the first version wrote to storage inside a React state
+ * updater, and the write silently never ran because the form was unmounted in
+ * the same tick. Writes are mutations now — they run to completion whether or
+ * not the component that started them is still on screen.
  */
 export type FitAnswer = 'tight' | 'ok' | 'loose';
 
@@ -18,40 +21,26 @@ export interface FitFeedback {
   createdAt: string;
 }
 
-const KEY = 'paula.fitFeedback';
-
 export const FEEDBACK_POINTS: BodyPoint[] = ['bust', 'waist', 'hips', 'thighs', 'stomach'];
 
-export function readFitFeedback(): FitFeedback[] {
-  return readStored<FitFeedback[]>(KEY, []);
-}
-
-/**
- * Writes go straight to storage, not through a state updater. The form that
- * calls `save` is unmounted by its parent in the same tick, and React never
- * runs the updater of a component it is removing — so a write hidden inside
- * one would silently never happen. `writeStored` broadcasts a storage event
- * and every mounted `useStored(KEY)` re-reads on its own.
- */
-export function saveFitFeedback(productId: string, answers: FitFeedback['answers']) {
-  const next: FitFeedback[] = [
-    ...readFitFeedback().filter(f => f.productId !== productId),
-    { productId, answers, createdAt: new Date().toISOString() },
-  ];
-  writeStored(KEY, next);
-}
-
-export function removeFitFeedback(productId: string) {
-  writeStored(KEY, readFitFeedback().filter(f => f.productId !== productId));
-}
-
 export function useFitFeedback() {
-  const [all] = useStored<FitFeedback[]>(KEY, []);
+  const query = useQuery({ queryKey: qk.feedback, queryFn: () => backend.feedback.list() });
+  const saveMutation = useMutation({
+    mutationFn: (v: { productId: string; answers: FitFeedback['answers'] }) => backend.feedback.save(v.productId, v.answers),
+  });
+  const removeMutation = useMutation({ mutationFn: (productId: string) => backend.feedback.remove(productId) });
 
+  const all = query.data ?? [];
   const forProduct = useCallback(
     (productId: string) => all.find(f => f.productId === productId) ?? null,
     [all],
   );
 
-  return { all, forProduct, save: saveFitFeedback, remove: removeFitFeedback };
+  return {
+    all,
+    loading: query.isPending,
+    forProduct,
+    save: (productId: string, answers: FitFeedback['answers']) => saveMutation.mutateAsync({ productId, answers }),
+    remove: (productId: string) => removeMutation.mutateAsync(productId),
+  };
 }

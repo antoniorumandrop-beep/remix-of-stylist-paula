@@ -4,6 +4,7 @@ import { Check, ChevronRight, Upload, X, Link, ImagePlus, UserRound } from 'luci
 import { bodyShapes, aestheticOptions, fitOptions, occasionOptions, brands } from '@/data/mockData';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useBodyProfile } from '@/lib/profile';
+import { useUserPrefs } from '@/lib/prefs';
 import { classifyShape } from '@/lib/fit/shape';
 import type { BodyShape } from '@/lib/fit/types';
 import { shapeKey } from '@/lib/fit/copy';
@@ -47,6 +48,7 @@ export default function Onboarding() {
   const [noTape, setNoTape] = useState(false);
   const [pickedShape, setPickedShape] = useState<BodyShape | null>(null);
   const { setProfile } = useBodyProfile();
+  const { prefs: savedPrefs, update: updatePrefs } = useUserPrefs();
 
   const measurementsValid = proportions.bust > 0 && proportions.waist > 0 && proportions.hips > 0;
   const liveShape = noTape
@@ -67,15 +69,24 @@ export default function Onboarding() {
     }
   };
 
+  // Every answer is saved as soon as its step is left, so closing the tab
+  // halfway through loses nothing. The last step saves the whole set again.
   const next = () => {
-    if (step === 0 && name.trim()) {
-      localStorage.setItem('paula-username', name.trim());
-    }
-    if (step === 2 || step === 3) {
-      persistProfile();
-    }
-    if (step === 4 && inspirationPeople.length > 0) {
-      localStorage.setItem('paula-inspirations', JSON.stringify(inspirationPeople));
+    if (step === 0 && name.trim()) void updatePrefs({ name: name.trim() });
+    if (step === 2 || step === 3) persistProfile();
+    if (step === 4) void updatePrefs({ inspirations: inspirationPeople, pinterestLinks });
+    if (step === TOTAL_STEPS - 1) {
+      void updatePrefs({
+        name: name.trim() || savedPrefs.name,
+        aesthetics: selectedAesthetics,
+        fitPrefs: selectedFit,
+        occasions: selectedOccasions,
+        budgetMin: budgetRange[0],
+        budgetMax: budgetRange[1],
+        brands: brandInput.split(',').map(b => b.trim()).filter(Boolean),
+        inspirations: inspirationPeople,
+        pinterestLinks,
+      });
     }
     if (step < TOTAL_STEPS - 1) setStep(step + 1);
     else navigate('/app/for-you');

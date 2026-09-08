@@ -1,9 +1,10 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageProvider } from "@/i18n/LanguageContext";
+import { BackendProvider } from "@/lib/backend/BackendProvider";
+import { RequireAuth } from "@/components/RequireAuth";
 import Welcome from "./pages/Welcome";
 import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
@@ -17,13 +18,12 @@ import CollectionDetail from "./pages/CollectionDetail";
 import Alerts from "./pages/Alerts";
 import BuildYourStyle from "./pages/BuildYourStyle";
 import FittingRoom from "./pages/FittingRoom";
+import ImportProducts from "./pages/ImportProducts";
 import NotFound from "./pages/NotFound";
 import { AppShell } from "./components/AppShell";
 
-const queryClient = new QueryClient();
-
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  <BackendProvider>
     <LanguageProvider>
       <TooltipProvider>
         <Toaster />
@@ -32,8 +32,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Welcome />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/app" element={<AppShell />}>
+            <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
+            <Route path="/app" element={<RequireAuth><AppShell /></RequireAuth>}>
               <Route index element={<Navigate to="/app/search" replace />} />
               <Route path="for-you" element={<ForYou />} />
               <Route path="search" element={<SearchPage />} />
@@ -46,12 +46,14 @@ const App = () => (
               <Route path="build-your-style" element={<BuildYourStyle />} />
               <Route path="fitting-room" element={<FittingRoom />} />
             </Route>
+            {/* Brand-side tooling, not linked from the app's navigation. */}
+            <Route path="/admin/import" element={<RequireAuth><ImportProducts /></RequireAuth>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
     </LanguageProvider>
-  </QueryClientProvider>
+  </BackendProvider>
 );
 
 export default App;

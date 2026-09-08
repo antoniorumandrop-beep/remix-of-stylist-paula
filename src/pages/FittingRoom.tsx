@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Shirt, Plus, Trash2, Check, X, Sparkles } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useWardrobe } from '@/lib/wardrobe';
-import { allProducts } from '@/data/mockData';
+import { useCatalog } from '@/lib/catalog/useCatalog';
 import { useFitFeedback } from '@/lib/fitFeedback';
 import { FitFeedbackForm } from '@/components/FitFeedbackForm';
+import { ProductImage } from '@/components/ProductImage';
 
 export default function FittingRoom() {
   const { t } = useLanguage();
@@ -18,9 +19,15 @@ export default function FittingRoom() {
   const [feedbackFor, setFeedbackFor] = useState<string | null>(null);
   const { forProduct } = useFitFeedback();
 
-  const productMap = useMemo(() => Object.fromEntries(allProducts.map(p => [p.id, p])), []);
-  const wardrobeProducts = items.map(i => ({ ...i, product: productMap[i.productId] })).filter(i => i.product);
-  const pendingProducts = pending.map(p => ({ ...p, product: productMap[p.productId] })).filter(p => p.product);
+  const { byId } = useCatalog();
+  const wardrobeProducts = useMemo(
+    () => items.map(i => ({ ...i, product: byId.get(i.productId) })).filter(i => i.product),
+    [items, byId],
+  );
+  const pendingProducts = useMemo(
+    () => pending.map(p => ({ ...p, product: byId.get(p.productId) })).filter(p => p.product),
+    [pending, byId],
+  );
 
   const togglePick = (id: string) =>
     setPicked(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
@@ -49,7 +56,7 @@ export default function FittingRoom() {
           <div className="space-y-2">
             {pendingProducts.map(({ product }) => (
               <div key={product!.id} className="bg-card rounded-2xl p-4 flex items-center gap-4">
-                <div className="w-14 h-14 rounded-xl bg-muted shrink-0" />
+                <ProductImage product={product!} className="w-14 h-14 rounded-xl shrink-0 relative overflow-hidden" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{product!.name}</p>
                   <p className="text-xs text-muted-foreground">{product!.brand} · {t('didYouBuyThis')}</p>
@@ -101,9 +108,7 @@ export default function FittingRoom() {
                       onClick={() => navigate(`/app/product/${product!.id}`)}
                       className="aspect-[3/4] rounded-2xl bg-card w-full block relative overflow-hidden"
                     >
-                      <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/30">
-                        <Shirt className="w-10 h-10" />
-                      </div>
+                      <ProductImage product={product!} fallback="icon" className="absolute inset-0 w-full h-full" />
                     </button>
                     <div className="mt-2.5 px-1">
                       <p className="text-[11px] uppercase tracking-widest text-muted-foreground">{product!.brand}</p>
@@ -180,9 +185,7 @@ export default function FittingRoom() {
                         sel ? 'ring-2 ring-foreground bg-card' : 'bg-card opacity-60 hover:opacity-100'
                       }`}
                     >
-                      <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/40">
-                        <Shirt className="w-7 h-7" />
-                      </div>
+                      <ProductImage product={product!} fallback="icon" className="absolute inset-0 w-full h-full rounded-xl overflow-hidden" />
                       {sel && (
                         <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center">
                           <Check className="w-3 h-3" />
@@ -224,7 +227,7 @@ export default function FittingRoom() {
                   </div>
                   <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
                     {o.productIds.map(pid => {
-                      const p = productMap[pid];
+                      const p = byId.get(pid);
                       if (!p) return null;
                       return (
                         <button
@@ -232,9 +235,7 @@ export default function FittingRoom() {
                           onClick={() => navigate(`/app/product/${pid}`)}
                           className="aspect-[3/4] rounded-xl bg-muted relative overflow-hidden"
                         >
-                          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/40">
-                            <Shirt className="w-6 h-6" />
-                          </div>
+                          <ProductImage product={p} fallback="icon" className="absolute inset-0 w-full h-full" />
                           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent p-1.5">
                             <p className="text-[10px] truncate text-left">{p.name}</p>
                           </div>

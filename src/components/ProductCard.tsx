@@ -7,6 +7,8 @@ import { FitBadge } from './FitBadge';
 import { Star } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useProductFit } from '@/lib/fit/product';
+import { useSaved } from '@/lib/saved';
+import { ProductImage } from './ProductImage';
 
 interface ProductCardProps {
   product: Product;
@@ -14,7 +16,8 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, onBrandClick }: ProductCardProps) {
-  const [saved, setSaved] = useState(false);
+  const { isSaved, toggle } = useSaved();
+  const saved = isSaved(product.id);
   const [showActions, setShowActions] = useState(false);
   const [showCollections, setShowCollections] = useState(false);
   const actionsRef = useRef<HTMLDivElement>(null);
@@ -58,7 +61,7 @@ export function ProductCard({ product, onBrandClick }: ProductCardProps) {
 
   const handleSave = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setSaved(!saved);
+    void toggle(product.id);
     setShowActions(false);
   };
 
@@ -67,9 +70,10 @@ export function ProductCard({ product, onBrandClick }: ProductCardProps) {
     setShowCollections(true);
   };
 
+  // Collections are still a mock; adding to one at least saves the product.
   const handleCollectionSelect = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setSaved(true);
+    if (!saved) void toggle(product.id);
     setShowActions(false);
     setShowCollections(false);
   };
@@ -77,6 +81,7 @@ export function ProductCard({ product, onBrandClick }: ProductCardProps) {
   return (
     <div className="group cursor-pointer" onClick={goToProduct}>
       <div className="relative aspect-[3/4] rounded-xl bg-card mb-3 overflow-hidden">
+        <ProductImage product={product} className="absolute inset-0 w-full h-full" />
         {fit && (
           <div className="absolute top-3 left-3 z-10">
             <FitBadge score={fit.score} />

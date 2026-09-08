@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { allProducts } from '@/data/mockData';
+import { useCatalog } from '@/lib/catalog/useCatalog';
 import { ProductCard } from '@/components/ProductCard';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useBodyProfile } from '@/lib/profile';
@@ -12,7 +12,8 @@ export default function BrandPage() {
   const { t } = useLanguage();
   const brandName = decodeURIComponent(id || '');
 
-  const brandProducts = allProducts.filter(p => p.brand === brandName);
+  const { products, loading } = useCatalog();
+  const brandProducts = products.filter(p => p.brand === brandName);
   const { profile } = useBodyProfile();
   const topFit = sortByFit(brandProducts, profile).filter(p => scoreProduct(p, profile));
   const bestMatches = topFit.slice(0, 4);
@@ -45,7 +46,7 @@ export default function BrandPage() {
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
-        {brandProducts.length === 0 && (
+        {!loading && brandProducts.length === 0 && (
           <p className="text-sm text-muted-foreground">{t('noProductsFound')}</p>
         )}
       </section>

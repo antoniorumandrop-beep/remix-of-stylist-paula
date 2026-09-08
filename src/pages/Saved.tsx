@@ -1,15 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { allProducts, sampleCollections } from '@/data/mockData';
+import { sampleCollections } from '@/data/mockData';
 import { ProductCard } from '@/components/ProductCard';
-import { Plus, Bell } from 'lucide-react';
+import { Plus, Bell, Heart } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { useSaved } from '@/lib/saved';
+import { useCatalog } from '@/lib/catalog/useCatalog';
 
 export default function Saved() {
   const [tab, setTab] = useState<'saved' | 'collections'>('saved');
   const navigate = useNavigate();
-  const savedProducts = allProducts.slice(0, 8);
   const { t } = useLanguage();
+  const { ids, loading } = useSaved();
+  const { byId } = useCatalog();
+  const savedProducts = ids.map(id => byId.get(id)).filter(Boolean) as NonNullable<ReturnType<typeof byId.get>>[];
 
   return (
     <div className="max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-10">
@@ -60,11 +64,18 @@ export default function Saved() {
       </div>
 
       {tab === 'saved' ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
-          {savedProducts.map(product => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        savedProducts.length === 0 && !loading ? (
+          <div className="text-center py-16">
+            <Heart className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">{t('savedEmpty')}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
+            {savedProducts.map(product => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        )
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
           <button className="aspect-square rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 hover:border-muted-foreground transition-colors">

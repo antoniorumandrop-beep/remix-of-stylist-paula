@@ -1,4 +1,6 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { backend, qk } from '@/lib/backend';
 
 export interface WardrobeItem {
   productId: string;
@@ -19,91 +21,43 @@ export interface Outfit {
   createdAt: string;
 }
 
-const KEYS = {
-  wardrobe: 'paula.wardrobe',
-  pending: 'paula.pendingPurchases',
-  outfits: 'paula.outfits',
-} as const;
-
-export function readStored<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-export function writeStored<T>(key: string, value: T) {
-  localStorage.setItem(key, JSON.stringify(value));
-  window.dispatchEvent(new CustomEvent('paula:storage', { detail: { key } }));
-}
-
-export function useStored<T>(key: string, fallback: T) {
-  const [value, setValue] = useState<T>(() => readStored(key, fallback));
-  useEffect(() => {
-    const onChange = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (!detail || detail.key === key) setValue(readStored(key, fallback));
-    };
-    window.addEventListener('paula:storage', onChange);
-    window.addEventListener('storage', onChange);
-    return () => {
-      window.removeEventListener('paula:storage', onChange);
-      window.removeEventListener('storage', onChange);
-    };
-  }, [key]);
-  const update = useCallback((next: T | ((prev: T) => T)) => {
-    setValue(prev => {
-      const v = typeof next === 'function' ? (next as (p: T) => T)(prev) : next;
-      writeStored(key, v);
-      return v;
-    });
-  }, [key]);
-  return [value, update] as const;
-}
-
+/**
+ * The wardrobe: things the user owns, things she clicked through to buy and
+ * has not confirmed yet, and outfits built from owned items.
+ *
+ * Reads are queries, writes are mutations, storage is `backend.wardrobe`.
+ */
 export function useWardrobe() {
-  const [items, setItems] = useStored<WardrobeItem[]>(KEYS.wardrobe, []);
-  const [pending, setPending] = useStored<PendingPurchase[]>(KEYS.pending, []);
-  const [outfits, setOutfits] = useStored<Outfit[]>(KEYS.outfits, []);
+  const itemsQuery = useQuery({ queryKey: qk.wardrobeItems, queryFn: () => backend.wardrobe.listItems() });
+  const pendingQuery = useQuery({ queryKey: qk.wardrobePending, queryFn: () => backend.wardrobe.listPending() });
+  const outfitsQuery = useQuery({ queryKey: qk.wardrobeOutfits, queryFn: () => backend.wardrobe.listOutfits() });
 
-  const has = (productId: string) => items.some(i => i.productId === productId);
+  const add = useMutation({ mutationFn: (id: string) => backend.wardrobe.addItem(id) });
+  const remove = useMutation({ mutationFn: (id: string) => backend.wardrobe.removeItem(id) });
+  const wear = useMutation({ mutationFn: (id: string) => backend.wardrobe.incrementWear(id) });
+  const pend = useMutation({ mutationFn: (id: string) => backend.wardrobe.markPending(id) });
+  const dismiss = useMutation({ mutationFn: (id: string) => backend.wardrobe.dismissPending(id) });
+  const create = useMutation({ mutationFn: (v: { name: string; productIds: string[] }) => backend.wardrobe.createOutfit(v.name, v.productIds) });
+  const del = useMutation({ mutationFn: (id: string) => backend.wardrobe.deleteOutfit(id) });
 
-  const addItem = (productId: string) => {
-    setItems(prev => prev.some(i => i.productId === productId)
-      ? prev
-      : [...prev, { productId, addedAt: new Date().toISOString(), timesWorn: 0 }]);
-    setPending(prev => prev.filter(p => p.productId !== productId));
+  const items = itemsQuery.data ?? [];
+  const pending = pendingQuery.data ?? [];
+  const outfits = outfitsQuery.data ?? [];
+
+  const has = useCallback((productId: string) => items.some(i => i.productId === productId), [items]);
+
+  return {
+    items,
+    pending,
+    outfits,
+    loading: itemsQuery.isPending || pendingQuery.isPending || outfitsQuery.isPending,
+    has,
+    addItem: (id: string) => add.mutateAsync(id),
+    removeItem: (id: string) => remove.mutateAsync(id),
+    incWear: (id: string) => wear.mutateAsync(id),
+    markPending: (id: string) => pend.mutateAsync(id),
+    dismissPending: (id: string) => dismiss.mutateAsync(id),
+    createOutfit: (name: string, productIds: string[]) => create.mutateAsync({ name, productIds }),
+    deleteOutfit: (id: string) => del.mutateAsync(id),
   };
-
-  const removeItem = (productId: string) => {
-    setItems(prev => prev.filter(i => i.productId !== productId));
-    setOutfits(prev => prev.map(o => ({ ...o, productIds: o.productIds.filter(id => id !== productId) })));
-  };
-
-  const incWear = (productId: string) => {
-    setItems(prev => prev.map(i => i.productId === productId ? { ...i, timesWorn: i.timesWorn + 1 } : i));
-  };
-
-  const markPending = (productId: string) => {
-    if (items.some(i => i.productId === productId)) return;
-    setPending(prev => prev.some(p => p.productId === productId)
-      ? prev
-      : [...prev, { productId, clickedAt: new Date().toISOString() }]);
-  };
-
-  const dismissPending = (productId: string) => {
-    setPending(prev => prev.filter(p => p.productId !== productId));
-  };
-
-  const createOutfit = (name: string, productIds: string[]) => {
-    const o: Outfit = { id: `o-${Date.now()}`, name, productIds, createdAt: new Date().toISOString() };
-    setOutfits(prev => [o, ...prev]);
-    return o;
-  };
-
-  const deleteOutfit = (id: string) => setOutfits(prev => prev.filter(o => o.id !== id));
-
-  return { items, pending, outfits, has, addItem, removeItem, incWear, markPending, dismissPending, createOutfit, deleteOutfit };
 }

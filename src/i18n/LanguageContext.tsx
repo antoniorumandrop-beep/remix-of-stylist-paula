@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
-import { translations, Language, TranslationKey } from './translations';
+import { translate, Language, TranslationKey } from './translations';
 
 interface LanguageContextType {
   lang: Language;
@@ -20,13 +20,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('paula-lang', newLang);
   };
 
-  const t = (key: TranslationKey, ...args: any[]): string => {
-    const value = translations[lang][key];
-    if (typeof value === 'function') {
-      return (value as Function)(...args);
-    }
-    return value as string;
-  };
+  const t = (key: TranslationKey, ...args: any[]): string => translate(lang, key, ...args);
 
   return (
     <LanguageContext.Provider value={{ lang, setLang: changeLang, t }}>

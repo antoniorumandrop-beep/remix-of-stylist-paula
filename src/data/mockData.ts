@@ -1,13 +1,7 @@
-export interface Product {
-  id: string;
-  name: string;
-  brand: string;
-  price: number;
-  fitScore: number;
-  category: string;
-  isSecondHand: boolean;
-  store: string;
-}
+import type { Product } from '@/lib/catalog/types';
+
+// `Product` now lives in `src/lib/catalog/types.ts`; re-exported so old imports keep working.
+export type { Product };
 
 export interface UserProfile {
   name: string;

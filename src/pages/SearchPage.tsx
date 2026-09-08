@@ -1,14 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Send, ImagePlus, X } from 'lucide-react';
-import { allProducts, defaultProfile } from '@/data/mockData';
-import type { Product } from '@/data/mockData';
+import type { Product } from '@/lib/catalog/types';
 import { ProductCard } from '@/components/ProductCard';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { readBodyProfile, useBodyProfile } from '@/lib/profile';
+import { useBodyProfile } from '@/lib/profile';
+import { useUserPrefs } from '@/lib/prefs';
+import { useCatalog } from '@/lib/catalog/useCatalog';
 import { sortByFit } from '@/lib/fit/product';
 import { shapeKey } from '@/lib/fit/copy';
-import type { Language } from '@/i18n/translations';
+import { stylist, type ContextPill } from '@/lib/ai';
 
 interface Message {
   id: string;
@@ -20,153 +21,14 @@ interface Message {
 }
 
 
-interface ContextPill {
-  key: string;
-  label: string;
-  value: string;
-}
-
-function generatePaulaResponse(
-  userText: string,
-  messageCount: number,
-  currentPills: ContextPill[],
-  lang: Language,
-  t: (key: any, ...args: any[]) => string
-): { reply: string; chips?: string[]; products?: Product[]; newPills?: ContextPill[] } {
-  const lower = userText.toLowerCase();
-  const newPills: ContextPill[] = [];
-
-  const budgetMatch = lower.match(/(\d+)\s*(pln|zł|zl|eur|€|\$|usd)/i) || lower.match(/(max|do|budget|budżet)\s*(\d+)/i);
-  if (budgetMatch) {
-    const amount = budgetMatch[0].match(/\d+/)?.[0];
-    if (amount) {
-      newPills.push({ key: 'budget', label: t('pillBudget'), value: `${amount} PLN` });
-    }
-  }
-
-  const occasionKeywords: Record<string, string> = {
-    'wedding': 'Wedding', 'wesele': 'Wedding', 'ślub': 'Wedding',
-    'office': 'Office', 'biuro': 'Office', 'work': 'Office', 'praca': 'Office',
-    'party': 'Party', 'impreza': 'Party', 'going out': 'Going out', 'wyjście': 'Going out',
-    'casual': 'Casual', 'everyday': 'Everyday', 'na co dzień': 'Everyday',
-    'date': 'Date night', 'randka': 'Date night',
-    'vacation': 'Vacation', 'travel': 'Travel', 'podróż': 'Travel', 'wakacje': 'Vacation',
-  };
-  for (const [keyword, occasion] of Object.entries(occasionKeywords)) {
-    if (lower.includes(keyword)) {
-      newPills.push({ key: 'occasion', label: t('pillOccasion'), value: occasion });
-      break;
-    }
-  }
-
-  const styleKeywords: Record<string, string> = {
-    'floral': 'Floral', 'kwiatowy': 'Floral', 'boho': 'Boho', 'minimalist': 'Minimalist', 'minimalistyczny': 'Minimalist',
-    'elegant': 'Elegant', 'elegancki': 'Elegant', 'casual': 'Casual',
-    'romantic': 'Romantic', 'romantyczny': 'Romantic',
-    'pastel': 'Pastels', 'black': 'Black', 'czarny': 'Black',
-    'white': 'White', 'biały': 'White', 'red': 'Red', 'czerwony': 'Red',
-    'navy': 'Navy', 'granatowy': 'Navy', 'satin': 'Satin', 'satynowy': 'Satin',
-  };
-  for (const [keyword, style] of Object.entries(styleKeywords)) {
-    if (lower.includes(keyword)) {
-      newPills.push({ key: 'style', label: t('pillStyle'), value: style });
-      break;
-    }
-  }
-
-  const categoryKeywords: Record<string, string> = {
-    'dress': 'Dresses', 'sukienk': 'Dresses', 'skirt': 'Skirts',
-    'spódnic': 'Skirts', 'blazer': 'Blazers', 'marynark': 'Blazers',
-    'top': 'Tops', 'blouse': 'Tops', 'bluzk': 'Tops',
-    'trouser': 'Trousers', 'spodni': 'Trousers', 'jeans': 'Jeans',
-    'shoes': 'Shoes', 'buty': 'Shoes',
-  };
-  for (const [keyword, cat] of Object.entries(categoryKeywords)) {
-    if (lower.includes(keyword)) {
-      newPills.push({ key: 'category', label: t('pillCategory'), value: cat });
-      break;
-    }
-  }
-
-  const lengthKeywords: Record<string, string> = { 'midi': 'Midi', 'maxi': 'Maxi', 'mini': 'Mini' };
-  for (const [keyword, len] of Object.entries(lengthKeywords)) {
-    if (lower.includes(keyword)) {
-      newPills.push({ key: 'length', label: t('pillLength'), value: len });
-      break;
-    }
-  }
-
-  if (lower.includes('second-hand') || lower.includes('vinted') || lower.includes('used') || lower.includes('vintage') || lower.includes('używan')) {
-    newPills.push({ key: 'source', label: t('pillSource'), value: 'Second-hand' });
-  }
-
-  const totalPills = [...currentPills];
-  for (const np of newPills) {
-    const idx = totalPills.findIndex(p => p.key === np.key);
-    if (idx >= 0) totalPills[idx] = np;
-    else totalPills.push(np);
-  }
-
-  const hasEnoughContext = totalPills.length >= 2 || messageCount >= 3;
-
-  let reply = '';
-  let chips: string[] | undefined;
-  let products: Product[] | undefined;
-
-  if (hasEnoughContext) {
-    let filtered = [...allProducts];
-    const budgetPill = totalPills.find(p => p.key === 'budget');
-    if (budgetPill) {
-      const max = parseInt(budgetPill.value);
-      if (!isNaN(max)) filtered = filtered.filter(p => p.price <= max);
-    }
-    const catPill = totalPills.find(p => p.key === 'category');
-    if (catPill) {
-      const catMap: Record<string, string> = {
-        'Dresses': 'dresses', 'Skirts': 'skirts', 'Blazers': 'outerwear',
-        'Tops': 'tops', 'Trousers': 'bottoms', 'Jeans': 'bottoms', 'Shoes': 'shoes',
-      };
-      const cat = catMap[catPill.value];
-      if (cat) filtered = filtered.filter(p => p.category === cat);
-    }
-    const sourcePill = totalPills.find(p => p.key === 'source');
-    if (sourcePill && sourcePill.value === 'Second-hand') {
-      filtered = filtered.filter(p => p.isSecondHand);
-    }
-    products = sortByFit(filtered, readBodyProfile()).slice(0, 12);
-
-    reply = t('paulaFoundOptions', products.length);
-    chips = [t('chipSecondHand'), t('chipFreeShipping'), t('chipUnder100')];
-  } else if (messageCount === 0) {
-    if (totalPills.find(p => p.key === 'occasion')) {
-      reply = t('paulaOccasionFound');
-    } else if (totalPills.find(p => p.key === 'category')) {
-      reply = t('paulaCategoryFound');
-      chips = [t('chipEveryday'), t('chipOffice'), t('chipWedding'), t('chipDateNight')];
-    } else {
-      reply = t('paulaGeneric');
-      chips = [t('chipEveryday'), t('chipOffice'), t('chipSpecialEvent')];
-    }
-  } else {
-    reply = t('paulaNoted');
-    let filtered = [...allProducts];
-    const budgetPill = totalPills.find(p => p.key === 'budget');
-    if (budgetPill) {
-      const max = parseInt(budgetPill.value);
-      if (!isNaN(max)) filtered = filtered.filter(p => p.price <= max);
-    }
-    products = sortByFit(filtered, readBodyProfile()).slice(0, 12);
-  }
-
-  return { reply, chips, products, newPills };
-}
-
 export default function SearchPage() {
   const navigate = useNavigate();
   const { lang, t } = useLanguage();
-  const userName = localStorage.getItem('paula-username') || defaultProfile.name;
-  const inspirations: string[] = JSON.parse(localStorage.getItem('paula-inspirations') || '[]');
+  const { prefs } = useUserPrefs();
+  const userName = prefs.name ?? '';
+  const inspirations = prefs.inspirations;
   const { profile, shape } = useBodyProfile();
+  const { products: catalog } = useCatalog();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [contextPills, setContextPills] = useState<ContextPill[]>([]);
@@ -177,12 +39,11 @@ export default function SearchPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dupeMode, setDupeMode] = useState(false);
   const [dupeReference, setDupeReference] = useState(0);
-  const userMsgCount = messages.filter(m => m.sender === 'user').length;
 
   const referencePrice = 899;
 
   const runSimilarSearch = () => {
-    const similar = sortByFit(allProducts, profile, (a, b) => a.price - b.price).slice(0, 12);
+    const similar = sortByFit(catalog, profile, (a, b) => a.price - b.price).slice(0, 12);
     setDupeReference(referencePrice);
     setDupeMode(false);
     setCurrentProducts(similar);
@@ -196,7 +57,7 @@ export default function SearchPage() {
 
   const runDupeSearch = () => {
     const dupes = sortByFit(
-      allProducts.filter(p => p.price <= referencePrice * 0.7),
+      catalog.filter(p => p.price <= referencePrice * 0.7),
       profile,
       (a, b) => a.price - b.price,
     ).slice(0, 12);
@@ -212,7 +73,7 @@ export default function SearchPage() {
   };
 
   const runBothSearch = () => {
-    const both = sortByFit(allProducts, profile, (a, b) => a.price - b.price).slice(0, 12);
+    const both = sortByFit(catalog, profile, (a, b) => a.price - b.price).slice(0, 12);
     setDupeReference(referencePrice);
     setDupeMode(true);
     setCurrentProducts(both);
@@ -283,32 +144,24 @@ export default function SearchPage() {
     setMessages(prev => [...prev, userMsg]);
     setInputValue('');
 
-    setTimeout(() => {
-      const { reply, chips, products, newPills } = generatePaulaResponse(
-        text, userMsgCount, contextPills, lang, t
-      );
-
-      if (newPills && newPills.length > 0) {
-        setContextPills(prev => {
-          const updated = [...prev];
-          for (const np of newPills) {
-            const idx = updated.findIndex(p => p.key === np.key);
-            if (idx >= 0) updated[idx] = np;
-            else updated.push(np);
-          }
-          return updated;
-        });
-      }
-
-      if (products) setCurrentProducts(products);
-
-      setMessages(prev => [...prev, {
-        id: `p-${Date.now()}`,
-        sender: 'paula',
-        text: reply,
-        chips,
-      }]);
-    }, 600);
+    // One turn to Paula's brain. Local rules today, the model once
+    // VITE_AI_ENDPOINT is set — this screen does not change either way.
+    const history = messages.map(m => ({ sender: m.sender, text: m.text }));
+    void stylist
+      .respond({ text: text.trim(), history, pills: contextPills, profile, catalog, lang })
+      .then(({ reply, chips, products, pills }) => {
+        setContextPills(pills);
+        if (products) setCurrentProducts(products);
+        setMessages(prev => [...prev, {
+          id: `p-${Date.now()}`,
+          sender: 'paula',
+          text: reply,
+          chips,
+        }]);
+      })
+      .catch(() => {
+        setMessages(prev => [...prev, { id: `p-${Date.now()}`, sender: 'paula', text: t('paulaUnavailable') }]);
+      });
   };
 
   const handleSend = () => addMessage(inputValue);

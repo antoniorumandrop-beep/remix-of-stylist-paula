@@ -1,14 +1,17 @@
 import { useCallback, useMemo } from 'react';
-import { readStored, useStored } from './wardrobe';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { backend, qk } from '@/lib/backend';
 import { classifyShape } from './fit/shape';
 import type { BodyInput, BodyMeasurements, BodyShape, ShapeResult } from './fit/types';
 
 /**
- * The user's body profile. Same localStorage pattern as the wardrobe: this is a
- * placeholder for the database, not the destination.
+ * The user's body profile.
  *
  * Two sources: measured (bust / waist / hips typed in, shape computed by FFIT)
  * or selected (no tape measure — the user picked the closest shape by hand).
+ *
+ * Storage goes through `backend.profile`; this file only knows the shape of
+ * the data and how to read it.
  */
 export interface MeasuredProfile {
   source: 'measured';
@@ -29,12 +32,6 @@ export interface SelectedProfile {
 
 export type BodyProfile = MeasuredProfile | SelectedProfile;
 
-const KEY = 'paula.bodyProfile';
-
-export function readBodyProfile(): BodyProfile | null {
-  return readStored<BodyProfile | null>(KEY, null);
-}
-
 export function toMeasurements(p: MeasuredProfile): BodyMeasurements {
   return { bust: p.bust, waist: p.waist, hips: p.hips, highHip: p.highHip, heightCm: p.heightCm, unit: 'cm' };
 }
@@ -51,8 +48,14 @@ export function profileShape(p: BodyProfile | null): ShapeResult | null {
 }
 
 export function useBodyProfile() {
-  const [profile, setProfile] = useStored<BodyProfile | null>(KEY, null);
+  const query = useQuery({ queryKey: qk.profile, queryFn: () => backend.profile.get() });
+  const setMutation = useMutation({ mutationFn: (p: BodyProfile) => backend.profile.set(p) });
+  const clearMutation = useMutation({ mutationFn: () => backend.profile.clear() });
+
+  const profile = query.data ?? null;
   const shape = useMemo(() => profileShape(profile), [profile]);
-  const clear = useCallback(() => setProfile(null), [setProfile]);
-  return { profile, setProfile, clear, shape };
+  const setProfile = useCallback((p: BodyProfile) => setMutation.mutateAsync(p), [setMutation.mutateAsync]);
+  const clear = useCallback(() => clearMutation.mutateAsync(), [clearMutation.mutateAsync]);
+
+  return { profile, shape, loading: query.isPending, setProfile, clear };
 }

@@ -1,31 +1,36 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users } from 'lucide-react';
-import { allProducts, defaultProfile, getSimilarBodiesBought } from '@/data/mockData';
+import { getSimilarBodiesBought } from '@/data/mockData';
 import { ProductCard } from '@/components/ProductCard';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useBodyProfile } from '@/lib/profile';
+import { useUserPrefs } from '@/lib/prefs';
+import { useCatalog } from '@/lib/catalog/useCatalog';
 import { scoreProduct, sortByFit } from '@/lib/fit/product';
 
-const feedProducts = [...allProducts].sort(() => Math.random() - 0.5);
+// Social proof is still mock data (reviews live in mockData.ts).
 const similarBodiesFeed = getSimilarBodiesBought('', 75, 8);
 
 export default function ForYou() {
   const [tab, setTab] = useState<'foryou' | 'trending'>('foryou');
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const userName = localStorage.getItem('paula-username') || defaultProfile.name;
-  const { profile } = useBodyProfile();
+  const { prefs } = useUserPrefs();
+  const userName = prefs.name ?? '';
+  const { profile, loading: profileLoading } = useBodyProfile();
+  const { products } = useCatalog();
+  const feedProducts = useMemo(() => [...products].sort(() => Math.random() - 0.5), [products]);
   const topFitProducts = useMemo(
-    () => sortByFit(allProducts, profile).filter(p => scoreProduct(p, profile)).slice(0, 8),
-    [profile],
+    () => sortByFit(products, profile).filter(p => scoreProduct(p, profile)).slice(0, 8),
+    [products, profile],
   );
 
   return (
     <div className="max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-10">
       <div className="flex items-center justify-between mb-8">
         <h1 className="font-display text-2xl lg:text-3xl">
-          {t('hiThere').replace(',', '')} {userName}
+          {userName ? `${t('hiThere').replace(',', '')} ${userName}` : t('hiThere').replace(',', '')}
         </h1>
         <div className="flex gap-1 bg-card rounded-full p-1">
           <button
@@ -49,7 +54,7 @@ export default function ForYou() {
 
       <section className="mb-12">
         <h2 className="font-display text-xl mb-4">{t('bestForProportions')}</h2>
-        {profile ? (
+        {profileLoading ? null : profile ? (
           <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
             {topFitProducts.map(product => (
               <div key={product.id} className="min-w-[180px] max-w-[180px]">

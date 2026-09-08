@@ -308,6 +308,28 @@ export const translations = {
     editFeedback: 'Edit',
     predictionMatched: 'Paula got this right.',
     predictionMissed: 'Paula predicted differently — this helps her learn.',
+    signOut: 'Sign out',
+    sizes: 'Sizes',
+    signingIn: 'Signing in…',
+    savedEmpty: 'Nothing saved yet. Tap the heart on a product.',
+    paulaUnavailable: 'Paula is not answering right now. Try again in a moment.',
+    adminImportTitle: 'Import brand products',
+    adminImportDesc: 'Paste the brand feed (CSV from Excel or JSON) or pick a file. Rows with a name, brand, price and category are imported; the rest are listed below so the brand can fix them.',
+    adminPasteHere: 'Paste CSV or JSON here',
+    adminChooseFile: 'Choose a file',
+    adminPreview: 'Preview',
+    adminImportN: (n: number) => `Import ${n} product${n === 1 ? '' : 's'}`,
+    adminSkippedRows: 'Skipped rows',
+    adminRow: 'row',
+    adminImported: 'Imported products',
+    adminClearImported: 'Remove all imported products',
+    adminTemplate: 'Template — copy into Excel, one product per row',
+    adminDetected: 'Detected attributes',
+    adminNothingYet: 'Nothing imported yet.',
+    adminImportedToast: (n: number) => `Imported ${n} product${n === 1 ? '' : 's'}.`,
+    adminNoAttributes: 'nothing detected — add length, cut or neckline to the name or description',
+    adminBackToApp: 'Back to the app',
+    adminHowEnriched: (by: string) => `enriched by: ${by}`,
   },
 
   pl: {
@@ -619,8 +641,37 @@ export const translations = {
     editFeedback: 'Zmień',
     predictionMatched: 'Paula trafiła.',
     predictionMissed: 'Paula przewidziała inaczej — to jej pomaga się uczyć.',
+    signOut: 'Wyloguj się',
+    sizes: 'Rozmiary',
+    signingIn: 'Logowanie…',
+    savedEmpty: 'Nic jeszcze nie zapisano. Dotknij serduszka przy produkcie.',
+    paulaUnavailable: 'Paula chwilowo nie odpowiada. Spróbuj za moment.',
+    adminImportTitle: 'Import produktów marki',
+    adminImportDesc: 'Wklej feed marki (CSV z Excela albo JSON) lub wybierz plik. Wiersze z nazwą, marką, ceną i kategorią zostaną zaimportowane; reszta jest wypisana niżej, żeby marka mogła je poprawić.',
+    adminPasteHere: 'Wklej tutaj CSV albo JSON',
+    adminChooseFile: 'Wybierz plik',
+    adminPreview: 'Podgląd',
+    adminImportN: (n: number) => `Importuj ${n} ${n === 1 ? 'produkt' : n < 5 ? 'produkty' : 'produktów'}`,
+    adminSkippedRows: 'Pominięte wiersze',
+    adminRow: 'wiersz',
+    adminImported: 'Zaimportowane produkty',
+    adminClearImported: 'Usuń wszystkie zaimportowane',
+    adminTemplate: 'Szablon — skopiuj do Excela, jeden produkt na wiersz',
+    adminDetected: 'Wykryte atrybuty',
+    adminNothingYet: 'Nic jeszcze nie zaimportowano.',
+    adminImportedToast: (n: number) => `Zaimportowano ${n} ${n === 1 ? 'produkt' : n < 5 ? 'produkty' : 'produktów'}.`,
+    adminNoAttributes: 'nic nie wykryto — dodaj długość, krój albo dekolt do nazwy lub opisu',
+    adminBackToApp: 'Wróć do aplikacji',
+    adminHowEnriched: (by: string) => `wzbogacone przez: ${by}`,
   },
 } as const;
 
 export type Language = keyof typeof translations;
 export type TranslationKey = keyof typeof translations.en;
+
+/** `t()` without a React context — for code that runs outside components. */
+export function translate(lang: Language, key: TranslationKey, ...args: any[]): string {
+  const value = translations[lang][key] ?? translations.en[key];
+  if (typeof value === 'function') return (value as (...a: any[]) => string)(...args);
+  return value as string;
+}

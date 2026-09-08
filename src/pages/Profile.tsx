@@ -1,16 +1,24 @@
 import { useNavigate } from 'react-router-dom';
-import { defaultProfile } from '@/data/mockData';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, LogOut } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useBodyProfile } from '@/lib/profile';
+import { useUserPrefs } from '@/lib/prefs';
+import { useAuth, useSession } from '@/lib/auth';
 import { shapeKey } from '@/lib/fit/copy';
 
 export default function Profile() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { profile, shape } = useBodyProfile();
-  const userName = localStorage.getItem('paula-username') || defaultProfile.name;
-  const inspirations: string[] = JSON.parse(localStorage.getItem('paula-inspirations') || '[]');
+  const { prefs } = useUserPrefs();
+  const { session } = useSession();
+  const { signOut } = useAuth();
+  const userName = prefs.name ?? t('notSet');
+  const inspirations = prefs.inspirations;
+  const list = (values: string[]) => (values.length > 0 ? values.join(', ') : t('notSet'));
+  const budgetValue = prefs.budgetMin !== null && prefs.budgetMax !== null
+    ? `${prefs.budgetMin}–${prefs.budgetMax} PLN`
+    : t('notSet');
 
   const proportionsValue = profile?.source === 'measured'
     ? `${profile.bust}/${profile.waist}/${profile.hips} cm`
@@ -25,11 +33,11 @@ export default function Profile() {
     { label: t('proportions'), value: proportionsValue, to: '/onboarding' },
     { label: t('bodyShape'), value: shapeValue, to: '/onboarding' },
     { label: t('height'), value: heightValue, to: '/onboarding' },
-    { label: t('style'), value: defaultProfile.aesthetics.join(', ') },
-    { label: t('styleInspirations'), value: inspirations.length > 0 ? inspirations.join(', ') : t('notSet') },
-    { label: t('occasions'), value: defaultProfile.occasions.join(', ') },
-    { label: t('budget'), value: `${defaultProfile.budgetMin}–${defaultProfile.budgetMax} PLN` },
-    { label: t('favoriteBrands'), value: defaultProfile.brands.join(', ') },
+    { label: t('style'), value: list(prefs.aesthetics), to: '/onboarding' },
+    { label: t('styleInspirations'), value: list(inspirations), to: '/onboarding' },
+    { label: t('occasions'), value: list(prefs.occasions), to: '/onboarding' },
+    { label: t('budget'), value: budgetValue, to: '/onboarding' },
+    { label: t('favoriteBrands'), value: list(prefs.brands), to: '/onboarding' },
   ];
 
   return (
@@ -72,12 +80,19 @@ export default function Profile() {
         ))}
       </div>
 
-      <div className="mt-8 pt-8 border-t border-border">
+      <div className="mt-8 pt-8 border-t border-border flex flex-col gap-4 items-start">
         <button
           onClick={() => navigate('/onboarding')}
           className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
         >
           {t('retakePhotoScan')}
+        </button>
+        <button
+          onClick={async () => { await signOut(); navigate('/', { replace: true }); }}
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
+        >
+          <LogOut className="w-4 h-4" />
+          {t('signOut')}{session?.email ? ` · ${session.email}` : ''}
         </button>
       </div>
     </div>

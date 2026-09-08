@@ -12,16 +12,19 @@ import { enrichFromText, mergeAttributes } from '@/lib/catalog/enrich';
 /**
  * Bridges the pure engine and the product data.
  *
- * Attributes are built in two layers: the rule-based enrichment reads the
- * product name and material (the same text a real feed would give us), and
- * the hand-tagged table lays human corrections on top. When the real catalog
- * arrives, only the first layer changes.
+ * Imported products arrive with `fit` already filled by the enrichment
+ * provider at import time. Mock products are built in two layers on the fly:
+ * the rule-based enrichment reads the name and material, and the hand-tagged
+ * table lays human corrections on top.
  *
- * A product with no entry in the tagged table gets no Fit Score at all. That
- * is deliberate: shoes and bags are not body-fit garments, and the table is
- * the registry of what is.
+ * A mock product with no entry in the tagged table gets no Fit Score at all.
+ * That is deliberate: shoes and bags are not body-fit garments, and the table
+ * is the registry of what is.
  */
 export function getProductFitAttributes(product: Product): FitAttributes | null {
+  // Imported products carry their enriched layer with them.
+  if (product.fit) return product.fit;
+  // Mock products: rules over the name and composition, hand tags on top.
   const tagged = productFitAttributes[product.id];
   if (!tagged) return null;
   const material = productMaterials[product.id];

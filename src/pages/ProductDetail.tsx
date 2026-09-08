@@ -1,10 +1,14 @@
 import { useState, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Heart, ExternalLink, Star, Send, Leaf, FlaskConical, Sparkles, ShieldCheck, AlertTriangle, ImageIcon, Camera, X, Users, Check, Shirt } from 'lucide-react';
-import { allProducts, defaultProfile, getProductReviews, getProductAverageRating, getProductMaterial, getSimilarBodiesBought } from '@/data/mockData';
+import { getProductReviews, getProductAverageRating, getProductMaterial, getSimilarBodiesBought } from '@/data/mockData';
 import type { Review } from '@/data/mockData';
 import { FitBadge } from '@/components/FitBadge';
 import { ProductCard } from '@/components/ProductCard';
+import { ProductImage } from '@/components/ProductImage';
+import { useCatalog } from '@/lib/catalog/useCatalog';
+import { useUserPrefs } from '@/lib/prefs';
+import { useSaved } from '@/lib/saved';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useWardrobe } from '@/lib/wardrobe';
 import { useBodyProfile } from '@/lib/profile';
@@ -24,12 +28,16 @@ export default function ProductDetail() {
   const [reviewPhotos, setReviewPhotos] = useState<string[]>([]);
   const { t } = useLanguage();
   const { has, addItem, markPending } = useWardrobe();
-  const { profile } = useBodyProfile();
+  const { profile, loading: profileLoading } = useBodyProfile();
   const { forProduct } = useFitFeedback();
+  const { prefs } = useUserPrefs();
+  const { isSaved, toggle: toggleSaved } = useSaved();
   const [showFeedback, setShowFeedback] = useState(false);
+  const { products: catalog, byId, loading: catalogLoading } = useCatalog();
 
-  const product = allProducts.find(p => p.id === id);
+  const product = id ? byId.get(id) : undefined;
   if (!product) {
+    if (catalogLoading) return null;
     return (
       <div className="max-w-2xl mx-auto px-4 py-20 text-center">
         <p className="text-muted-foreground">Product not found.</p>
@@ -38,7 +46,9 @@ export default function ProductDetail() {
     );
   }
 
-  const material = getProductMaterial(product.id);
+  // Imported products carry their real composition; the mock quality panel
+  // only makes sense for the mock catalog.
+  const material = product.source ? null : getProductMaterial(product.id);
   const existingReviews = getProductReviews(product.id);
   const allReviews = [...existingReviews, ...localReviews];
   const { avg, count } = getProductAverageRating(product.id);
@@ -60,7 +70,7 @@ export default function ProductDetail() {
   const lengthNote = evaluateLength(getProductFitAttributes(product)?.lengthClass?.value, profile?.heightCm);
 
   const similar = sortByFit(
-    allProducts.filter(p => p.id !== product.id && p.category === product.category),
+    catalog.filter(p => p.id !== product.id && p.category === product.category),
     profile,
   ).slice(0, 4);
 
@@ -71,7 +81,7 @@ export default function ProductDetail() {
     const newReview: Review = {
       id: `local-${Date.now()}`,
       productId: product.id,
-      author: defaultProfile.name,
+      author: prefs.name ?? 'Ty',
       rating: reviewRating,
       text: reviewText.trim(),
       date: new Date().toISOString().split('T')[0],
@@ -107,7 +117,8 @@ export default function ProductDetail() {
       </button>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
-        <div className="aspect-[3/4] rounded-2xl bg-card relative">
+        <div className="aspect-[3/4] rounded-2xl bg-card relative overflow-hidden">
+          <ProductImage product={product} className="absolute inset-0 w-full h-full" />
           {fit && (
             <div className="absolute top-4 left-4">
               <FitBadge score={fit.score} size="md" />
@@ -129,6 +140,9 @@ export default function ProductDetail() {
           </button>
           <h1 className="font-display text-2xl lg:text-3xl mt-2">{product.name}</h1>
           <p className="text-xl font-medium mt-3">{product.price} PLN</p>
+          {product.description && (
+            <p className="text-sm text-muted-foreground mt-3">{product.description}</p>
+          )}
 
           {fit ? (
             <div className="bg-card rounded-xl p-5 mt-6">
@@ -184,7 +198,7 @@ export default function ProductDetail() {
                 )}
               </div>
             </div>
-          ) : !profile ? (
+          ) : !profile && !profileLoading ? (
             <div className="bg-card rounded-xl p-5 mt-6">
               <p className="text-sm text-muted-foreground">{t('fitNoProfile')}</p>
               <button
@@ -213,14 +227,23 @@ export default function ProductDetail() {
 
           <div className="flex gap-3 mt-6">
             <button
-              onClick={() => markPending(product.id)}
+              onClick={() => {
+                // Imported products have a real shop link; the mock catalog has none.
+                // The click is deliberate and visible — no automatic redirects.
+                void markPending(product.id);
+                if (product.url) window.open(product.url, '_blank', 'noopener,noreferrer');
+              }}
               className="flex-1 py-3.5 bg-foreground text-background rounded-full text-sm font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
             >
               <ExternalLink className="w-4 h-4" />
               {t('viewOn')} {product.store}
             </button>
-            <button className="p-3.5 border border-border rounded-full hover:bg-card transition-colors">
-              <Heart className="w-5 h-5" />
+            <button
+              onClick={() => void toggleSaved(product.id)}
+              aria-pressed={isSaved(product.id)}
+              className="p-3.5 border border-border rounded-full hover:bg-card transition-colors"
+            >
+              <Heart className={`w-5 h-5 ${isSaved(product.id) ? 'fill-foreground' : ''}`} />
             </button>
           </div>
           <button
@@ -240,6 +263,18 @@ export default function ProductDetail() {
               <span className="text-muted-foreground">{t('store')}</span>
               <span>{product.store}</span>
             </div>
+            {product.material && (
+              <div className="flex justify-between gap-6 py-3 border-b border-border">
+                <span className="text-muted-foreground">{t('composition')}</span>
+                <span className="text-right">{product.material}</span>
+              </div>
+            )}
+            {product.sizes && (
+              <div className="flex justify-between gap-6 py-3 border-b border-border">
+                <span className="text-muted-foreground">{t('sizes')}</span>
+                <span className="text-right">{product.sizes}</span>
+              </div>
+            )}
             <div className="flex justify-between py-3 border-b border-border">
               <span className="text-muted-foreground">{t('condition')}</span>
               <span>{product.isSecondHand ? t('preOwned') : t('new')}</span>
