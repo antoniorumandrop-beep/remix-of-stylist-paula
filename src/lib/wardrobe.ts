@@ -25,7 +25,7 @@ const KEYS = {
   outfits: 'paula.outfits',
 } as const;
 
-function read<T>(key: string, fallback: T): T {
+export function readStored<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as T) : fallback;
@@ -39,12 +39,12 @@ function write<T>(key: string, value: T) {
   window.dispatchEvent(new CustomEvent('paula:storage', { detail: { key } }));
 }
 
-function useStored<T>(key: string, fallback: T) {
-  const [value, setValue] = useState<T>(() => read(key, fallback));
+export function useStored<T>(key: string, fallback: T) {
+  const [value, setValue] = useState<T>(() => readStored(key, fallback));
   useEffect(() => {
     const onChange = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      if (!detail || detail.key === key) setValue(read(key, fallback));
+      if (!detail || detail.key === key) setValue(readStored(key, fallback));
     };
     window.addEventListener('paula:storage', onChange);
     window.addEventListener('storage', onChange);

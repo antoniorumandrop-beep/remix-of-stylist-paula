@@ -5,6 +5,9 @@ import { allProducts, defaultProfile } from '@/data/mockData';
 import type { Product } from '@/data/mockData';
 import { ProductCard } from '@/components/ProductCard';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { readBodyProfile, useBodyProfile } from '@/lib/profile';
+import { sortByFit } from '@/lib/fit/product';
+import { shapeKey } from '@/lib/fit/copy';
 import type { Language } from '@/i18n/translations';
 
 interface Message {
@@ -130,8 +133,7 @@ function generatePaulaResponse(
     if (sourcePill && sourcePill.value === 'Second-hand') {
       filtered = filtered.filter(p => p.isSecondHand);
     }
-    filtered.sort((a, b) => b.fitScore - a.fitScore);
-    products = filtered.slice(0, 12);
+    products = sortByFit(filtered, readBodyProfile()).slice(0, 12);
 
     reply = t('paulaFoundOptions', products.length);
     chips = [t('chipSecondHand'), t('chipFreeShipping'), t('chipUnder100')];
@@ -153,8 +155,7 @@ function generatePaulaResponse(
       const max = parseInt(budgetPill.value);
       if (!isNaN(max)) filtered = filtered.filter(p => p.price <= max);
     }
-    filtered.sort((a, b) => b.fitScore - a.fitScore);
-    products = filtered.slice(0, 12);
+    products = sortByFit(filtered, readBodyProfile()).slice(0, 12);
   }
 
   return { reply, chips, products, newPills };
@@ -165,6 +166,7 @@ export default function SearchPage() {
   const { lang, t } = useLanguage();
   const userName = localStorage.getItem('paula-username') || defaultProfile.name;
   const inspirations: string[] = JSON.parse(localStorage.getItem('paula-inspirations') || '[]');
+  const { profile, shape } = useBodyProfile();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [contextPills, setContextPills] = useState<ContextPill[]>([]);
@@ -180,9 +182,7 @@ export default function SearchPage() {
   const referencePrice = 899;
 
   const runSimilarSearch = () => {
-    const similar = [...allProducts]
-      .sort((a, b) => b.fitScore - a.fitScore || a.price - b.price)
-      .slice(0, 12);
+    const similar = sortByFit(allProducts, profile, (a, b) => a.price - b.price).slice(0, 12);
     setDupeReference(referencePrice);
     setDupeMode(false);
     setCurrentProducts(similar);
@@ -195,10 +195,11 @@ export default function SearchPage() {
   };
 
   const runDupeSearch = () => {
-    const dupes = allProducts
-      .filter(p => p.price <= referencePrice * 0.7)
-      .sort((a, b) => b.fitScore - a.fitScore || a.price - b.price)
-      .slice(0, 12);
+    const dupes = sortByFit(
+      allProducts.filter(p => p.price <= referencePrice * 0.7),
+      profile,
+      (a, b) => a.price - b.price,
+    ).slice(0, 12);
     setDupeReference(referencePrice);
     setDupeMode(true);
     setCurrentProducts(dupes);
@@ -211,9 +212,7 @@ export default function SearchPage() {
   };
 
   const runBothSearch = () => {
-    const both = [...allProducts]
-      .sort((a, b) => b.fitScore - a.fitScore || a.price - b.price)
-      .slice(0, 12);
+    const both = sortByFit(allProducts, profile, (a, b) => a.price - b.price).slice(0, 12);
     setDupeReference(referencePrice);
     setDupeMode(true);
     setCurrentProducts(both);
@@ -344,7 +343,7 @@ export default function SearchPage() {
           <div>
             <div className="text-sm font-medium">Paula</div>
           <div className="text-[11px] text-muted-foreground">
-              {userName} · {defaultProfile.bodyShape} · {defaultProfile.height} cm
+              {userName}{shape ? ` · ${t(shapeKey(shape.shape))}` : ''}{profile?.heightCm ? ` · ${profile.heightCm} cm` : ''}
               {inspirations.length > 0 && ` · ${t('pillInspo')}: ${inspirations.slice(0, 2).join(', ')}`}
             </div>
           </div>

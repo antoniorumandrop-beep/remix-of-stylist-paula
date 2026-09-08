@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users } from 'lucide-react';
 import { allProducts, defaultProfile, getSimilarBodiesBought } from '@/data/mockData';
 import { ProductCard } from '@/components/ProductCard';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { useBodyProfile } from '@/lib/profile';
+import { scoreProduct, sortByFit } from '@/lib/fit/product';
 
-const topFitProducts = [...allProducts].filter(p => p.fitScore > 0).sort((a, b) => b.fitScore - a.fitScore).slice(0, 8);
 const feedProducts = [...allProducts].sort(() => Math.random() - 0.5);
 const similarBodiesFeed = getSimilarBodiesBought('', 75, 8);
 
@@ -14,6 +15,11 @@ export default function ForYou() {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const userName = localStorage.getItem('paula-username') || defaultProfile.name;
+  const { profile } = useBodyProfile();
+  const topFitProducts = useMemo(
+    () => sortByFit(allProducts, profile).filter(p => scoreProduct(p, profile)).slice(0, 8),
+    [profile],
+  );
 
   return (
     <div className="max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-10">
@@ -43,13 +49,25 @@ export default function ForYou() {
 
       <section className="mb-12">
         <h2 className="font-display text-xl mb-4">{t('bestForProportions')}</h2>
-        <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
-          {topFitProducts.map(product => (
-            <div key={product.id} className="min-w-[180px] max-w-[180px]">
-              <ProductCard product={product} onBrandClick={b => navigate(`/app/brand/${encodeURIComponent(b)}`)} />
-            </div>
-          ))}
-        </div>
+        {profile ? (
+          <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
+            {topFitProducts.map(product => (
+              <div key={product.id} className="min-w-[180px] max-w-[180px]">
+                <ProductCard product={product} onBrandClick={b => navigate(`/app/brand/${encodeURIComponent(b)}`)} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-card rounded-2xl p-6">
+            <p className="text-sm text-muted-foreground">{t('fitNoProfile')}</p>
+            <button
+              onClick={() => navigate('/onboarding')}
+              className="mt-3 text-sm font-medium underline underline-offset-4"
+            >
+              {t('addMeasurements')}
+            </button>
+          </div>
+        )}
       </section>
 
       {similarBodiesFeed.length > 0 && (

@@ -7,6 +7,10 @@ import { FitBadge } from '@/components/FitBadge';
 import { ProductCard } from '@/components/ProductCard';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useWardrobe } from '@/lib/wardrobe';
+import { useBodyProfile } from '@/lib/profile';
+import { getProductFitAttributes, scoreProduct, sortByFit } from '@/lib/fit/product';
+import { evaluateLength } from '@/lib/fit/length';
+import { lengthKey, pointKey, reasonText, shapeKey, verdictKey } from '@/lib/fit/copy';
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +22,7 @@ export default function ProductDetail() {
   const [reviewPhotos, setReviewPhotos] = useState<string[]>([]);
   const { t } = useLanguage();
   const { has, addItem, markPending } = useWardrobe();
+  const { profile } = useBodyProfile();
 
   const product = allProducts.find(p => p.id === id);
   if (!product) {
@@ -38,10 +43,13 @@ export default function ProductDetail() {
     ? Math.round((allReviews.reduce((s, r) => s + r.rating, 0) / allReviews.length) * 10) / 10
     : 0;
 
-  const similar = allProducts
-    .filter(p => p.id !== product.id && p.category === product.category)
-    .sort((a, b) => b.fitScore - a.fitScore)
-    .slice(0, 4);
+  const fit = scoreProduct(product, profile);
+  const lengthNote = evaluateLength(getProductFitAttributes(product.id)?.lengthClass?.value, profile?.heightCm);
+
+  const similar = sortByFit(
+    allProducts.filter(p => p.id !== product.id && p.category === product.category),
+    profile,
+  ).slice(0, 4);
 
   const similarBodies = getSimilarBodiesBought(product.id, 75, 4);
 
@@ -87,9 +95,9 @@ export default function ProductDetail() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
         <div className="aspect-[3/4] rounded-2xl bg-card relative">
-          {product.fitScore > 0 && (
+          {fit && (
             <div className="absolute top-4 left-4">
-              <FitBadge score={product.fitScore} size="md" />
+              <FitBadge score={fit.score} size="md" />
             </div>
           )}
           {product.isSecondHand && (
@@ -109,23 +117,61 @@ export default function ProductDetail() {
           <h1 className="font-display text-2xl lg:text-3xl mt-2">{product.name}</h1>
           <p className="text-xl font-medium mt-3">{product.price} PLN</p>
 
-          {product.fitScore > 0 && (
+          {fit ? (
             <div className="bg-card rounded-xl p-5 mt-6">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-sm font-medium">{t('fitConfidence')}</span>
-                <span className="text-sm font-medium">{product.fitScore}%</span>
+                <span className="text-sm font-medium">{fit.score}%</span>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">
                 <div
                   className="h-full bg-foreground rounded-full transition-all"
-                  style={{ width: `${product.fitScore}%` }}
+                  style={{ width: `${fit.score}%` }}
                 />
               </div>
               <p className="text-xs text-muted-foreground mt-3">
-                {t('basedOnProportions', defaultProfile.bodyShape.toLowerCase(), defaultProfile.height)}
+                {t('basedOnProportions', t(shapeKey(fit.shape)).toLowerCase(), profile?.heightCm ?? '—')}
               </p>
+              {fit.confidence < 0.6 && (
+                <p className="text-xs text-muted-foreground mt-1">{t('fitConfidenceLow')}</p>
+              )}
+
+              <div className="mt-5 pt-4 border-t border-border">
+                <div className="text-sm font-medium mb-3">{t('fitBreakdownTitle')}</div>
+                <ul className="space-y-2.5">
+                  {fit.points.map(point => {
+                    const reasons = point.reasons.map(r => reasonText(r, t)).filter(Boolean) as string[];
+                    return (
+                      <li key={point.point} className="text-sm">
+                        <div className="flex items-center justify-between gap-4">
+                          <span>{t(pointKey(point.point))}</span>
+                          <span className={point.verdict === 'neutral' || point.verdict === 'unknown' ? 'text-muted-foreground' : 'font-medium'}>
+                            {t(verdictKey(point.verdict))}
+                          </span>
+                        </div>
+                        {reasons.length > 0 && (
+                          <p className="text-xs text-muted-foreground mt-0.5">{reasons.join(' · ')}</p>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+                {lengthNote && (
+                  <p className="text-xs text-muted-foreground mt-4">{t(lengthKey(lengthNote.note))}</p>
+                )}
+              </div>
             </div>
-          )}
+          ) : !profile ? (
+            <div className="bg-card rounded-xl p-5 mt-6">
+              <p className="text-sm text-muted-foreground">{t('fitNoProfile')}</p>
+              <button
+                onClick={() => navigate('/onboarding')}
+                className="mt-3 text-sm font-medium underline underline-offset-4"
+              >
+                {t('addMeasurements')}
+              </button>
+            </div>
+          ) : null}
 
           <div className="flex gap-3 mt-6">
             <button

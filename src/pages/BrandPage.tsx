@@ -3,6 +3,8 @@ import { ArrowLeft } from 'lucide-react';
 import { allProducts } from '@/data/mockData';
 import { ProductCard } from '@/components/ProductCard';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { useBodyProfile } from '@/lib/profile';
+import { scoreProduct, sortByFit } from '@/lib/fit/product';
 
 export default function BrandPage() {
   const { id } = useParams<{ id: string }>();
@@ -11,7 +13,8 @@ export default function BrandPage() {
   const brandName = decodeURIComponent(id || '');
 
   const brandProducts = allProducts.filter(p => p.brand === brandName);
-  const topFit = [...brandProducts].filter(p => p.fitScore > 0).sort((a, b) => b.fitScore - a.fitScore);
+  const { profile } = useBodyProfile();
+  const topFit = sortByFit(brandProducts, profile).filter(p => scoreProduct(p, profile));
   const bestMatches = topFit.slice(0, 4);
   const restProducts = topFit.slice(4);
 

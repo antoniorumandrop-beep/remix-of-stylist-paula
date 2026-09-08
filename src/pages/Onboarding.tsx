@@ -3,8 +3,21 @@ import { useNavigate } from 'react-router-dom';
 import { Check, ChevronRight, Upload, X, Link, ImagePlus, UserRound } from 'lucide-react';
 import { bodyShapes, aestheticOptions, fitOptions, occasionOptions, brands } from '@/data/mockData';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { useBodyProfile } from '@/lib/profile';
+import { classifyShape } from '@/lib/fit/shape';
+import type { BodyShape } from '@/lib/fit/types';
+import { shapeKey } from '@/lib/fit/copy';
 
 const TOTAL_STEPS = 9;
+
+// The picker still uses the five everyday names; FFIT is finer-grained.
+const SHAPE_FROM_PICKER: Record<string, BodyShape> = {
+  'hourglass': 'hourglass',
+  'pear': 'triangle',
+  'rectangle': 'rectangle',
+  'inverted-triangle': 'inverted-triangle',
+  'apple': 'oval',
+};
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -31,10 +44,35 @@ export default function Onboarding() {
   const [inspirationInput, setInspirationInput] = useState('');
   const [uploadedInspoPhotos, setUploadedInspoPhotos] = useState<string[]>([]);
   const [brandInput, setBrandInput] = useState('');
+  const [noTape, setNoTape] = useState(false);
+  const [pickedShape, setPickedShape] = useState<BodyShape | null>(null);
+  const { setProfile } = useBodyProfile();
+
+  const measurementsValid = proportions.bust > 0 && proportions.waist > 0 && proportions.hips > 0;
+  const liveShape = noTape
+    ? (pickedShape ? { shape: pickedShape, merged: false, diffs: null } : null)
+    : measurementsValid
+      ? classifyShape({ bust: proportions.bust, waist: proportions.waist, hips: proportions.hips })
+      : null;
+
+  const persistProfile = () => {
+    const heightCm = Number(height) > 0 ? Number(height) : undefined;
+    const updatedAt = new Date().toISOString();
+    if (noTape) {
+      if (pickedShape) setProfile({ source: 'selected', shape: pickedShape, heightCm, updatedAt });
+      return;
+    }
+    if (measurementsValid) {
+      setProfile({ source: 'measured', bust: proportions.bust, waist: proportions.waist, hips: proportions.hips, heightCm, updatedAt });
+    }
+  };
 
   const next = () => {
     if (step === 0 && name.trim()) {
       localStorage.setItem('paula-username', name.trim());
+    }
+    if (step === 2 || step === 3) {
+      persistProfile();
     }
     if (step === 4 && inspirationPeople.length > 0) {
       localStorage.setItem('paula-inspirations', JSON.stringify(inspirationPeople));
@@ -49,6 +87,7 @@ export default function Onboarding() {
 
   const canProceed = () => {
     if (step === 0) return name.length > 0;
+    if (step === 2) return noTape ? pickedShape !== null : measurementsValid;
     return true;
   };
 
@@ -119,99 +158,147 @@ export default function Onboarding() {
           <div>
             <h2 className="font-display text-3xl md:text-4xl mb-3">{t('yourProportions')}</h2>
             <p className="text-muted-foreground mb-8">
-              {photoUploaded ? t('proportionsFromPhoto') : t('proportionsManual')}
+              {noTape ? t('pickYourShape') : photoUploaded ? t('proportionsFromPhoto') : t('proportionsManual')}
             </p>
 
-            <div className="bg-card rounded-2xl p-6 mb-6">
-              <div className="flex gap-6 items-center mb-6">
-                <div className="w-16 flex-shrink-0">
-                  <svg viewBox="0 0 40 80" className="w-full text-foreground">
-                    <circle cx="20" cy="8" r="5" fill="none" stroke="currentColor" strokeWidth="1.2" />
-                    <line x1="10" y1="18" x2="30" y2="18" stroke="currentColor" strokeWidth="1.2" />
-                    <path d={`M${20 - proportions.shoulders / 5},18 L${20 - proportions.bust / 10},30 L${20 - proportions.waist / 10},42 L${20 - proportions.hips / 8},55 L${20 - 4},75 M${20 + proportions.shoulders / 5},18 L${20 + proportions.bust / 10},30 L${20 + proportions.waist / 10},42 L${20 + proportions.hips / 8},55 L${20 + 4},75`} fill="none" stroke="currentColor" strokeWidth="1.2" />
-                  </svg>
-                </div>
-                <div className="flex-1 space-y-1 text-sm">
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>{t('shoulders')}</span>
-                    <span className="font-medium text-foreground">{proportions.shoulders} cm</span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>{t('bust')}</span>
-                    <span className="font-medium text-foreground">{proportions.bust} cm</span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>{t('waist')}</span>
-                    <span className="font-medium text-foreground">{proportions.waist} cm</span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>{t('hips')}</span>
-                    <span className="font-medium text-foreground">{proportions.hips} cm</span>
-                  </div>
-                </div>
+            {noTape ? (
+              <div className="grid grid-cols-1 gap-3 mb-6">
+                {bodyShapes.map(shape => {
+                  const mapped = SHAPE_FROM_PICKER[shape.id];
+                  const active = pickedShape === mapped;
+                  return (
+                    <button
+                      key={shape.id}
+                      onClick={() => setPickedShape(mapped)}
+                      className={`text-left px-5 py-4 rounded-xl transition-all ${
+                        active ? 'bg-foreground text-background' : 'bg-card hover:bg-card/80'
+                      }`}
+                    >
+                      <div className="text-sm font-medium">{t(shapeKey(mapped))}</div>
+                      <div className={`text-xs mt-1 ${active ? 'text-background/70' : 'text-muted-foreground'}`}>
+                        {shape.description}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-
-              <div className="space-y-3">
-                {[
-                  { key: 'shoulders' as const, label: t('shoulders'), unit: 'cm' },
-                  { key: 'bust' as const, label: t('bust'), unit: 'cm' },
-                  { key: 'waist' as const, label: t('waist'), unit: 'cm' },
-                  { key: 'hips' as const, label: t('hips'), unit: 'cm' },
-                ].map(({ key, label, unit }) => (
-                  <div key={key} className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">{label}</span>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        value={proportions[key]}
-                        onChange={e => setProportions(p => ({ ...p, [key]: Number(e.target.value) }))}
-                        className="w-20 px-3 py-2 bg-background rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-foreground/10"
-                      />
-                      <span className="text-xs text-muted-foreground w-6">{unit}</span>
+            ) : (
+              <>
+                <div className="bg-card rounded-2xl p-6 mb-4">
+                  <div className="flex gap-6 items-center mb-6">
+                    <div className="w-16 flex-shrink-0">
+                      <svg viewBox="0 0 40 80" className="w-full text-foreground">
+                        <circle cx="20" cy="8" r="5" fill="none" stroke="currentColor" strokeWidth="1.2" />
+                        <line x1="10" y1="18" x2="30" y2="18" stroke="currentColor" strokeWidth="1.2" />
+                        <path d={`M${20 - proportions.shoulders / 5},18 L${20 - proportions.bust / 10},30 L${20 - proportions.waist / 10},42 L${20 - proportions.hips / 8},55 L${20 - 4},75 M${20 + proportions.shoulders / 5},18 L${20 + proportions.bust / 10},30 L${20 + proportions.waist / 10},42 L${20 + proportions.hips / 8},55 L${20 + 4},75`} fill="none" stroke="currentColor" strokeWidth="1.2" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 space-y-1 text-sm">
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>{t('bust')}</span>
+                        <span className="font-medium text-foreground">{proportions.bust} cm</span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>{t('waist')}</span>
+                        <span className="font-medium text-foreground">{proportions.waist} cm</span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>{t('hips')}</span>
+                        <span className="font-medium text-foreground">{proportions.hips} cm</span>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="text-xs text-muted-foreground mb-2">{t('torsoLength')}</div>
-                <div className="flex gap-2">
-                  {['Short', 'Average', 'Long'].map(v => (
-                    <button
-                      key={v}
-                      onClick={() => setProportions(p => ({ ...p, torsoLength: v }))}
-                      className={`flex-1 px-3 py-2 rounded-lg text-xs transition-all ${
-                        proportions.torsoLength === v
-                          ? 'bg-foreground text-background'
-                          : 'bg-card hover:bg-card/80'
-                      }`}
-                    >
-                      {lengthLabels[v]}
-                    </button>
-                  ))}
+                  <div className="space-y-3">
+                    {[
+                      { key: 'bust' as const, label: t('bust'), hint: t('measureBust') },
+                      { key: 'waist' as const, label: t('waist'), hint: t('measureWaist') },
+                      { key: 'hips' as const, label: t('hips'), hint: t('measureHips') },
+                    ].map(({ key, label, hint }) => (
+                      <div key={key}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">{label}</span>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              value={proportions[key] || ''}
+                              onChange={e => setProportions(p => ({ ...p, [key]: Number(e.target.value) }))}
+                              className="w-20 px-3 py-2 bg-background rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-foreground/10"
+                            />
+                            <span className="text-xs text-muted-foreground w-6">cm</span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">{hint}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {liveShape && (
+              <div className="border border-border rounded-2xl p-5 mb-6">
+                <div className="text-xs text-muted-foreground mb-1">{t('yourShapeIs')}</div>
+                <div className="font-display text-xl">{t(shapeKey(liveShape.shape))}</div>
+                {liveShape.diffs && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {t('shapeExplain', liveShape.diffs.hipsWaist, liveShape.diffs.bustHips)}
+                  </p>
+                )}
+                {liveShape.merged && (
+                  <p className="text-xs text-muted-foreground mt-2">{t('shapeMerged')}</p>
+                )}
+              </div>
+            )}
+
+            <button
+              onClick={() => { setNoTape(v => !v); setPickedShape(null); }}
+              className="text-sm text-muted-foreground underline underline-offset-4 mb-6 block"
+            >
+              {noTape ? t('backToMeasurements') : t('noTapeMeasure')}
+            </button>
+
+            {!noTape && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs text-muted-foreground mb-2">{t('torsoLength')}</div>
+                  <div className="flex gap-2">
+                    {['Short', 'Average', 'Long'].map(v => (
+                      <button
+                        key={v}
+                        onClick={() => setProportions(p => ({ ...p, torsoLength: v }))}
+                        className={`flex-1 px-3 py-2 rounded-lg text-xs transition-all ${
+                          proportions.torsoLength === v
+                            ? 'bg-foreground text-background'
+                            : 'bg-card hover:bg-card/80'
+                        }`}
+                      >
+                        {lengthLabels[v]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-2">{t('legLength')}</div>
+                  <div className="flex gap-2">
+                    {['Short', 'Average', 'Long'].map(v => (
+                      <button
+                        key={v}
+                        onClick={() => setProportions(p => ({ ...p, legLength: v }))}
+                        className={`flex-1 px-3 py-2 rounded-lg text-xs transition-all ${
+                          proportions.legLength === v
+                            ? 'bg-foreground text-background'
+                            : 'bg-card hover:bg-card/80'
+                        }`}
+                      >
+                        {lengthLabels[v]}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <div>
-                <div className="text-xs text-muted-foreground mb-2">{t('legLength')}</div>
-                <div className="flex gap-2">
-                  {['Short', 'Average', 'Long'].map(v => (
-                    <button
-                      key={v}
-                      onClick={() => setProportions(p => ({ ...p, legLength: v }))}
-                      className={`flex-1 px-3 py-2 rounded-lg text-xs transition-all ${
-                        proportions.legLength === v
-                          ? 'bg-foreground text-background'
-                          : 'bg-card hover:bg-card/80'
-                      }`}
-                    >
-                      {lengthLabels[v]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         );
 
@@ -468,8 +555,16 @@ export default function Onboarding() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t('proportions')}</span>
-                  <span className="font-medium">{proportions.bust}/{proportions.waist}/{proportions.hips}</span>
+                  <span className="font-medium">
+                    {noTape ? t('selected') : `${proportions.bust}/${proportions.waist}/${proportions.hips}`}
+                  </span>
                 </div>
+                {liveShape && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t('bodyShape')}</span>
+                    <span className="font-medium">{t(shapeKey(liveShape.shape))}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t('height')}</span>
                   <span className="font-medium">{height} cm</span>

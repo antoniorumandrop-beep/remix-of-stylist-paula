@@ -1,26 +1,30 @@
+import { useNavigate } from 'react-router-dom';
 import { defaultProfile } from '@/data/mockData';
 import { ChevronRight } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
-
-const defaultProportions = {
-  shoulders: 38,
-  bust: 88,
-  waist: 68,
-  hips: 96,
-  torsoLength: 'Average',
-  legLength: 'Long',
-};
+import { useBodyProfile } from '@/lib/profile';
+import { shapeKey } from '@/lib/fit/copy';
 
 export default function Profile() {
   const { t } = useLanguage();
+  const navigate = useNavigate();
+  const { profile, shape } = useBodyProfile();
   const userName = localStorage.getItem('paula-username') || defaultProfile.name;
   const inspirations: string[] = JSON.parse(localStorage.getItem('paula-inspirations') || '[]');
 
+  const proportionsValue = profile?.source === 'measured'
+    ? `${profile.bust}/${profile.waist}/${profile.hips} cm`
+    : t('notSet');
+  const shapeValue = shape
+    ? `${t(shapeKey(shape.shape))} · ${t(profile?.source === 'measured' ? 'measured' : 'selected')}`
+    : t('notSet');
+  const heightValue = profile?.heightCm ? `${profile.heightCm} cm` : t('notSet');
+
   const sections = [
     { label: t('name'), value: userName },
-    { label: t('proportions'), value: `${defaultProportions.bust}/${defaultProportions.waist}/${defaultProportions.hips} cm` },
-    { label: t('torsoLegs'), value: `${defaultProportions.torsoLength} / ${defaultProportions.legLength}` },
-    { label: t('height'), value: `${defaultProfile.height} cm` },
+    { label: t('proportions'), value: proportionsValue, to: '/onboarding' },
+    { label: t('bodyShape'), value: shapeValue, to: '/onboarding' },
+    { label: t('height'), value: heightValue, to: '/onboarding' },
     { label: t('style'), value: defaultProfile.aesthetics.join(', ') },
     { label: t('styleInspirations'), value: inspirations.length > 0 ? inspirations.join(', ') : t('notSet') },
     { label: t('occasions'), value: defaultProfile.occasions.join(', ') },
@@ -42,9 +46,11 @@ export default function Profile() {
             </svg>
           </div>
           <div>
-            <div className="font-display text-xl">{t('yourProportions')}</div>
+            <div className="font-display text-xl">{shape ? t(shapeKey(shape.shape)) : t('yourProportions')}</div>
             <p className="text-sm text-muted-foreground mt-1">
-              {t('shoulders')} {defaultProportions.shoulders} · {t('bust')} {defaultProportions.bust} · {t('waist')} {defaultProportions.waist} · {t('hips')} {defaultProportions.hips} cm
+              {profile?.source === 'measured'
+                ? `${t('bust')} ${profile.bust} · ${t('waist')} ${profile.waist} · ${t('hips')} ${profile.hips} cm`
+                : t('fitNoProfile')}
             </p>
           </div>
         </div>
@@ -54,6 +60,7 @@ export default function Profile() {
         {sections.map(section => (
           <button
             key={section.label}
+            onClick={() => section.to && navigate(section.to)}
             className="w-full flex items-center justify-between px-4 py-4 rounded-xl hover:bg-card transition-colors text-left"
           >
             <div>
@@ -66,7 +73,10 @@ export default function Profile() {
       </div>
 
       <div className="mt-8 pt-8 border-t border-border">
-        <button className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors">
+        <button
+          onClick={() => navigate('/onboarding')}
+          className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
+        >
           {t('retakePhotoScan')}
         </button>
       </div>

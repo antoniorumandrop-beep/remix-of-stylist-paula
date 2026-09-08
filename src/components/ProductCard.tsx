@@ -6,6 +6,7 @@ import { getProductAverageRating, sampleCollections } from '@/data/mockData';
 import { FitBadge } from './FitBadge';
 import { Star } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { useProductFit } from '@/lib/fit/product';
 
 interface ProductCardProps {
   product: Product;
@@ -20,6 +21,7 @@ export function ProductCard({ product, onBrandClick }: ProductCardProps) {
   const navigate = useNavigate();
   const { avg, count } = getProductAverageRating(product.id);
   const { t } = useLanguage();
+  const fit = useProductFit(product);
 
   useEffect(() => {
     if (!showActions && !showCollections) return;
@@ -75,9 +77,9 @@ export function ProductCard({ product, onBrandClick }: ProductCardProps) {
   return (
     <div className="group cursor-pointer" onClick={goToProduct}>
       <div className="relative aspect-[3/4] rounded-xl bg-card mb-3 overflow-hidden">
-        {product.fitScore > 0 && (
+        {fit && (
           <div className="absolute top-3 left-3 z-10">
-            <FitBadge score={product.fitScore} />
+            <FitBadge score={fit.score} />
           </div>
         )}
 
