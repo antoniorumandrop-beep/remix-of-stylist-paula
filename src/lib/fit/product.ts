@@ -6,33 +6,32 @@ import type { BodyProfile } from '@/lib/profile';
 import { toBodyInput, useBodyProfile } from '@/lib/profile';
 import type { FitAttributes } from './attributes';
 import { computeFit } from './score';
-import { parseStretch } from './stretch';
 import type { FitResult } from './types';
+import { enrichFromText, mergeAttributes } from '@/lib/catalog/enrich';
 
 /**
- * Bridges the pure engine and the product data. Attributes come from two
- * places: the hand-tagged table (temporary — replaced by the enrichment layer
- * in step 1) and the material composition, which already exists and yields
- * stretch with no human input.
+ * Bridges the pure engine and the product data.
+ *
+ * Attributes are built in two layers: the rule-based enrichment reads the
+ * product name and material (the same text a real feed would give us), and
+ * the hand-tagged table lays human corrections on top. When the real catalog
+ * arrives, only the first layer changes.
  *
  * A product with no entry in the tagged table gets no Fit Score at all. That
- * is deliberate: shoes and bags are not body-fit garments.
+ * is deliberate: shoes and bags are not body-fit garments, and the table is
+ * the registry of what is.
  */
-export function getProductFitAttributes(productId: string): FitAttributes | null {
-  const tagged = productFitAttributes[productId];
+export function getProductFitAttributes(product: Product): FitAttributes | null {
+  const tagged = productFitAttributes[product.id];
   if (!tagged) return null;
-  if (tagged.stretchLevel) return tagged;
-
-  const material = productMaterials[productId];
-  if (!material) return tagged;
-  const stretch = parseStretch(material.composition);
-  if (stretch.level === 'unknown') return tagged;
-  return { ...tagged, stretchLevel: { value: stretch.level, confidence: stretch.confidence } };
+  const material = productMaterials[product.id];
+  const fromRules = enrichFromText({ name: product.name, material: material?.composition });
+  return mergeAttributes(fromRules, tagged);
 }
 
 export function scoreProduct(product: Product, profile: BodyProfile | null): FitResult | null {
   if (!profile) return null;
-  const attrs = getProductFitAttributes(product.id);
+  const attrs = getProductFitAttributes(product);
   if (!attrs) return null;
   return computeFit(attrs, toBodyInput(profile));
 }

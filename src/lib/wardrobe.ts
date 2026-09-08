@@ -34,7 +34,7 @@ export function readStored<T>(key: string, fallback: T): T {
   }
 }
 
-function write<T>(key: string, value: T) {
+export function writeStored<T>(key: string, value: T) {
   localStorage.setItem(key, JSON.stringify(value));
   window.dispatchEvent(new CustomEvent('paula:storage', { detail: { key } }));
 }
@@ -56,7 +56,7 @@ export function useStored<T>(key: string, fallback: T) {
   const update = useCallback((next: T | ((prev: T) => T)) => {
     setValue(prev => {
       const v = typeof next === 'function' ? (next as (p: T) => T)(prev) : next;
-      write(key, v);
+      writeStored(key, v);
       return v;
     });
   }, [key]);

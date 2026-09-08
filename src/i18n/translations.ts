@@ -294,6 +294,20 @@ export const translations = {
     lengthRunsLong: 'This length will sit longer on you than on the model.',
     lengthRunsShort: 'This length will sit shorter on you than on the model.',
     lengthAsIntended: 'This length sits on you as intended.',
+
+    // "Did it fit?" loop
+    didItFit: 'Did it fit?',
+    didItFitDesc: 'Ten seconds. This is how Paula learns what actually fits you.',
+    feedbackTight: 'tight',
+    feedbackOk: 'fine',
+    feedbackLoose: 'loose',
+    saveFeedback: 'Save',
+    feedbackSaved: 'Thanks — saved.',
+    yourFeedback: 'You said',
+    tellPaulaHowItFit: 'Tell Paula how it fit',
+    editFeedback: 'Edit',
+    predictionMatched: 'Paula got this right.',
+    predictionMissed: 'Paula predicted differently — this helps her learn.',
   },
 
   pl: {
@@ -591,6 +605,20 @@ export const translations = {
     lengthRunsLong: 'Ta długość będzie na Tobie dłuższa niż na modelce.',
     lengthRunsShort: 'Ta długość będzie na Tobie krótsza niż na modelce.',
     lengthAsIntended: 'Ta długość leży na Tobie tak, jak zaprojektowano.',
+
+    // Pętla „czy pasowało?"
+    didItFit: 'Czy pasowało?',
+    didItFitDesc: 'Dziesięć sekund. Tak Paula uczy się, co naprawdę na Tobie leży.',
+    feedbackTight: 'ciasno',
+    feedbackOk: 'dobrze',
+    feedbackLoose: 'luźno',
+    saveFeedback: 'Zapisz',
+    feedbackSaved: 'Dzięki — zapisane.',
+    yourFeedback: 'Twoja ocena',
+    tellPaulaHowItFit: 'Powiedz Pauli, jak leżało',
+    editFeedback: 'Zmień',
+    predictionMatched: 'Paula trafiła.',
+    predictionMissed: 'Paula przewidziała inaczej — to jej pomaga się uczyć.',
   },
 } as const;
 

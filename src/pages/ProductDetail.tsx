@@ -11,6 +11,8 @@ import { useBodyProfile } from '@/lib/profile';
 import { getProductFitAttributes, scoreProduct, sortByFit } from '@/lib/fit/product';
 import { evaluateLength } from '@/lib/fit/length';
 import { lengthKey, pointKey, reasonText, shapeKey, verdictKey } from '@/lib/fit/copy';
+import { useFitFeedback, type FitAnswer } from '@/lib/fitFeedback';
+import { FitFeedbackForm } from '@/components/FitFeedbackForm';
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
@@ -23,6 +25,8 @@ export default function ProductDetail() {
   const { t } = useLanguage();
   const { has, addItem, markPending } = useWardrobe();
   const { profile } = useBodyProfile();
+  const { forProduct } = useFitFeedback();
+  const [showFeedback, setShowFeedback] = useState(false);
 
   const product = allProducts.find(p => p.id === id);
   if (!product) {
@@ -44,7 +48,16 @@ export default function ProductDetail() {
     : 0;
 
   const fit = scoreProduct(product, profile);
-  const lengthNote = evaluateLength(getProductFitAttributes(product.id)?.lengthClass?.value, profile?.heightCm);
+  const feedback = forProduct(product.id);
+  const owned = has(product.id);
+  const feedbackLabel = (a: FitAnswer) =>
+    a === 'tight' ? t('feedbackTight') : a === 'ok' ? t('feedbackOk') : t('feedbackLoose');
+  // A prediction "matches" when the user's answer agrees with the verdict.
+  const predictionMatches = (verdict: string, answer: FitAnswer) =>
+    (verdict === 'tight' && answer === 'tight') ||
+    (verdict === 'loose' && answer === 'loose') ||
+    (verdict === 'neutral' && answer === 'ok');
+  const lengthNote = evaluateLength(getProductFitAttributes(product)?.lengthClass?.value, profile?.heightCm);
 
   const similar = sortByFit(
     allProducts.filter(p => p.id !== product.id && p.category === product.category),
@@ -152,6 +165,16 @@ export default function ProductDetail() {
                         {reasons.length > 0 && (
                           <p className="text-xs text-muted-foreground mt-0.5">{reasons.join(' · ')}</p>
                         )}
+                        {feedback?.answers[point.point] && (
+                          <p className="text-xs mt-0.5">
+                            <span className="text-muted-foreground">{t('yourFeedback')}: </span>
+                            <span className="font-medium">{feedbackLabel(feedback.answers[point.point]!)}</span>
+                            <span className="text-muted-foreground">
+                              {' — '}
+                              {predictionMatches(point.verdict, feedback.answers[point.point]!) ? t('predictionMatched') : t('predictionMissed')}
+                            </span>
+                          </p>
+                        )}
                       </li>
                     );
                   })}
@@ -172,6 +195,21 @@ export default function ProductDetail() {
               </button>
             </div>
           ) : null}
+
+          {owned && (
+            <div className="mt-4">
+              {showFeedback ? (
+                <FitFeedbackForm productId={product.id} onDone={() => setShowFeedback(false)} />
+              ) : (
+                <button
+                  onClick={() => setShowFeedback(true)}
+                  className="text-sm font-medium underline underline-offset-4"
+                >
+                  {feedback ? t('editFeedback') : t('tellPaulaHowItFit')}
+                </button>
+              )}
+            </div>
+          )}
 
           <div className="flex gap-3 mt-6">
             <button

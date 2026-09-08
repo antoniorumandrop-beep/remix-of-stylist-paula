@@ -4,6 +4,8 @@ import { Shirt, Plus, Trash2, Check, X, Sparkles } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useWardrobe } from '@/lib/wardrobe';
 import { allProducts } from '@/data/mockData';
+import { useFitFeedback } from '@/lib/fitFeedback';
+import { FitFeedbackForm } from '@/components/FitFeedbackForm';
 
 export default function FittingRoom() {
   const { t } = useLanguage();
@@ -13,6 +15,8 @@ export default function FittingRoom() {
   const [building, setBuilding] = useState(false);
   const [outfitName, setOutfitName] = useState('');
   const [picked, setPicked] = useState<string[]>([]);
+  const [feedbackFor, setFeedbackFor] = useState<string | null>(null);
+  const { forProduct } = useFitFeedback();
 
   const productMap = useMemo(() => Object.fromEntries(allProducts.map(p => [p.id, p])), []);
   const wardrobeProducts = items.map(i => ({ ...i, product: productMap[i.productId] })).filter(i => i.product);
@@ -116,6 +120,14 @@ export default function FittingRoom() {
                           {t('markAsWorn')}
                         </button>
                         <button
+                          onClick={() => setFeedbackFor(feedbackFor === product!.id ? null : product!.id)}
+                          className={`flex-1 text-[11px] py-1.5 rounded-full border ${
+                            forProduct(product!.id) ? 'border-foreground' : 'border-border'
+                          } hover:bg-card`}
+                        >
+                          {forProduct(product!.id) ? t('editFeedback') : t('didItFit')}
+                        </button>
+                        <button
                           onClick={() => removeItem(product!.id)}
                           className="p-1.5 rounded-full hover:bg-card text-muted-foreground"
                         >
@@ -126,6 +138,11 @@ export default function FittingRoom() {
                   </div>
                 );
               })}
+            </div>
+          )}
+          {feedbackFor && (
+            <div className="mt-6 max-w-md">
+              <FitFeedbackForm productId={feedbackFor} onDone={() => setFeedbackFor(null)} />
             </div>
           )}
         </section>
