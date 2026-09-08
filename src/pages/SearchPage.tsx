@@ -1,0 +1,516 @@
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Send, ImagePlus, X } from 'lucide-react';
+import { allProducts, defaultProfile } from '@/data/mockData';
+import type { Product } from '@/data/mockData';
+import { ProductCard } from '@/components/ProductCard';
+import { useLanguage } from '@/i18n/LanguageContext';
+import type { Language } from '@/i18n/translations';
+
+interface Message {
+  id: string;
+  sender: 'user' | 'paula';
+  text: string;
+  chips?: string[];
+  photoUploaded?: boolean;
+  photoUrl?: string;
+}
+
+
+interface ContextPill {
+  key: string;
+  label: string;
+  value: string;
+}
+
+function generatePaulaResponse(
+  userText: string,
+  messageCount: number,
+  currentPills: ContextPill[],
+  lang: Language,
+  t: (key: any, ...args: any[]) => string
+): { reply: string; chips?: string[]; products?: Product[]; newPills?: ContextPill[] } {
+  const lower = userText.toLowerCase();
+  const newPills: ContextPill[] = [];
+
+  const budgetMatch = lower.match(/(\d+)\s*(pln|zł|zl|eur|€|\$|usd)/i) || lower.match(/(max|do|budget|budżet)\s*(\d+)/i);
+  if (budgetMatch) {
+    const amount = budgetMatch[0].match(/\d+/)?.[0];
+    if (amount) {
+      newPills.push({ key: 'budget', label: t('pillBudget'), value: `${amount} PLN` });
+    }
+  }
+
+  const occasionKeywords: Record<string, string> = {
+    'wedding': 'Wedding', 'wesele': 'Wedding', 'ślub': 'Wedding',
+    'office': 'Office', 'biuro': 'Office', 'work': 'Office', 'praca': 'Office',
+    'party': 'Party', 'impreza': 'Party', 'going out': 'Going out', 'wyjście': 'Going out',
+    'casual': 'Casual', 'everyday': 'Everyday', 'na co dzień': 'Everyday',
+    'date': 'Date night', 'randka': 'Date night',
+    'vacation': 'Vacation', 'travel': 'Travel', 'podróż': 'Travel', 'wakacje': 'Vacation',
+  };
+  for (const [keyword, occasion] of Object.entries(occasionKeywords)) {
+    if (lower.includes(keyword)) {
+      newPills.push({ key: 'occasion', label: t('pillOccasion'), value: occasion });
+      break;
+    }
+  }
+
+  const styleKeywords: Record<string, string> = {
+    'floral': 'Floral', 'kwiatowy': 'Floral', 'boho': 'Boho', 'minimalist': 'Minimalist', 'minimalistyczny': 'Minimalist',
+    'elegant': 'Elegant', 'elegancki': 'Elegant', 'casual': 'Casual',
+    'romantic': 'Romantic', 'romantyczny': 'Romantic',
+    'pastel': 'Pastels', 'black': 'Black', 'czarny': 'Black',
+    'white': 'White', 'biały': 'White', 'red': 'Red', 'czerwony': 'Red',
+    'navy': 'Navy', 'granatowy': 'Navy', 'satin': 'Satin', 'satynowy': 'Satin',
+  };
+  for (const [keyword, style] of Object.entries(styleKeywords)) {
+    if (lower.includes(keyword)) {
+      newPills.push({ key: 'style', label: t('pillStyle'), value: style });
+      break;
+    }
+  }
+
+  const categoryKeywords: Record<string, string> = {
+    'dress': 'Dresses', 'sukienk': 'Dresses', 'skirt': 'Skirts',
+    'spódnic': 'Skirts', 'blazer': 'Blazers', 'marynark': 'Blazers',
+    'top': 'Tops', 'blouse': 'Tops', 'bluzk': 'Tops',
+    'trouser': 'Trousers', 'spodni': 'Trousers', 'jeans': 'Jeans',
+    'shoes': 'Shoes', 'buty': 'Shoes',
+  };
+  for (const [keyword, cat] of Object.entries(categoryKeywords)) {
+    if (lower.includes(keyword)) {
+      newPills.push({ key: 'category', label: t('pillCategory'), value: cat });
+      break;
+    }
+  }
+
+  const lengthKeywords: Record<string, string> = { 'midi': 'Midi', 'maxi': 'Maxi', 'mini': 'Mini' };
+  for (const [keyword, len] of Object.entries(lengthKeywords)) {
+    if (lower.includes(keyword)) {
+      newPills.push({ key: 'length', label: t('pillLength'), value: len });
+      break;
+    }
+  }
+
+  if (lower.includes('second-hand') || lower.includes('vinted') || lower.includes('used') || lower.includes('vintage') || lower.includes('używan')) {
+    newPills.push({ key: 'source', label: t('pillSource'), value: 'Second-hand' });
+  }
+
+  const totalPills = [...currentPills];
+  for (const np of newPills) {
+    const idx = totalPills.findIndex(p => p.key === np.key);
+    if (idx >= 0) totalPills[idx] = np;
+    else totalPills.push(np);
+  }
+
+  const hasEnoughContext = totalPills.length >= 2 || messageCount >= 3;
+
+  let reply = '';
+  let chips: string[] | undefined;
+  let products: Product[] | undefined;
+
+  if (hasEnoughContext) {
+    let filtered = [...allProducts];
+    const budgetPill = totalPills.find(p => p.key === 'budget');
+    if (budgetPill) {
+      const max = parseInt(budgetPill.value);
+      if (!isNaN(max)) filtered = filtered.filter(p => p.price <= max);
+    }
+    const catPill = totalPills.find(p => p.key === 'category');
+    if (catPill) {
+      const catMap: Record<string, string> = {
+        'Dresses': 'dresses', 'Skirts': 'skirts', 'Blazers': 'outerwear',
+        'Tops': 'tops', 'Trousers': 'bottoms', 'Jeans': 'bottoms', 'Shoes': 'shoes',
+      };
+      const cat = catMap[catPill.value];
+      if (cat) filtered = filtered.filter(p => p.category === cat);
+    }
+    const sourcePill = totalPills.find(p => p.key === 'source');
+    if (sourcePill && sourcePill.value === 'Second-hand') {
+      filtered = filtered.filter(p => p.isSecondHand);
+    }
+    filtered.sort((a, b) => b.fitScore - a.fitScore);
+    products = filtered.slice(0, 12);
+
+    reply = t('paulaFoundOptions', products.length);
+    chips = [t('chipSecondHand'), t('chipFreeShipping'), t('chipUnder100')];
+  } else if (messageCount === 0) {
+    if (totalPills.find(p => p.key === 'occasion')) {
+      reply = t('paulaOccasionFound');
+    } else if (totalPills.find(p => p.key === 'category')) {
+      reply = t('paulaCategoryFound');
+      chips = [t('chipEveryday'), t('chipOffice'), t('chipWedding'), t('chipDateNight')];
+    } else {
+      reply = t('paulaGeneric');
+      chips = [t('chipEveryday'), t('chipOffice'), t('chipSpecialEvent')];
+    }
+  } else {
+    reply = t('paulaNoted');
+    let filtered = [...allProducts];
+    const budgetPill = totalPills.find(p => p.key === 'budget');
+    if (budgetPill) {
+      const max = parseInt(budgetPill.value);
+      if (!isNaN(max)) filtered = filtered.filter(p => p.price <= max);
+    }
+    filtered.sort((a, b) => b.fitScore - a.fitScore);
+    products = filtered.slice(0, 12);
+  }
+
+  return { reply, chips, products, newPills };
+}
+
+export default function SearchPage() {
+  const navigate = useNavigate();
+  const { lang, t } = useLanguage();
+  const userName = localStorage.getItem('paula-username') || defaultProfile.name;
+  const inspirations: string[] = JSON.parse(localStorage.getItem('paula-inspirations') || '[]');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [contextPills, setContextPills] = useState<ContextPill[]>([]);
+  const [currentProducts, setCurrentProducts] = useState<Product[]>([]);
+  const [editingPill, setEditingPill] = useState<string | null>(null);
+  const [pillEditValue, setPillEditValue] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dupeMode, setDupeMode] = useState(false);
+  const [dupeReference, setDupeReference] = useState(0);
+  const userMsgCount = messages.filter(m => m.sender === 'user').length;
+
+  const referencePrice = 899;
+
+  const runSimilarSearch = () => {
+    const similar = [...allProducts]
+      .sort((a, b) => b.fitScore - a.fitScore || a.price - b.price)
+      .slice(0, 12);
+    setDupeReference(referencePrice);
+    setDupeMode(false);
+    setCurrentProducts(similar);
+    setMessages(prev => [...prev, {
+      id: `p-${Date.now()}`,
+      sender: 'paula',
+      text: t('paulaSimilarFound', similar.length),
+      chips: [t('chipSecondHand'), t('chipUnder100')],
+    }]);
+  };
+
+  const runDupeSearch = () => {
+    const dupes = allProducts
+      .filter(p => p.price <= referencePrice * 0.7)
+      .sort((a, b) => b.fitScore - a.fitScore || a.price - b.price)
+      .slice(0, 12);
+    setDupeReference(referencePrice);
+    setDupeMode(true);
+    setCurrentProducts(dupes);
+    setMessages(prev => [...prev, {
+      id: `p-${Date.now()}`,
+      sender: 'paula',
+      text: t('paulaDupesFound', dupes.length, referencePrice),
+      chips: [t('chipSecondHand'), t('chipUnder100')],
+    }]);
+  };
+
+  const runBothSearch = () => {
+    const both = [...allProducts]
+      .sort((a, b) => b.fitScore - a.fitScore || a.price - b.price)
+      .slice(0, 12);
+    setDupeReference(referencePrice);
+    setDupeMode(true);
+    setCurrentProducts(both);
+    setMessages(prev => [...prev, {
+      id: `p-${Date.now()}`,
+      sender: 'paula',
+      text: t('paulaBothFound', both.length, referencePrice),
+      chips: [t('chipSecondHand'), t('chipUnder100')],
+    }]);
+  };
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const url = String(reader.result);
+      setMessages(prev => [...prev, {
+        id: `u-${Date.now()}`,
+        sender: 'user',
+        text: t('photoUploaded'),
+        photoUploaded: true,
+        photoUrl: url,
+      }]);
+      setTimeout(() => {
+        setMessages(prev => [...prev, {
+          id: `p-${Date.now()}`,
+          sender: 'paula',
+          text: t('paulaPhotoReceived'),
+          chips: [t('findSame'), t('findDupes'), t('findBoth')],
+        }]);
+      }, 500);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const removePill = (key: string) => {
+    setContextPills(prev => prev.filter(p => p.key !== key));
+  };
+
+  const startEditPill = (pill: ContextPill) => {
+    setEditingPill(pill.key);
+    setPillEditValue(pill.value);
+  };
+
+  const savePillEdit = (key: string) => {
+    if (pillEditValue.trim()) {
+      setContextPills(prev => prev.map(p => p.key === key ? { ...p, value: pillEditValue.trim() } : p));
+    }
+    setEditingPill(null);
+  };
+
+  const addMessage = (text: string) => {
+    if (!text.trim()) return;
+
+    const userMsg: Message = {
+      id: `u-${Date.now()}`,
+      sender: 'user',
+      text: text.trim(),
+    };
+
+    setMessages(prev => [...prev, userMsg]);
+    setInputValue('');
+
+    setTimeout(() => {
+      const { reply, chips, products, newPills } = generatePaulaResponse(
+        text, userMsgCount, contextPills, lang, t
+      );
+
+      if (newPills && newPills.length > 0) {
+        setContextPills(prev => {
+          const updated = [...prev];
+          for (const np of newPills) {
+            const idx = updated.findIndex(p => p.key === np.key);
+            if (idx >= 0) updated[idx] = np;
+            else updated.push(np);
+          }
+          return updated;
+        });
+      }
+
+      if (products) setCurrentProducts(products);
+
+      setMessages(prev => [...prev, {
+        id: `p-${Date.now()}`,
+        sender: 'paula',
+        text: reply,
+        chips,
+      }]);
+    }, 600);
+  };
+
+  const handleSend = () => addMessage(inputValue);
+  const handleChipClick = (chip: string) => {
+    if (chip === t('findSame')) {
+      setMessages(prev => [...prev, { id: `u-${Date.now()}`, sender: 'user', text: chip }]);
+      setTimeout(runSimilarSearch, 500);
+      return;
+    }
+    if (chip === t('findDupes')) {
+      setMessages(prev => [...prev, { id: `u-${Date.now()}`, sender: 'user', text: chip }]);
+      setTimeout(runDupeSearch, 500);
+      return;
+    }
+    if (chip === t('findBoth')) {
+      setMessages(prev => [...prev, { id: `u-${Date.now()}`, sender: 'user', text: chip }]);
+      setTimeout(runBothSearch, 500);
+      return;
+    }
+    addMessage(chip);
+  };
+
+
+  const lastPaulaMsg = [...messages].reverse().find(m => m.sender === 'paula');
+  const activeChips = lastPaulaMsg?.chips;
+
+  return (
+    <div className="h-full flex flex-col lg:flex-row overflow-hidden">
+      <div className={`flex flex-col lg:w-1/2 lg:max-w-xl lg:border-r border-border min-h-0 ${currentProducts.length > 0 ? 'shrink-0 h-2/5 lg:h-full' : 'flex-1 lg:h-full'}`}>
+        <div className="border-b border-border px-4 py-3 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-card flex items-center justify-center font-display text-sm">P</div>
+          <div>
+            <div className="text-sm font-medium">Paula</div>
+          <div className="text-[11px] text-muted-foreground">
+              {userName} · {defaultProfile.bodyShape} · {defaultProfile.height} cm
+              {inspirations.length > 0 && ` · ${t('pillInspo')}: ${inspirations.slice(0, 2).join(', ')}`}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+          {messages.length === 0 && (
+            <div className="pt-8 pb-4 text-center">
+              <h1 className="font-display text-3xl lg:text-4xl tracking-tight text-foreground">
+                {t('hiThere')} {userName}
+              </h1>
+              <p className="font-display text-muted-foreground mt-1 text-base">{t('whatLookingFor')}</p>
+            </div>
+          )}
+
+          {messages.map(msg => (
+            <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div
+                className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                  msg.sender === 'user'
+                    ? 'bg-foreground text-background rounded-br-md'
+                    : 'bg-card text-foreground rounded-bl-md'
+                }`}
+              >
+                {msg.photoUploaded && (
+                  msg.photoUrl ? (
+                    <img src={msg.photoUrl} alt={t('photoUploaded')} className="w-32 h-40 object-cover rounded-lg mb-2" />
+                  ) : (
+                    <div className="w-32 h-40 bg-muted rounded-lg mb-2 flex items-center justify-center">
+                      <ImagePlus className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                  )
+                )}
+
+                {msg.text}
+              </div>
+            </div>
+          ))}
+
+          {activeChips && activeChips.length > 0 && (
+            <div className="flex flex-wrap gap-2 pl-0">
+              {activeChips.map(chip => (
+                <button
+                  key={chip}
+                  onClick={() => handleChipClick(chip)}
+                  className="px-4 py-2 border border-border rounded-full text-sm hover:bg-card transition-colors"
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="border-t border-border px-4 py-2 mb-[env(safe-area-inset-bottom)]">
+          {contextPills.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 mb-2">
+              {contextPills.map(pill => (
+                <span
+                  key={pill.key}
+                  className="text-[11px] px-2.5 py-1 bg-card rounded-full flex items-center gap-1.5 text-muted-foreground group"
+                >
+                  {editingPill === pill.key ? (
+                    <input
+                      type="text"
+                      value={pillEditValue}
+                      onChange={e => setPillEditValue(e.target.value)}
+                      onBlur={() => savePillEdit(pill.key)}
+                      onKeyDown={e => e.key === 'Enter' && savePillEdit(pill.key)}
+                      className="bg-transparent border-none outline-none text-[11px] w-16 text-foreground"
+                      autoFocus
+                    />
+                  ) : (
+                    <button
+                      onClick={() => startEditPill(pill)}
+                      className="hover:text-foreground transition-colors"
+                    >
+                      {pill.label}: {pill.value}
+                    </button>
+                  )}
+                  <button onClick={() => removePill(pill.key)} className="hover:text-foreground">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoSelect}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              title={t('findDupesHint')}
+              aria-label={t('findDupes')}
+              className="p-2 rounded-full hover:bg-card shrink-0"
+            >
+              <ImagePlus className="w-5 h-5 text-muted-foreground" />
+            </button>
+
+            <input
+              type="text"
+              value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSend()}
+              placeholder={t('askPaulaAnything')}
+              className="flex-1 py-2.5 px-4 bg-card rounded-full text-sm focus:outline-none min-w-0"
+            />
+            <button
+              onClick={handleSend}
+              className="p-2.5 bg-foreground text-background rounded-full hover:opacity-90 transition-opacity shrink-0"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {currentProducts.length > 0 ? (
+        <div className="flex-1 border-t lg:border-t-0 overflow-y-auto">
+          <div className="p-3 lg:p-8">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-muted-foreground">
+                {dupeMode
+                  ? `${t('dupesTitle')} · ${t('estimatedOriginal')} ~${dupeReference} PLN`
+                  : `${currentProducts.length} ${t('results')}`}
+              </span>
+              <select className="text-xs bg-card rounded-full px-3 py-1 border-0 focus:outline-none">
+                <option>{t('sortFitScore')}</option>
+                <option>{t('priceLowHigh')}</option>
+                <option>{t('priceHighLow')}</option>
+                <option>{t('newest')}</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 lg:gap-4">
+              {currentProducts.map(product => (
+                <div key={product.id} className="relative">
+                  {dupeMode && (
+                    <span className="absolute z-10 top-11 left-3 text-[10px] font-medium px-2 py-0.5 rounded-full bg-background/90 backdrop-blur-sm text-foreground shadow-sm">
+                      {t('cheaperBy', Math.round((1 - product.price / dupeReference) * 100))}
+                    </span>
+                  )}
+                  <ProductCard
+                    product={product}
+                    onBrandClick={b => navigate(`/app/brand/${encodeURIComponent(b)}`)}
+                  />
+                </div>
+              ))}
+            </div>
+
+          </div>
+        </div>
+      ) : (
+        <div className="hidden lg:flex items-center justify-center flex-1">
+          <div className="text-center text-muted-foreground">
+            <p className="text-sm">{t('resultsWillAppear')}</p>
+            <p className="text-xs mt-1">{t('startConversation')}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
