@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Heart, ExternalLink, Star, Send, Leaf, FlaskConical, Sparkles, ShieldCheck, AlertTriangle, ImageIcon, Camera, X, Users, Check, Shirt } from 'lucide-react';
 import { getProductReviews, getProductAverageRating, getProductMaterial, getSimilarBodiesBought } from '@/data/mockData';
 import type { Review } from '@/data/mockData';
+import { useObjectUrls } from '@/lib/useObjectUrls';
 import { FitBadge } from '@/components/FitBadge';
 import { ProductCard } from '@/components/ProductCard';
 import { ProductImage } from '@/components/ProductImage';
@@ -26,6 +27,18 @@ export default function ProductDetail() {
   const [reviewRating, setReviewRating] = useState(5);
   const [localReviews, setLocalReviews] = useState<Review[]>([]);
   const [reviewPhotos, setReviewPhotos] = useState<string[]>([]);
+
+  // Owns the blob URLs behind the attached photos and releases them — on
+  // removal, on submit, and on leaving the screen. See useObjectUrls.
+  const photoUrls = useObjectUrls();
+
+  const removeReviewPhoto = (index: number) => {
+    setReviewPhotos(prev => {
+      const url = prev[index];
+      if (url) photoUrls.revoke(url);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
   const { t } = useLanguage();
   const { has, addItem, markPending } = useWardrobe();
   const { profile, loading: profileLoading } = useBodyProfile();
@@ -89,6 +102,7 @@ export default function ProductDetail() {
     setLocalReviews(prev => [...prev, { ...newReview, photoCount: reviewPhotos.length || undefined }]);
     setReviewText('');
     setReviewRating(5);
+    photoUrls.revokeAll();
     setReviewPhotos([]);
   };
 
@@ -101,7 +115,7 @@ export default function ProductDetail() {
       const files = (e.target as HTMLInputElement).files;
       if (files) {
         Array.from(files).forEach(file => {
-          const url = URL.createObjectURL(file);
+          const url = photoUrls.create(file);
           setReviewPhotos(prev => [...prev, url]);
         });
       }
@@ -493,7 +507,7 @@ export default function ProductDetail() {
                   <div key={i} className="relative w-20 h-24 rounded-lg overflow-hidden group">
                     <img src={photo} alt="" className="w-full h-full object-cover" />
                     <button
-                      onClick={() => setReviewPhotos(prev => prev.filter((_, idx) => idx !== i))}
+                      onClick={() => removeReviewPhoto(i)}
                       className="absolute top-1 right-1 p-0.5 rounded-full bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <X className="w-3 h-3" />
