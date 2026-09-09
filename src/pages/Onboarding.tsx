@@ -202,7 +202,7 @@ export default function Onboarding() {
                     >
                       <div className="text-sm font-medium">{t(shapeKey(mapped))}</div>
                       <div className={`text-xs mt-1 ${active ? 'text-background/70' : 'text-muted-foreground'}`}>
-                        {shape.description}
+                        {t(shape.descriptionKey)}
                       </div>
                     </button>
                   );

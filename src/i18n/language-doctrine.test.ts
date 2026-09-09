@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync, readdirSync } from 'node:fs';
+import { resolve, join } from 'node:path';
 
 /**
  * The language rule, made checkable.
@@ -116,5 +116,52 @@ describe('zasady języka', () => {
       const lower = sentence.toLowerCase();
       expect(FORBIDDEN.some(term => lower.includes(term)), sentence).toBe(false);
     }
+  });
+});
+
+/**
+ * The same rule, applied to every file we own — not only to the translation
+ * table.
+ *
+ * This is not hypothetical tidiness. The hand-picked body shapes carried their
+ * descriptions in `data/mockData.ts`, in English, telling women which
+ * silhouettes "work beautifully on you", what "creates beautiful balance" and
+ * which necklines were "your best friend". It sat in the one screen for
+ * someone with no tape measure, and a guard that read only the translation
+ * file could never have seen it.
+ */
+describe('zasady języka — poza tabelą tłumaczeń', () => {
+  const srcDir = resolve(__dirname, '..');
+
+  function ourStrings(): { path: string; line: number; text: string }[] {
+    const out: { path: string; line: number; text: string }[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name === 'ui' || entry.name === 'test') continue;
+          walk(full);
+          continue;
+        }
+        if (!/\.tsx?$/.test(entry.name) || entry.name.includes('.test.')) continue;
+        readFileSync(full, 'utf8').split('\n').forEach((line, i) => {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return;
+          for (const match of line.matchAll(/(['"`])((?:\\.|(?!\1).){8,})\1/g)) {
+            out.push({ path: full.split('/src/')[1], line: i + 1, text: match[2] });
+          }
+        });
+      }
+    };
+    walk(srcDir);
+    return out;
+  }
+
+  it('żaden plik nie ocenia ciała', () => {
+    const offenders = ourStrings()
+      .filter(({ text }) => FORBIDDEN.some(term => text.toLowerCase().includes(term)))
+      .map(({ path, line, text }) => `${path}:${line} — ${text}`);
+
+    expect(offenders, offenders.join('\n')).toEqual([]);
   });
 });

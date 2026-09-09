@@ -320,13 +320,24 @@ export const defaultProfile: UserProfile = {
   brands: ['COS', 'Mango', 'Arket'],
 };
 
+/**
+ * The hand-picked shapes, for someone with no tape measure.
+ *
+ * `descriptionKey` rather than prose, for two reasons. The prose was English
+ * in a Polish interface, and it broke the product's own language rule: it told
+ * women what "works beautifully" on them, what "creates beautiful balance" and
+ * which necklines were "your best friend". Paula does not rate bodies and does
+ * not prescribe — she describes a proportion and says where a cut is likely to
+ * pull. That is a licence condition (OpenRAIL-M Attachment A, pt. 8), not only
+ * a matter of voice.
+ */
 export const bodyShapes = [
-  { id: 'hourglass', name: 'Hourglass', description: 'Balanced shoulders and hips with a defined waist. Most silhouettes work beautifully on you.' },
-  { id: 'pear', name: 'Pear', description: 'Hips wider than shoulders. A-line and structured tops create beautiful balance.' },
-  { id: 'rectangle', name: 'Rectangle', description: 'Balanced proportions throughout. Waist-defining pieces add dimension.' },
-  { id: 'inverted-triangle', name: 'Inverted Triangle', description: 'Shoulders wider than hips. Volume on bottom creates stunning proportion.' },
-  { id: 'apple', name: 'Apple', description: 'Fuller midsection with slender limbs. Empire waists and V-necks are your best friend.' },
-];
+  { id: 'hourglass', name: 'Hourglass', descriptionKey: 'shapePickHourglass' },
+  { id: 'pear', name: 'Pear', descriptionKey: 'shapePickPear' },
+  { id: 'rectangle', name: 'Rectangle', descriptionKey: 'shapePickRectangle' },
+  { id: 'inverted-triangle', name: 'Inverted Triangle', descriptionKey: 'shapePickInvertedTriangle' },
+  { id: 'apple', name: 'Apple', descriptionKey: 'shapePickApple' },
+] as const;
 
 export const aestheticOptions = [
   { id: 'minimalist', name: 'Minimalist', color: '#e8e5e0' },

@@ -252,6 +252,11 @@ export const translations = {
 
     // Collection Detail
     collectionNotFound: 'Collection not found.',
+    shapePickHourglass: 'Shoulders and hips close in width, waist clearly narrower.',
+    shapePickPear: 'Hips wider than shoulders — a straight cut usually pulls at the hip before the waist.',
+    shapePickRectangle: 'Bust, waist and hips close in measurement; a fitted waist often sits loose.',
+    shapePickInvertedTriangle: 'Shoulders wider than hips — a fitted top usually pulls across the shoulder first.',
+    shapePickApple: 'Waist is the widest of the three measurements; a waist seam tends to press there.',
     productNotFound: 'We could not find this product.',
     inspirationPlaceholder: 'e.g. Hailey Bieber, Zendaya\u2026',
     brandsPlaceholder: 'e.g. Reserved, Mohito, COS\u2026',
@@ -688,6 +693,11 @@ export const translations = {
 
     // Collection Detail
     collectionNotFound: 'Kolekcja nie znaleziona.',
+    shapePickHourglass: 'Ramiona i biodra zbliżone szerokością, talia wyraźnie węższa.',
+    shapePickPear: 'Biodra szersze od ramion — prosty krój zwykle ciągnie w biodrze wcześniej niż w talii.',
+    shapePickRectangle: 'Biust, talia i biodra o zbliżonych obwodach; zaznaczona talia często zostaje luźna.',
+    shapePickInvertedTriangle: 'Ramiona szersze od bioder — dopasowana góra zwykle ciągnie najpierw w ramionach.',
+    shapePickApple: 'Talia jest najszerszym z trzech obwodów; szew w pasie zwykle uciska właśnie tam.',
     productNotFound: 'Nie znale\u017ali\u015bmy tego produktu.',
     inspirationPlaceholder: 'np. Julia Wieniawa, Zendaya\u2026',
     brandsPlaceholder: 'np. Reserved, Mohito, COS\u2026',
