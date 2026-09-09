@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users } from 'lucide-react';
 import { getSimilarBodiesBought } from '@/data/mockData';
@@ -8,19 +8,25 @@ import { useBodyProfile } from '@/lib/profile';
 import { useUserPrefs } from '@/lib/prefs';
 import { useCatalog } from '@/lib/catalog/useCatalog';
 import { scoreProduct, sortByFit } from '@/lib/fit/product';
-
-// Social proof is still mock data (reviews live in mockData.ts).
-const similarBodiesFeed = getSimilarBodiesBought('', 75, 8);
+import { sessionSeed, shuffle } from '@/lib/shuffle';
 
 export default function ForYou() {
-  const [tab, setTab] = useState<'foryou' | 'trending'>('foryou');
   const navigate = useNavigate();
   const { t } = useLanguage();
   const { prefs } = useUserPrefs();
   const userName = prefs.name ?? '';
   const { profile, loading: profileLoading } = useBodyProfile();
   const { products } = useCatalog();
-  const feedProducts = useMemo(() => [...products].sort(() => Math.random() - 0.5), [products]);
+
+  // One seed for the whole browser session, so opening a product and coming
+  // back does not rearrange the page underneath her.
+  const feedSeed = useMemo(() => sessionSeed(), []);
+  const feedProducts = useMemo(() => shuffle(products, feedSeed), [products, feedSeed]);
+
+  // Social proof is still mock data (reviews live in mockData.ts), but it was
+  // being computed once at module load — frozen at import time, before the
+  // catalogue existed, and unable to react to anything afterwards.
+  const similarBodiesFeed = useMemo(() => getSimilarBodiesBought('', 75, 8), []);
   const topFitProducts = useMemo(
     () => sortByFit(products, profile).filter(p => scoreProduct(p, profile)).slice(0, 8),
     [products, profile],
@@ -32,24 +38,11 @@ export default function ForYou() {
         <h1 className="font-display text-2xl lg:text-3xl">
           {userName ? `${t('hiThere').replace(',', '')} ${userName}` : t('hiThere').replace(',', '')}
         </h1>
-        <div className="flex gap-1 bg-card rounded-full p-1">
-          <button
-            onClick={() => setTab('foryou')}
-            className={`px-4 py-2 rounded-full text-sm transition-all ${
-              tab === 'foryou' ? 'bg-foreground text-background' : 'text-muted-foreground'
-            }`}
-          >
-            {t('forYou')}
-          </button>
-          <button
-            onClick={() => setTab('trending')}
-            className={`px-4 py-2 rounded-full text-sm transition-all ${
-              tab === 'trending' ? 'bg-foreground text-background' : 'text-muted-foreground'
-            }`}
-          >
-            {t('trending')}
-          </button>
-        </div>
+        {/* The "Trending" tab is gone rather than hidden behind a flag: it
+            rendered the same list as "For You" with a different heading, and
+            nothing in the catalogue records popularity or recency, so there is
+            no honest way to fill it. It comes back when the "did it fit?" loop
+            has enough data to rank by. */}
       </div>
 
       <section className="mb-12">
@@ -97,9 +90,7 @@ export default function ForYou() {
       )}
 
       <section>
-        <h2 className="font-display text-xl mb-4">
-          {tab === 'foryou' ? t('curatedForYou') : t('trendingNow')}
-        </h2>
+        <h2 className="font-display text-xl mb-4">{t('curatedForYou')}</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
           {feedProducts.map(product => (
             <ProductCard key={product.id} product={product} onBrandClick={b => navigate(`/app/brand/${encodeURIComponent(b)}`)} />
