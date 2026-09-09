@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react';
 import { translate, Language, TranslationKey } from './translations';
 
 interface LanguageContextType {
@@ -39,18 +39,26 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     ),
   );
 
-  const changeLang = (newLang: Language) => {
+  const changeLang = useCallback((newLang: Language) => {
     setLang(newLang);
     localStorage.setItem(LANGUAGE_STORAGE_KEY, newLang);
-  };
+  }, []);
 
-  const t = (key: TranslationKey, ...args: any[]): string => translate(lang, key, ...args);
-
-  return (
-    <LanguageContext.Provider value={{ lang, setLang: changeLang, t }}>
-      {children}
-    </LanguageContext.Provider>
+  const t = useCallback(
+    (key: TranslationKey, ...args: any[]): string => translate(lang, key, ...args),
+    [lang],
   );
+
+  /**
+   * Every screen in the app reads this context, so an unmemoised value made
+   * all of them re-render whenever the provider rendered for any reason at
+   * all — `t` was a new function on every pass, so the value was a new object
+   * on every pass. Now it changes only when the language does, which is the
+   * only time any consumer needs to hear about it.
+   */
+  const value = useMemo(() => ({ lang, setLang: changeLang, t }), [lang, changeLang, t]);
+
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 
 export function useLanguage() {
