@@ -17,7 +17,8 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={createQueryClient()}>{children}</QueryClientProvider>;
 }
 
-const useReady = () => renderHook(() => useWardrobe(), { wrapper });
+/** Named without the `use` prefix: it is a test helper, not a hook. */
+const mountWardrobe = () => renderHook(() => useWardrobe(), { wrapper });
 
 describe('useWardrobe', () => {
   beforeEach(() => {
@@ -25,7 +26,7 @@ describe('useWardrobe', () => {
   });
 
   it('starts empty', async () => {
-    const { result } = useReady();
+    const { result } = mountWardrobe();
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.items).toEqual([]);
@@ -34,7 +35,7 @@ describe('useWardrobe', () => {
   });
 
   it('follows a purchase from click, through confirmation, into the wardrobe', async () => {
-    const { result } = useReady();
+    const { result } = mountWardrobe();
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => { await result.current.markPending('produkt-1'); });
@@ -46,7 +47,7 @@ describe('useWardrobe', () => {
   });
 
   it('lets her say she did not buy it after all', async () => {
-    const { result } = useReady();
+    const { result } = mountWardrobe();
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => { await result.current.markPending('produkt-2'); });
@@ -58,7 +59,7 @@ describe('useWardrobe', () => {
   });
 
   it('counts wears without losing the item', async () => {
-    const { result } = useReady();
+    const { result } = mountWardrobe();
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => { await result.current.addItem('produkt-3'); });
@@ -73,7 +74,7 @@ describe('useWardrobe', () => {
   });
 
   it('does not add the same garment twice', async () => {
-    const { result } = useReady();
+    const { result } = mountWardrobe();
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => { await result.current.addItem('produkt-4'); });
@@ -86,7 +87,7 @@ describe('useWardrobe', () => {
   });
 
   it('builds and removes an outfit', async () => {
-    const { result } = useReady();
+    const { result } = mountWardrobe();
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => { await result.current.createOutfit('Na wesele', ['produkt-1', 'produkt-2']); });
@@ -100,7 +101,7 @@ describe('useWardrobe', () => {
   });
 
   it('removing a garment leaves the rest alone', async () => {
-    const { result } = useReady();
+    const { result } = mountWardrobe();
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
