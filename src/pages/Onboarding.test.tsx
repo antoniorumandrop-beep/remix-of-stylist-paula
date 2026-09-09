@@ -104,3 +104,54 @@ describe('Onboarding — the whole walk', () => {
     expect(screen.getByText('1 / 11')).toBeInTheDocument();
   });
 });
+
+describe('Onboarding — budżet', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  /** Walks to the budget step, which sits after the two taste steps. */
+  const goToBudget = () => {
+    renderOnboarding();
+    fireEvent.change(screen.getByPlaceholderText('Your name'), { target: { value: 'Gabriela' } });
+    for (let i = 0; i < 8; i++) clickContinue();
+    expect(screen.getByText("What's your usual budget per item?")).toBeInTheDocument();
+  };
+
+  const sliders = () => screen.getAllByRole('slider') as HTMLInputElement[];
+
+  it('never lets the minimum climb past the maximum', () => {
+    goToBudget();
+    const [min] = sliders();
+    // The minimum slider runs to 500 while the maximum sits at 300, so the raw
+    // bounds allow an impossible range. Clamping is the only thing stopping it.
+    fireEvent.change(min, { target: { value: '500' } });
+    const [minAfter, maxAfter] = sliders();
+    expect(Number(minAfter.value)).toBeLessThanOrEqual(Number(maxAfter.value));
+    expect(Number(minAfter.value)).toBe(300);
+  });
+
+  it('never lets the maximum drop below the minimum', () => {
+    goToBudget();
+    const [min, max] = sliders();
+    fireEvent.change(min, { target: { value: '250' } });
+    fireEvent.change(max, { target: { value: '100' } });
+    const [minAfter, maxAfter] = sliders();
+    expect(Number(maxAfter.value)).toBeGreaterThanOrEqual(Number(minAfter.value));
+    expect(Number(maxAfter.value)).toBe(250);
+  });
+
+  it('saves a range that is the right way round', async () => {
+    goToBudget();
+    const [min] = sliders();
+    fireEvent.change(min, { target: { value: '500' } });
+    clickContinue(); // 9 — brands
+    clickContinue(); // 10 — summary
+    clickText('Start exploring');
+
+    await waitFor(async () => {
+      const prefs = await backend.prefs.get();
+      expect(prefs.budgetMin).toBeLessThanOrEqual(prefs.budgetMax!);
+    });
+  });
+});

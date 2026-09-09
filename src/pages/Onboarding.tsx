@@ -46,6 +46,18 @@ export default function Onboarding() {
   const [selectedFit, setSelectedFit] = useState<string[]>([]);
   const [selectedOccasions, setSelectedOccasions] = useState<string[]>([]);
   const [budgetRange, setBudgetRange] = useState([100, 300]);
+
+  /**
+   * The two sliders describe one range, so each has to respect the other.
+   * Their raw bounds overlap (minimum runs 50–500, maximum 100–500), so
+   * dragging the minimum past the maximum used to store budgetMin > budgetMax
+   * — a range that matches nothing, and that every screen downstream reads as
+   * an empty budget rather than as a mistake.
+   */
+  const setBudgetMin = (value: number) =>
+    setBudgetRange(([, max]) => [Math.min(value, max), max]);
+  const setBudgetMax = (value: number) =>
+    setBudgetRange(([min]) => [min, Math.max(value, min)]);
   const [pinterestLinks, setPinterestLinks] = useState<string[]>([]);
   const [pinterestInput, setPinterestInput] = useState('');
   const [inspirationPeople, setInspirationPeople] = useState<string[]>([]);
@@ -620,7 +632,7 @@ export default function Onboarding() {
                 max={500}
                 step={25}
                 value={budgetRange[0]}
-                onChange={e => setBudgetRange([Number(e.target.value), budgetRange[1]])}
+                onChange={e => setBudgetMin(Number(e.target.value))}
                 className="w-full accent-foreground"
               />
               <input
@@ -629,7 +641,7 @@ export default function Onboarding() {
                 max={500}
                 step={25}
                 value={budgetRange[1]}
-                onChange={e => setBudgetRange([budgetRange[0], Number(e.target.value)])}
+                onChange={e => setBudgetMax(Number(e.target.value))}
                 className="w-full accent-foreground"
               />
               <div className="flex gap-3">
