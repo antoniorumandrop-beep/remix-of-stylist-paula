@@ -88,7 +88,7 @@ export default function ProductDetail() {
     if (catalogLoading) return null;
     return (
       <div className="max-w-2xl mx-auto px-4 py-20 text-center">
-        <p className="text-muted-foreground">Product not found.</p>
+        <p className="text-muted-foreground">{t('productNotFound')}</p>
         <button onClick={() => navigate(-1)} className="mt-4 text-sm underline underline-offset-4">{t('goBack')}</button>
       </div>
     );

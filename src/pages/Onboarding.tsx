@@ -439,7 +439,7 @@ export default function Onboarding() {
               <div className="flex gap-2 mb-3">
                 <input
                   type="text"
-                  placeholder="e.g. Hailey Bieber, Zendaya..."
+                  placeholder={t('inspirationPlaceholder')}
                   value={inspirationInput}
                   onChange={e => setInspirationInput(e.target.value)}
                   onKeyDown={e => {
@@ -658,7 +658,7 @@ export default function Onboarding() {
             <p className="text-muted-foreground mb-8">{t('optionalBrands')}</p>
             <input
               type="text"
-              placeholder="e.g. Zara, COS, Massimo Dutti..."
+              placeholder={t('brandsPlaceholder')}
               value={brandInput}
               onChange={e => setBrandInput(e.target.value)}
               className="w-full px-4 py-4 bg-card rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-foreground/10 mb-4"

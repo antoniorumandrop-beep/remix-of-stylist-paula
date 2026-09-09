@@ -252,6 +252,9 @@ export const translations = {
 
     // Collection Detail
     collectionNotFound: 'Collection not found.',
+    productNotFound: 'We could not find this product.',
+    inspirationPlaceholder: 'e.g. Hailey Bieber, Zendaya\u2026',
+    brandsPlaceholder: 'e.g. Reserved, Mohito, COS\u2026',
     featureNotReady: 'Not working yet',
     notFoundTitle: 'This page does not exist',
     notFoundMessage: 'The link may be old, or the address slightly off.',
@@ -685,6 +688,9 @@ export const translations = {
 
     // Collection Detail
     collectionNotFound: 'Kolekcja nie znaleziona.',
+    productNotFound: 'Nie znale\u017ali\u015bmy tego produktu.',
+    inspirationPlaceholder: 'np. Julia Wieniawa, Zendaya\u2026',
+    brandsPlaceholder: 'np. Reserved, Mohito, COS\u2026',
     featureNotReady: 'Jeszcze nie działa',
     notFoundTitle: 'Tej strony nie ma',
     notFoundMessage: 'Link może być stary albo adres odrobinę przekręcony.',

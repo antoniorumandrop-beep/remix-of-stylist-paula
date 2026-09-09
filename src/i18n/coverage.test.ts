@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync, readdirSync } from 'node:fs';
+import { resolve, join } from 'node:path';
 
 /**
  * Guards against English leaking into the Polish interface.
@@ -64,5 +64,54 @@ describe('pokrycie tłumaczeń', () => {
     for (const key of DELIBERATELY_IDENTICAL) {
       expect(pl.get(key), `${key} nie jest już identyczne — usuń je z listy wyjątków`).toBe(en.get(key));
     }
+  });
+});
+
+/**
+ * The table itself can be complete while the interface still speaks English,
+ * because a screen can simply not use the table at all. That is how the 404
+ * page and "Product not found." stayed in English: both were hard-coded.
+ */
+describe('teksty poza tabelą tłumaczeń', () => {
+  const pagesDir = resolve(__dirname, '..', 'pages');
+  const componentsDir = resolve(__dirname, '..', 'components');
+
+  /** Reads every screen and component we own, skipping shadcn and tests. */
+  function ourFiles(): { path: string; text: string }[] {
+    const out: { path: string; text: string }[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name === 'ui') continue; // shadcn, not ours to translate
+          walk(full);
+          continue;
+        }
+        if (!entry.name.endsWith('.tsx') || entry.name.includes('.test.')) continue;
+        out.push({ path: full, text: readFileSync(full, 'utf8') });
+      }
+    };
+    walk(pagesDir);
+    walk(componentsDir);
+    return out;
+  }
+
+  it('nie zostawia widocznego tekstu wpisanego na sztywno', () => {
+    const offenders: string[] = [];
+    for (const { path, text } of ourFiles()) {
+      text.split('\n').forEach((line, i) => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return;
+        // Text sitting directly between JSX tags, with no {t(...)} around it.
+        for (const match of line.matchAll(/>([A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż][^<>{}\n]{6,})</g)) {
+          offenders.push(`${path.split('/src/')[1]}:${i + 1} — ${match[1].trim()}`);
+        }
+      });
+    }
+
+    // The error boundary is the one deliberate exception: it renders when
+    // there may be no language context left to read, so its copy is fixed.
+    const real = offenders.filter(o => !o.startsWith('components/ErrorBoundary.tsx'));
+    expect(real, real.join('\n')).toEqual([]);
   });
 });
