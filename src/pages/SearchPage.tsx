@@ -42,6 +42,9 @@ export default function SearchPage() {
   const [dupeMode, setDupeMode] = useState(false);
   const [dupeReference, setDupeReference] = useState(0);
   const [sortMode, setSortMode] = useState<SortMode>('fit');
+  // Between sending and the answer nothing moved on screen, so a slow turn was
+  // indistinguishable from a message that never sent.
+  const [paulaThinking, setPaulaThinking] = useState(false);
 
   const runSimilarSearch = () => {
     const similar = sortByFit(catalog, profile, (a, b) => a.price - b.price).slice(0, 12);
@@ -104,7 +107,9 @@ export default function SearchPage() {
         photoUploaded: true,
         photoUrl: url,
       }]);
+      setPaulaThinking(true);
       setTimeout(() => {
+        setPaulaThinking(false);
         setMessages(prev => [...prev, {
           id: `p-${Date.now()}`,
           sender: 'paula',
@@ -124,7 +129,7 @@ export default function SearchPage() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, paulaThinking]);
 
   const removePill = (key: string) => {
     setContextPills(prev => prev.filter(p => p.key !== key));
@@ -157,9 +162,11 @@ export default function SearchPage() {
     // One turn to Paula's brain. Local rules today, the model once
     // VITE_AI_ENDPOINT is set — this screen does not change either way.
     const history = messages.map(m => ({ sender: m.sender, text: m.text }));
+    setPaulaThinking(true);
     void stylist
       .respond({ text: text.trim(), history, pills: contextPills, profile, catalog, lang })
       .then(({ reply, chips, products, pills }) => {
+        setPaulaThinking(false);
         setContextPills(pills);
         if (products) setCurrentProducts(products);
         setMessages(prev => [...prev, {
@@ -170,6 +177,7 @@ export default function SearchPage() {
         }]);
       })
       .catch(() => {
+        setPaulaThinking(false);
         setMessages(prev => [...prev, { id: `p-${Date.now()}`, sender: 'paula', text: t('paulaUnavailable') }]);
       });
   };
@@ -194,7 +202,11 @@ export default function SearchPage() {
       return;
     }
     setMessages(prev => [...prev, { id: `u-${Date.now()}`, sender: 'user', text: chip.label }]);
-    setTimeout(search, 500);
+    setPaulaThinking(true);
+    setTimeout(() => {
+      setPaulaThinking(false);
+      search();
+    }, 500);
   };
 
 
@@ -265,6 +277,19 @@ export default function SearchPage() {
                   {chip.label}
                 </button>
               ))}
+            </div>
+          )}
+
+          {paulaThinking && (
+            <div className="flex justify-start" aria-live="polite">
+              <div className="bg-card text-muted-foreground px-4 py-3 rounded-2xl rounded-bl-md text-sm flex items-center gap-2">
+                <span className="flex gap-1" aria-hidden="true">
+                  <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse [animation-delay:150ms]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse [animation-delay:300ms]" />
+                </span>
+                {t('paulaTyping')}
+              </div>
             </div>
           )}
 

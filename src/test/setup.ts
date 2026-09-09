@@ -13,3 +13,11 @@ Object.defineProperty(window, "matchMedia", {
     dispatchEvent: () => {},
   }),
 });
+
+// jsdom implements no layout, so it has no scrollIntoView. Screens that keep a
+// conversation pinned to the bottom call it on every new message; without this
+// they throw during render and the test failure points at the test, not at the
+// missing browser API.
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}
