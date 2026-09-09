@@ -21,5 +21,6 @@ export function rawToProduct(raw: RawProduct): Product {
     material: raw.material,
     sizes: raw.sizes,
     source: raw.source,
+    fetchedAt: raw.fetchedAt,
   };
 }

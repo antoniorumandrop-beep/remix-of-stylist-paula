@@ -61,6 +61,8 @@ export interface Product {
   material?: string;
   sizes?: string;
   source?: string;
+  /** When the source handed us this record. Absent on the mock catalogue. */
+  fetchedAt?: string;
   /** The enriched layer, when the product came through the import pipeline. */
   fit?: FitAttributes;
 }

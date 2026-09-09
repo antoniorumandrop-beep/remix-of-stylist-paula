@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Send, ImagePlus, X } from 'lucide-react';
 import type { Product } from '@/lib/catalog/types';
@@ -8,6 +8,7 @@ import { useBodyProfile } from '@/lib/profile';
 import { useUserPrefs } from '@/lib/prefs';
 import { useCatalog } from '@/lib/catalog/useCatalog';
 import { sortByFit } from '@/lib/fit/product';
+import { sortProducts, type SortMode } from '@/lib/catalog/sort';
 import { shapeKey } from '@/lib/fit/copy';
 import { stylist, type ContextPill } from '@/lib/ai';
 
@@ -39,6 +40,7 @@ export default function SearchPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dupeMode, setDupeMode] = useState(false);
   const [dupeReference, setDupeReference] = useState(0);
+  const [sortMode, setSortMode] = useState<SortMode>('fit');
 
   const referencePrice = 899;
 
@@ -185,6 +187,11 @@ export default function SearchPage() {
   };
 
 
+  const sortedProducts = useMemo(
+    () => sortProducts(currentProducts, profile, sortMode),
+    [currentProducts, profile, sortMode],
+  );
+
   const lastPaulaMsg = [...messages].reverse().find(m => m.sender === 'paula');
   const activeChips = lastPaulaMsg?.chips;
 
@@ -330,15 +337,20 @@ export default function SearchPage() {
                   ? `${t('dupesTitle')} · ${t('estimatedOriginal')} ~${dupeReference} PLN`
                   : `${currentProducts.length} ${t('results')}`}
               </span>
-              <select className="text-xs bg-card rounded-full px-3 py-1 border-0 focus:outline-none">
-                <option>{t('sortFitScore')}</option>
-                <option>{t('priceLowHigh')}</option>
-                <option>{t('priceHighLow')}</option>
-                <option>{t('newest')}</option>
+              <select
+                value={sortMode}
+                onChange={e => setSortMode(e.target.value as SortMode)}
+                aria-label={t('sortBy')}
+                className="text-xs bg-card rounded-full px-3 py-1 border-0 focus:outline-none"
+              >
+                <option value="fit">{t('sortFitScore')}</option>
+                <option value="price-asc">{t('priceLowHigh')}</option>
+                <option value="price-desc">{t('priceHighLow')}</option>
+                <option value="newest">{t('newest')}</option>
               </select>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 lg:gap-4">
-              {currentProducts.map(product => (
+              {sortedProducts.map(product => (
                 <div key={product.id} className="relative">
                   {dupeMode && (
                     <span className="absolute z-10 top-11 left-3 text-[10px] font-medium px-2 py-0.5 rounded-full bg-background/90 backdrop-blur-sm text-foreground shadow-sm">
