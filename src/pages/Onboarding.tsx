@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, ChevronRight, Upload, X, Link, ImagePlus, UserRound, HelpCircle } from 'lucide-react';
+import { ChevronRight, X, Link, ImagePlus, UserRound, HelpCircle } from 'lucide-react';
 import { bodyShapes, aestheticOptions, fitOptions, occasionOptions, brands } from '@/data/mockData';
 import { MeasureGuide, type MeasureKey } from '@/components/MeasureGuide';
 import { useLanguage } from '@/i18n/LanguageContext';
@@ -10,7 +10,7 @@ import { classifyShape } from '@/lib/fit/shape';
 import type { BodyShape } from '@/lib/fit/types';
 import { shapeKey } from '@/lib/fit/copy';
 
-const TOTAL_STEPS = 11;
+const TOTAL_STEPS = 10;
 
 // The picker still uses the five everyday names; FFIT is finer-grained.
 const SHAPE_FROM_PICKER: Record<string, BodyShape> = {
@@ -26,7 +26,6 @@ export default function Onboarding() {
   const { t } = useLanguage();
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
-  const [photoUploaded, setPhotoUploaded] = useState(false);
   const [proportions, setProportions] = useState({
     shoulders: 38,
     bust: 88,
@@ -93,10 +92,10 @@ export default function Onboarding() {
   // halfway through loses nothing. The last step saves the whole set again.
   const next = () => {
     if (step === 0 && name.trim()) void updatePrefs({ name: name.trim() });
-    if (step === 2 || step === 3) persistProfile();
-    if (step === 4) void updatePrefs({ inspirations: inspirationPeople, pinterestLinks });
-    if (step === 5) void updatePrefs({ aesthetics: selectedAesthetics });
-    if (step === 6) void updatePrefs({ fitPrefs: selectedFit });
+    if (step === 1 || step === 2) persistProfile();
+    if (step === 3) void updatePrefs({ inspirations: inspirationPeople, pinterestLinks });
+    if (step === 4) void updatePrefs({ aesthetics: selectedAesthetics });
+    if (step === 5) void updatePrefs({ fitPrefs: selectedFit });
     if (step === TOTAL_STEPS - 1) {
       void updatePrefs({
         name: name.trim() || savedPrefs.name,
@@ -120,7 +119,7 @@ export default function Onboarding() {
 
   const canProceed = () => {
     if (step === 0) return name.length > 0;
-    if (step === 2) return noTape ? pickedShape !== null : measurementsValid;
+    if (step === 1) return noTape ? pickedShape !== null : measurementsValid;
     return true;
   };
 
@@ -151,47 +150,9 @@ export default function Onboarding() {
       case 1:
         return (
           <div>
-            <h2 className="font-display text-3xl md:text-4xl mb-3">{t('bodyScan')}</h2>
-            <p className="text-muted-foreground mb-8">{t('bodyScanDesc')}</p>
-            <div className="bg-card rounded-2xl p-8 mb-6">
-              <div className="flex flex-col items-center gap-6">
-                <div className="w-32 h-56 border-2 border-dashed border-border rounded-2xl flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="w-8 h-8 rounded-full border-2 border-muted-foreground mx-auto mb-2" />
-                    <div className="w-6 h-16 border-2 border-muted-foreground mx-auto mb-1 rounded-sm" />
-                    <div className="flex gap-1 justify-center">
-                      <div className="w-3 h-12 border-2 border-muted-foreground rounded-sm" />
-                      <div className="w-3 h-12 border-2 border-muted-foreground rounded-sm" />
-                    </div>
-                  </div>
-                </div>
-                <div className="text-sm text-muted-foreground text-center max-w-xs">{t('standStraight')}</div>
-                <button
-                  onClick={() => setPhotoUploaded(true)}
-                  className="flex items-center gap-2 px-6 py-3 bg-foreground text-background rounded-full text-sm font-medium"
-                >
-                  <Upload className="w-4 h-4" />
-                  {t('uploadPhoto')}
-                </button>
-                {photoUploaded && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Check className="w-4 h-4" /> {t('photoUploaded')}
-                  </div>
-                )}
-              </div>
-            </div>
-            <button onClick={next} className="text-sm text-muted-foreground underline underline-offset-4">
-              {t('skipForNow')}
-            </button>
-          </div>
-        );
-
-      case 2:
-        return (
-          <div>
             <h2 className="font-display text-3xl md:text-4xl mb-3">{t('yourProportions')}</h2>
             <p className="text-muted-foreground mb-6">
-              {noTape ? t('pickYourShape') : photoUploaded ? t('proportionsFromPhoto') : t('proportionsManual')}
+              {noTape ? t('pickYourShape') : t('proportionsManual')}
             </p>
 
             {/* Read before measuring, not after: the instructions are what takes
@@ -385,7 +346,7 @@ export default function Onboarding() {
           </div>
         );
 
-      case 3:
+      case 2:
         return (
           <div>
             <h2 className="font-display text-3xl md:text-4xl mb-3">{t('howTallAreYou')}</h2>
@@ -402,7 +363,7 @@ export default function Onboarding() {
           </div>
         );
 
-      case 4:
+      case 3:
         return (
           <div>
             <h2 className="font-display text-3xl md:text-4xl mb-3">{t('showMeYourStyle')}</h2>
@@ -539,7 +500,7 @@ export default function Onboarding() {
           </div>
         );
 
-      case 5:
+      case 4:
         return (
           <div>
             <h2 className="font-display text-3xl md:text-4xl mb-3">{t('whichAesthetics')}</h2>
@@ -567,7 +528,7 @@ export default function Onboarding() {
           </div>
         );
 
-      case 6:
+      case 5:
         return (
           <div>
             <h2 className="font-display text-3xl md:text-4xl mb-3">{t('howShouldClothesSit')}</h2>
@@ -593,7 +554,7 @@ export default function Onboarding() {
           </div>
         );
 
-      case 7:
+      case 6:
         return (
           <div>
             <h2 className="font-display text-3xl md:text-4xl mb-3">{t('whatDoYouDressFor')}</h2>
@@ -616,7 +577,7 @@ export default function Onboarding() {
           </div>
         );
 
-      case 8:
+      case 7:
         return (
           <div>
             <h2 className="font-display text-3xl md:text-4xl mb-3">{t('usualBudget')}</h2>
@@ -661,7 +622,7 @@ export default function Onboarding() {
           </div>
         );
 
-      case 9:
+      case 8:
         return (
           <div>
             <h2 className="font-display text-3xl md:text-4xl mb-3">{t('anyBrandsYouLove')}</h2>
@@ -679,7 +640,7 @@ export default function Onboarding() {
           </div>
         );
 
-      case 10:
+      case 9:
         return (
           <div className="text-center">
             <h2 className="font-display text-4xl md:text-5xl mb-4">{t('paulaIsReady')}</h2>

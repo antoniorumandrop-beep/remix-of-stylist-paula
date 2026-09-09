@@ -52,27 +52,26 @@ describe('Onboarding — the whole walk', () => {
     fireEvent.change(screen.getByPlaceholderText('Your name'), { target: { value: 'Gabriela' } });
     clickContinue();
 
-    clickContinue(); // 1 — body scan
-    clickContinue(); // 2 — proportions (defaults are already valid)
-    clickContinue(); // 3 — height
-    clickContinue(); // 4 — style inspiration
+    clickContinue(); // 1 — proportions (defaults are already valid)
+    clickContinue(); // 2 — height
+    clickContinue(); // 3 — style inspiration
 
-    // 5 — aesthetics
+    // 4 — aesthetics
     expect(screen.getByText('Which of these feel like you?')).toBeInTheDocument();
     clickText('Minimalist');
     clickText('Classic');
     clickContinue();
 
-    // 6 — how clothes should sit
+    // 5 — how clothes should sit
     expect(screen.getByText('How do you like clothes to sit?')).toBeInTheDocument();
     clickText('Relaxed');
     clickContinue();
 
-    clickContinue(); // 7 — occasions
-    clickContinue(); // 8 — budget
-    clickContinue(); // 9 — brands
+    clickContinue(); // 6 — occasions
+    clickContinue(); // 7 — budget
+    clickContinue(); // 8 — brands
 
-    // 10 — summary. The footer is gone here, so the save runs from this button.
+    // 9 — summary. The footer is gone here, so the save runs from this button.
     clickText('Start exploring');
 
     await waitFor(async () => {
@@ -91,7 +90,6 @@ describe('Onboarding — the whole walk', () => {
     clickContinue();
     clickContinue();
     clickContinue();
-    clickContinue();
 
     clickText('Bohemian');
     clickContinue();
@@ -104,7 +102,7 @@ describe('Onboarding — the whole walk', () => {
 
   it('shows every step, and the summary last', () => {
     renderOnboarding();
-    expect(screen.getByText('1 / 11')).toBeInTheDocument();
+    expect(screen.getByText('1 / 10')).toBeInTheDocument();
   });
 });
 
@@ -120,7 +118,7 @@ describe('Onboarding — budżet', () => {
   const goToBudget = () => {
     renderOnboarding();
     fireEvent.change(screen.getByPlaceholderText('Your name'), { target: { value: 'Gabriela' } });
-    for (let i = 0; i < 8; i++) clickContinue();
+    for (let i = 0; i < 7; i++) clickContinue();
     expect(screen.getByText("What's your usual budget per item?")).toBeInTheDocument();
   };
 
@@ -151,8 +149,8 @@ describe('Onboarding — budżet', () => {
     goToBudget();
     const [min] = sliders();
     fireEvent.change(min, { target: { value: '500' } });
-    clickContinue(); // 9 — brands
-    clickContinue(); // 10 — summary
+    clickContinue(); // 8 — brands
+    clickContinue(); // 9 — summary
     clickText('Start exploring');
 
     await waitFor(async () => {
