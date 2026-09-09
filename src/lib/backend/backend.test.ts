@@ -110,7 +110,14 @@ describe('backend contract (local)', () => {
     expect(list[0].fit?.stretchLevel?.value).toBe('high');
     expect((await b.catalog.get('brand:x'))?.imageUrl).toBe('https://x/1.jpg');
     // Re-import with the same id replaces, not duplicates.
-    await b.catalog.importRaw([{ ...list[0], id: 'brand:x', source: 'brand', externalId: 'x', currency: 'PLN', fetchedAt: 'later', price: 149 } as any]);
+    // Spelled out rather than spread from `list[0]`: that is the enriched view
+    // of the product, not the raw record the importer takes, and casting one to
+    // the other hid the difference instead of stating it.
+    await b.catalog.importRaw([{
+      id: 'brand:x', source: 'brand', externalId: 'x', name: 'Sukienka midi kopertowa z dekoltem w serek',
+      brand: 'Marka', price: 149, currency: 'PLN', category: 'dresses', imageUrl: 'https://x/1.jpg',
+      material: '95% wiskoza, 5% elastan', fetchedAt: 'later',
+    }]);
     expect((await b.catalog.get('brand:x'))?.price).toBe(149);
     expect(await b.catalog.listImported()).toHaveLength(1);
     await b.catalog.clearImported();
