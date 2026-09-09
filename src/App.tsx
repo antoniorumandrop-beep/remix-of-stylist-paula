@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageProvider } from "@/i18n/LanguageContext";
 import { BackendProvider } from "@/lib/backend/BackendProvider";
 import { RequireAuth } from "@/components/RequireAuth";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Welcome from "./pages/Welcome";
 import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
@@ -23,37 +24,39 @@ import NotFound from "./pages/NotFound";
 import { AppShell } from "./components/AppShell";
 
 const App = () => (
-  <BackendProvider>
-    <LanguageProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Welcome />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
-            <Route path="/app" element={<RequireAuth><AppShell /></RequireAuth>}>
-              <Route index element={<Navigate to="/app/search" replace />} />
-              <Route path="for-you" element={<ForYou />} />
-              <Route path="search" element={<SearchPage />} />
-              <Route path="saved" element={<Saved />} />
-              <Route path="profile" element={<Profile />} />
-              <Route path="brand/:id" element={<BrandPage />} />
-              <Route path="product/:id" element={<ProductDetail />} />
-              <Route path="collection/:id" element={<CollectionDetail />} />
-              <Route path="alerts" element={<Alerts />} />
-              <Route path="build-your-style" element={<BuildYourStyle />} />
-              <Route path="fitting-room" element={<FittingRoom />} />
-            </Route>
-            {/* Brand-side tooling, not linked from the app's navigation. */}
-            <Route path="/admin/import" element={<RequireAuth><ImportProducts /></RequireAuth>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </LanguageProvider>
-  </BackendProvider>
+  <ErrorBoundary>
+    <BackendProvider>
+      <LanguageProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Welcome />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
+              <Route path="/app" element={<RequireAuth><AppShell /></RequireAuth>}>
+                <Route index element={<Navigate to="/app/search" replace />} />
+                <Route path="for-you" element={<ForYou />} />
+                <Route path="search" element={<SearchPage />} />
+                <Route path="saved" element={<Saved />} />
+                <Route path="profile" element={<Profile />} />
+                <Route path="brand/:id" element={<BrandPage />} />
+                <Route path="product/:id" element={<ProductDetail />} />
+                <Route path="collection/:id" element={<CollectionDetail />} />
+                <Route path="alerts" element={<Alerts />} />
+                <Route path="build-your-style" element={<BuildYourStyle />} />
+                <Route path="fitting-room" element={<FittingRoom />} />
+              </Route>
+              {/* Brand-side tooling, not linked from the app's navigation. */}
+              <Route path="/admin/import" element={<RequireAuth><ImportProducts /></RequireAuth>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </LanguageProvider>
+    </BackendProvider>
+  </ErrorBoundary>
 );
 
 export default App;
