@@ -64,7 +64,12 @@ export function slugify(text: string): string {
   return text
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    // \u0300-\u036f is the combining-diacritics block NFD leaves behind.
+    // Written as escapes on purpose: as literal characters they are invisible
+    // in the source and each one visually attaches to the bracket before it,
+    // so any tool that normalises the file can quietly destroy the range —
+    // and this is the line that turns polish product names into slugs.
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/ł/g, 'l')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
@@ -73,7 +78,9 @@ export function slugify(text: string): string {
 
 /** Minimal RFC 4180 reader: quoted fields, escaped quotes, newlines inside quotes. */
 export function parseCsv(text: string, delimiter?: string): string[][] {
-  const src = text.replace(/^﻿/, '');
+  // Polish Excel writes a byte-order mark; as a literal character it is
+  // invisible here, so it goes in as an escape.
+  const src = text.replace(/^\uFEFF/, '');
   const delim = delimiter ?? detectDelimiter(src);
   const rows: string[][] = [];
   let row: string[] = [];

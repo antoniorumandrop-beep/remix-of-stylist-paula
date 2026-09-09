@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseBrandFeed, parseCsv, parsePrice, normalizeCategory, FEED_TEMPLATE_CSV } from './feed';
+import { parseBrandFeed, parseCsv, parsePrice, normalizeCategory, slugify, FEED_TEMPLATE_CSV } from './feed';
 
 const OPTS = { source: 'brand', fetchedAt: '2026-09-08T00:00:00.000Z' };
 
@@ -87,5 +87,39 @@ describe('parseBrandFeed', () => {
     expect(errors).toEqual([]);
     expect(products[0].category).toBe('tops');
     expect(products[0].imageUrl).toBe('https://x/1.jpg');
+  });
+});
+
+/**
+ * Two regexes in this file were written with the characters they match typed
+ * literally: the byte-order mark, and the combining-diacritics block. Both are
+ * invisible in the source, and the combining marks attach visually to the
+ * bracket before them, so a tool that normalises the file could destroy either
+ * range without anything looking wrong. They are escapes now; these tests are
+ * what would notice if they stopped working.
+ */
+describe('znaki niewidzialne w parserze', () => {
+  it('strips the byte-order mark Polish Excel writes', () => {
+    const withBom = '﻿name;brand;price;category\nSukienka;Marka;199;sukienki';
+    const result = parseBrandFeed(withBom, { source: 'brand' });
+
+    expect(result.errors).toEqual([]);
+    expect(result.products).toHaveLength(1);
+    expect(result.products[0].name).toBe('Sukienka');
+  });
+
+  it('keeps working when the header has no mark', () => {
+    const plain = 'name;brand;price;category\nSukienka;Marka;199;sukienki';
+    expect(parseBrandFeed(plain, { source: 'brand' }).products).toHaveLength(1);
+  });
+
+  it('strips Polish diacritics when building a slug', () => {
+    expect(slugify('Spódnica ołówkowa')).toBe('spodnica-olowkowa');
+    expect(slugify('Żółta sukienka')).toBe('zolta-sukienka');
+    expect(slugify('Bluzka z lnu — nowość')).toBe('bluzka-z-lnu-nowosc');
+  });
+
+  it('handles a name that is only diacritics', () => {
+    expect(slugify('ąćęłńóśźż')).toBe('acelnoszz');
   });
 });
