@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Heart, ExternalLink, Star, Send, Leaf, FlaskConical, Sparkles, ShieldCheck, AlertTriangle, ImageIcon, Camera, X, Users, Check, Shirt } from 'lucide-react';
 import { getProductReviews, getProductAverageRating, getProductMaterial, getSimilarBodiesBought } from '@/data/mockData';
@@ -49,6 +49,41 @@ export default function ProductDetail() {
   const { products: catalog, byId, loading: catalogLoading } = useCatalog();
 
   const product = id ? byId.get(id) : undefined;
+
+  /**
+   * These sit above the "product not found" return because hooks have to run
+   * in the same order on every render, and they are memoised because sorting
+   * by fit runs the scorer over every product in the category. Left bare in
+   * the render body it ran again on every keystroke in the review box —
+   * invisible with fifty fixtures, a stutter with a brand feed of several
+   * hundred, and none of it depends on what she is typing.
+   */
+  const allReviews = useMemo(
+    () => (product ? [...getProductReviews(product.id), ...localReviews] : []),
+    [product, localReviews],
+  );
+  const totalAvg = useMemo(
+    () => (allReviews.length > 0
+      ? Math.round((allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length) * 10) / 10
+      : 0),
+    [allReviews],
+  );
+  const fit = useMemo(() => (product ? scoreProduct(product, profile) : null), [product, profile]);
+  const lengthNote = useMemo(
+    () => (product ? evaluateLength(getProductFitAttributes(product)?.lengthClass?.value, profile?.heightCm) : null),
+    [product, profile?.heightCm],
+  );
+  const similar = useMemo(
+    () => (product
+      ? sortByFit(catalog.filter(p => p.id !== product.id && p.category === product.category), profile).slice(0, 4)
+      : []),
+    [catalog, product, profile],
+  );
+  const similarBodies = useMemo(
+    () => (product ? getSimilarBodiesBought(product.id, 75, 4) : []),
+    [product],
+  );
+
   if (!product) {
     if (catalogLoading) return null;
     return (
@@ -62,15 +97,8 @@ export default function ProductDetail() {
   // Imported products carry their real composition; the mock quality panel
   // only makes sense for the mock catalog.
   const material = product.source ? null : getProductMaterial(product.id);
-  const existingReviews = getProductReviews(product.id);
-  const allReviews = [...existingReviews, ...localReviews];
   const { avg, count } = getProductAverageRating(product.id);
   const totalCount = count + localReviews.length;
-  const totalAvg = allReviews.length > 0
-    ? Math.round((allReviews.reduce((s, r) => s + r.rating, 0) / allReviews.length) * 10) / 10
-    : 0;
-
-  const fit = scoreProduct(product, profile);
   const feedback = forProduct(product.id);
   const owned = has(product.id);
   const feedbackLabel = (a: FitAnswer) =>
@@ -80,14 +108,6 @@ export default function ProductDetail() {
     (verdict === 'tight' && answer === 'tight') ||
     (verdict === 'loose' && answer === 'loose') ||
     (verdict === 'neutral' && answer === 'ok');
-  const lengthNote = evaluateLength(getProductFitAttributes(product)?.lengthClass?.value, profile?.heightCm);
-
-  const similar = sortByFit(
-    catalog.filter(p => p.id !== product.id && p.category === product.category),
-    profile,
-  ).slice(0, 4);
-
-  const similarBodies = getSimilarBodiesBought(product.id, 75, 4);
 
   const handleSubmitReview = () => {
     if (!reviewText.trim()) return;
