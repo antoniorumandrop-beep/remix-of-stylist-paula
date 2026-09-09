@@ -468,7 +468,13 @@ export default function ProductDetail() {
         )}
 
         <div className="bg-card rounded-xl p-5">
-          <h3 className="text-sm font-medium mb-3">{t('writeReview')}</h3>
+          <h3 className="text-sm font-medium mb-1">{t('writeReview')}</h3>
+          {/* Reviews live in component state and go nowhere. Persisting them
+              locally would be worse than losing them: she would write one, see
+              it appear, and reasonably conclude it had been published. Saying
+              so is the only honest option until reviews have a table behind
+              them — PLUG(supabase), and a schema decision that is not mine. */}
+          <p className="text-xs text-muted-foreground mb-3">{t('reviewDemoNote')}</p>
           <div className="flex items-center gap-1 mb-3">
             {Array.from({ length: 5 }).map((_, i) => (
               <button key={i} onClick={() => setReviewRating(i + 1)} className="p-0.5">
