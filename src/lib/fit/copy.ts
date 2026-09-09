@@ -1,8 +1,8 @@
-import type { TranslationKey } from '@/i18n/translations';
+import type { TranslationKey, TranslationArgs } from '@/i18n/translations';
 import type { BodyPoint, BodyShape, Verdict } from './types';
 import type { LengthNote } from './length';
 
-type T = (key: TranslationKey, ...args: any[]) => string;
+type T = <K extends TranslationKey>(key: K, ...args: TranslationArgs<K>) => string;
 
 /**
  * Maps the engine's stable reason codes to translation keys. The engine never

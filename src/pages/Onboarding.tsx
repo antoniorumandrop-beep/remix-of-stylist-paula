@@ -4,6 +4,7 @@ import { ChevronRight, X, Link, ImagePlus, UserRound, HelpCircle } from 'lucide-
 import { bodyShapes, aestheticOptions, fitOptions, occasionOptions, brands } from '@/data/mockData';
 import { MeasureGuide, type MeasureKey } from '@/components/MeasureGuide';
 import { useLanguage } from '@/i18n/LanguageContext';
+import type { TranslationKey } from '@/i18n/translations';
 import { useBodyProfile } from '@/lib/profile';
 import { useUserPrefs } from '@/lib/prefs';
 import { classifyShape } from '@/lib/fit/shape';
@@ -521,7 +522,7 @@ export default function Onboarding() {
                     style={{ backgroundColor: opt.color }}
                     aria-hidden="true"
                   />
-                  {t(opt.name as never)}
+                  {t(opt.name as TranslationKey)}
                 </button>
               ))}
             </div>
@@ -547,7 +548,7 @@ export default function Onboarding() {
                       : 'bg-card hover:bg-card/80'
                   }`}
                 >
-                  {t(opt.label as never)}
+                  {t(opt.label as TranslationKey)}
                 </button>
               ))}
             </div>
@@ -570,7 +571,7 @@ export default function Onboarding() {
                       : 'bg-card hover:bg-card/80'
                   }`}
                 >
-                  {t(opt as any)}
+                  {t(opt as TranslationKey)}
                 </button>
               ))}
             </div>

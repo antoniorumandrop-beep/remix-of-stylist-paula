@@ -845,9 +845,27 @@ export const translations = {
 export type Language = keyof typeof translations;
 export type TranslationKey = keyof typeof translations.en;
 
+/**
+ * The arguments a given key expects.
+ *
+ * Most entries are plain strings and take none; some are small functions that
+ * interpolate a count or a name. Deriving the parameters from the entry itself
+ * means a message like `adminImportedToast` cannot be called without its
+ * number — which used to produce "Zaimportowano undefined produktów" with
+ * nothing to warn about it.
+ */
+export type TranslationArgs<K extends TranslationKey> =
+  (typeof translations.en)[K] extends (...args: infer P) => string ? P : [];
+
 /** `t()` without a React context — for code that runs outside components. */
-export function translate(lang: Language, key: TranslationKey, ...args: any[]): string {
+export function translate<K extends TranslationKey>(
+  lang: Language,
+  key: K,
+  ...args: TranslationArgs<K>
+): string {
   const value = translations[lang][key] ?? translations.en[key];
-  if (typeof value === 'function') return (value as (...a: any[]) => string)(...args);
+  if (typeof value === 'function') {
+    return (value as (...a: unknown[]) => string)(...(args as unknown[]));
+  }
   return value as string;
 }

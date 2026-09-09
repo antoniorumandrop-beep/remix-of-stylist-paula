@@ -1,10 +1,11 @@
 import { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react';
-import { translate, Language, TranslationKey } from './translations';
+import { translate, type Language, type TranslationKey, type TranslationArgs } from './translations';
 
 interface LanguageContextType {
   lang: Language;
   setLang: (lang: Language) => void;
-  t: (key: TranslationKey, ...args: any[]) => string;
+  /** Typed per key: a message that interpolates a count cannot be called without it. */
+  t: <K extends TranslationKey>(key: K, ...args: TranslationArgs<K>) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -45,7 +46,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const t = useCallback(
-    (key: TranslationKey, ...args: any[]): string => translate(lang, key, ...args),
+    <K extends TranslationKey>(key: K, ...args: TranslationArgs<K>): string => translate(lang, key, ...args),
     [lang],
   );
 

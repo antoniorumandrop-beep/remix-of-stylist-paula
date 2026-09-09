@@ -2,6 +2,7 @@ import type { Product } from '@/lib/catalog/types';
 import type { BodyProfile } from '@/lib/profile';
 import type { Language } from '@/i18n/translations';
 import { translate } from '@/i18n/translations';
+import type { TranslationKey, TranslationArgs } from '@/i18n/translations';
 import { sortByFit } from '@/lib/fit/product';
 
 /**
@@ -135,7 +136,7 @@ function applyPills(catalog: Product[], pills: ContextPill[]): Product[] {
 
 export const localStylist: StylistProvider = {
   async respond({ text, history, pills, profile, catalog, lang }) {
-    const t = (key: any, ...args: any[]) => translate(lang, key, ...args);
+    const t = <K extends TranslationKey>(key: K, ...args: TranslationArgs<K>) => translate(lang, key, ...args);
     const lower = text.toLowerCase();
     const userTurns = history.filter(m => m.sender === 'user').length;
     const found: ContextPill[] = [];
