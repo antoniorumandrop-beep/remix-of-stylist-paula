@@ -160,3 +160,46 @@ describe('Onboarding — budżet', () => {
     });
   });
 });
+
+describe('Onboarding — sensowność wpisanych wymiarów', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem('paula-lang', 'en');
+  });
+
+  /** Walks to the proportions step, which is now the second one. */
+  const goToProportions = () => {
+    renderOnboarding();
+    fireEvent.change(screen.getByPlaceholderText('Your name'), { target: { value: 'Gabriela' } });
+    clickContinue();
+  };
+
+  const field = (label: string) =>
+    screen.getAllByRole('spinbutton').at(['Bust', 'Waist', 'Hips'].indexOf(label))!;
+
+  it('says nothing about ordinary measurements', () => {
+    goToProportions();
+    expect(screen.queryByText(/looks like a slip/)).not.toBeInTheDocument();
+  });
+
+  it('points out a slipped digit without blocking the step', () => {
+    goToProportions();
+    fireEvent.change(field('Waist'), { target: { value: '7' } });
+
+    expect(screen.getByText(/looks like a slip/)).toBeInTheDocument();
+    // A warning, not a gate: she is the one holding the tape.
+    expect(screen.getByText('Continue').closest('button')).not.toBeDisabled();
+  });
+
+  it('offers the conversion when a number looks like inches', () => {
+    goToProportions();
+    fireEvent.change(field('Bust'), { target: { value: '35' } });
+    expect(screen.getByText(/around 89 cm/)).toBeInTheDocument();
+  });
+
+  it('accepts a body well outside the average without comment', () => {
+    goToProportions();
+    fireEvent.change(field('Hips'), { target: { value: '168' } });
+    expect(screen.queryByText(/looks like a slip/)).not.toBeInTheDocument();
+  });
+});

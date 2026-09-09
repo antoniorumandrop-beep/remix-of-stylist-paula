@@ -287,6 +287,8 @@ export const translations = {
     'Travel': 'Travel',
 
     // Fit engine — measurements
+    measureLooksOff: 'That number looks like a slip \u2014 worth checking before you carry on.',
+    measureMaybeInches: (cm: number) => `That looks like inches. In centimetres it would be around ${cm} cm.`,
     measureGuideTitle: 'How to measure',
     measureGuideIntro: 'Five minutes with a tape measure. Measured carefully it is as accurate as a body scanner — these instructions are what makes the difference.',
     howToMeasure: 'How to measure',
@@ -712,6 +714,8 @@ export const translations = {
     'Travel': 'Podróże',
 
     // Fit engine — pomiary
+    measureLooksOff: 'Ta liczba wygl\u0105da na pomy\u0142k\u0119 \u2014 warto sprawdzi\u0107, zanim p\u00f3jdziesz dalej.',
+    measureMaybeInches: (cm: number) => `To wygl\u0105da na cale. W centymetrach by\u0142oby oko\u0142o ${cm} cm.`,
     measureGuideTitle: 'Jak mierzyć',
     measureGuideIntro: 'Pięć minut z centymetrem. Zrobiony uważnie pomiar taśmą jest tak dokładny jak skaner 3D — różnicę robi właśnie ta instrukcja.',
     howToMeasure: 'Jak się zmierzyć',

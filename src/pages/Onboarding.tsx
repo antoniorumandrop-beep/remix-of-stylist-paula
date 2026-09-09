@@ -8,6 +8,7 @@ import type { TranslationKey } from '@/i18n/translations';
 import { useBodyProfile } from '@/lib/profile';
 import { useUserPrefs } from '@/lib/prefs';
 import { classifyShape } from '@/lib/fit/shape';
+import { checkMeasurement, inchesToCm } from '@/lib/fit/validate';
 import type { BodyShape } from '@/lib/fit/types';
 import { shapeKey } from '@/lib/fit/copy';
 
@@ -70,6 +71,17 @@ export default function Onboarding() {
   const { prefs: savedPrefs, update: updatePrefs } = useUserPrefs();
 
   const measurementsValid = proportions.bust > 0 && proportions.waist > 0 && proportions.hips > 0;
+
+  /**
+   * A warning, never a block. A slipped digit produces a confident Fit Score
+   * built on nonsense, but we do not know every body — so this points at the
+   * number and leaves the decision with the person holding the tape.
+   */
+  const measurementNote = (field: Parameters<typeof checkMeasurement>[0], value: number): string | null => {
+    const issue = checkMeasurement(field, value);
+    if (issue === null) return null;
+    return issue === 'maybe-inches' ? t('measureMaybeInches', inchesToCm(value)) : t('measureLooksOff');
+  };
   const highHip = proportions.highHip > 0 ? proportions.highHip : undefined;
   const liveShape = noTape
     ? (pickedShape ? { shape: pickedShape, merged: false, diffs: null } : null)
@@ -257,6 +269,9 @@ export default function Onboarding() {
                           </div>
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">{hint}</p>
+                        {measurementNote(key, proportions[key]) && (
+                          <p className="text-xs mt-1 text-amber-700">{measurementNote(key, proportions[key])}</p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -361,6 +376,9 @@ export default function Onboarding() {
               />
               <span className="text-lg text-muted-foreground">cm</span>
             </div>
+            {measurementNote('height', Number(height)) && (
+              <p className="text-xs mt-3 text-amber-700">{measurementNote('height', Number(height))}</p>
+            )}
           </div>
         );
 
