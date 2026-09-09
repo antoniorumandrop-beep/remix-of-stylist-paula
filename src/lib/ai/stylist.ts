@@ -69,22 +69,31 @@ export interface StylistProvider {
 
 // ---------------------------------------------------------------- local rules
 
+/**
+ * Polish inflects, so these tables match on stems rather than dictionary
+ * forms — the same way `CATEGORY_WORDS` below always did.
+ *
+ * The full forms were a real gap, not a stylistic one: nobody types "biuro",
+ * they type "coś do biura" or "w biurze", and neither matched. The occasion
+ * simply never appeared, so Paula asked a question the person had already
+ * answered.
+ */
 const OCCASIONS: Record<string, string> = {
-  'wedding': 'Wedding', 'wesele': 'Wedding', 'ślub': 'Wedding',
-  'office': 'Office', 'biuro': 'Office', 'work': 'Office', 'praca': 'Office',
-  'party': 'Party', 'impreza': 'Party', 'going out': 'Going out', 'wyjście': 'Going out',
-  'casual': 'Casual', 'everyday': 'Everyday', 'na co dzień': 'Everyday',
-  'date': 'Date night', 'randka': 'Date night',
-  'vacation': 'Vacation', 'travel': 'Travel', 'podróż': 'Travel', 'wakacje': 'Vacation',
+  'wedding': 'Wedding', 'wesel': 'Wedding', 'ślub': 'Wedding',
+  'office': 'Office', 'biur': 'Office', 'work': 'Office', 'prac': 'Office',
+  'party': 'Party', 'imprez': 'Party', 'going out': 'Going out', 'wyjści': 'Going out',
+  'casual': 'Casual', 'everyday': 'Everyday', 'na co dzień': 'Everyday', 'codzienn': 'Everyday',
+  'date': 'Date night', 'randk': 'Date night',
+  'vacation': 'Vacation', 'travel': 'Travel', 'podróż': 'Travel', 'wakacj': 'Vacation',
 };
 
 const STYLES: Record<string, string> = {
-  'floral': 'Floral', 'kwiatowy': 'Floral', 'boho': 'Boho', 'minimalist': 'Minimalist', 'minimalistyczny': 'Minimalist',
-  'elegant': 'Elegant', 'elegancki': 'Elegant', 'casual': 'Casual',
-  'romantic': 'Romantic', 'romantyczny': 'Romantic',
-  'pastel': 'Pastels', 'black': 'Black', 'czarny': 'Black',
-  'white': 'White', 'biały': 'White', 'red': 'Red', 'czerwony': 'Red',
-  'navy': 'Navy', 'granatowy': 'Navy', 'satin': 'Satin', 'satynowy': 'Satin',
+  'floral': 'Floral', 'kwiat': 'Floral', 'boho': 'Boho', 'minimalist': 'Minimalist',
+  'elegan': 'Elegant', 'casual': 'Casual',
+  'romantic': 'Romantic', 'romantyczn': 'Romantic',
+  'pastel': 'Pastels', 'black': 'Black', 'czarn': 'Black',
+  'white': 'White', 'biał': 'White', 'red': 'Red', 'czerwon': 'Red',
+  'navy': 'Navy', 'granatow': 'Navy', 'satin': 'Satin', 'satynow': 'Satin',
 };
 
 const CATEGORY_WORDS: Record<string, string> = {
