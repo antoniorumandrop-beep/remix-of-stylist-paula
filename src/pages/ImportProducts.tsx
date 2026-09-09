@@ -7,7 +7,9 @@ import { parseBrandFeed, FEED_TEMPLATE_CSV, type FeedParseResult } from '@/lib/c
 import { useCatalogImport } from '@/lib/catalog/useCatalog';
 import { enrichFromText } from '@/lib/catalog/enrich';
 import type { FitAttributes } from '@/lib/fit/attributes';
+import type { RawProduct } from '@/lib/catalog/types';
 import { ProductImage } from '@/components/ProductImage';
+import { LinkImport } from '@/components/LinkImport';
 import { aiMode } from '@/lib/ai';
 
 /**
@@ -46,6 +48,20 @@ export default function ImportProducts() {
 
   const preview = () => setParsed(parseBrandFeed(text, { source: 'brand' }));
 
+  /**
+   * A product pulled from a link joins the same pending list as the CSV rows,
+   * so it goes through the same preview, the same enrichment and the same
+   * import button. One product can come from two intake paths; it must not
+   * come from two code paths.
+   */
+  const addFromLink = (product: RawProduct) => {
+    setParsed(prev => {
+      const products = prev?.products ?? [];
+      if (products.some(p => p.id === product.id)) return prev;
+      return { products: [...products, product], errors: prev?.errors ?? [] };
+    });
+  };
+
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -81,6 +97,8 @@ export default function ImportProducts() {
 
         <h1 className="font-display text-3xl mb-2">{t('adminImportTitle')}</h1>
         <p className="text-sm text-muted-foreground mb-8 max-w-2xl">{t('adminImportDesc')}</p>
+
+        <LinkImport onAdd={addFromLink} />
 
         <textarea
           value={text}

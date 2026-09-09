@@ -35,6 +35,7 @@ a po każdej udanej mutacji odświeżają się wszystkie zapytania
 | Zapisane (serduszko) | localStorage `paula.saved` | `SavedRepository` | tabela `saved_products` |
 | Katalog | mocki + import w localStorage `paula.catalog.imported` | `CatalogRepository` | tabele `products` (raw) + `product_fit_attributes` (enriched) |
 | Import od marki | ekran `/admin/import` (CSV/JSON → `parseBrandFeed`) | `src/lib/catalog/feed.ts`, `src/pages/ImportProducts.tsx` | ten sam ekran, zapis do `products`, polityka RLS „tylko admin" |
+| Import z linku produktowego | ekran `/admin/import`, pobranie przez middleware dev-serwera (`vite-plugins/fetch-product.ts`) | parser `src/lib/catalog/link.ts` (czysty, bez sieci), pobranie `src/lib/catalog/linkFetch.ts` | edge function `/fetch-product` — te same trzy reguły: sprawdzenie `robots.txt`, własny User-Agent, jedna strona na żądanie |
 | Wzbogacanie atrybutów | reguły (`src/lib/catalog/enrich.ts`) | `EnrichmentProvider` w `src/lib/ai/enrichment.ts`, env `VITE_AI_ENDPOINT` | edge function `/enrich` z modelem wizyjnym |
 | Rozmowa z Paulą | reguły słów kluczowych (`src/lib/ai/stylist.ts`, `localStylist`) | `StylistProvider`, env `VITE_AI_ENDPOINT` | edge function `/stylist` z modelem językowym |
 | Zdjęcia produktów | URL z feedu marki (`imageUrl`), mocki bez zdjęć | `src/components/ProductImage.tsx` | bez zmian; ewentualnie bucket na kopie |
@@ -42,6 +43,43 @@ a po każdej udanej mutacji odświeżają się wszystkie zapytania
 
 Schemat bazy do tego wszystkiego: `docs/supabase-schema.draft.sql`.
 Szablon feedu dla marki: `docs/brand-feed-template.csv`.
+
+## Import z linku — co dokładnie trzeba przenieść
+
+Jedyna część, która nie działa poza dev-serwerem, to **pobranie HTML**.
+Przeglądarka nie pobierze strony cudzego sklepu (CORS blokuje żądanie, zanim
+wyjdzie), więc robi to coś, co nie jest przeglądarką. Dziś: middleware
+`vite-plugins/fetch-product.ts` (`apply: 'serve'`, czyli **nie trafia do
+builda produkcyjnego**). Docelowo: edge function.
+
+Do przeniesienia jest wyłącznie ten jeden endpoint. Ma przyjąć `?url=` i
+oddać `{ html, finalUrl, truncated }`. Cała reszta — parser, walidacja
+zdjęcia, konwersja na `RawProduct`, ekran — zostaje bez zmiany. Po stronie
+klienta zmienia się jedna stała `DEV_ENDPOINT` w `src/lib/catalog/linkFetch.ts`.
+
+Edge function musi robić dokładnie to samo, co middleware, bo każde z tych
+zachowań ma powód:
+
+1. **Sprawdza `robots.txt` przed pobraniem strony.** Zalando wpuszcza
+   `User-agent: *` na karty produktów, a nazwane boty AI (`ClaudeBot`,
+   `GPTBot`, …) wyrzuca z całej domeny. Sprawdzone na żywym pliku: ścieżki
+   `/cart/*` i `/myaccount/*` nasz pobieracz odrzuca sam, karty produktów
+   przechodzą.
+2. **Przedstawia się własną nazwą** (`PaulaBot/0.1`), nie udaje Chrome'a.
+   Test 30/30 z `research/bodytech-09` używał UA Chrome, bo mierzył
+   *dostępność danych* — to była metoda pomiaru, nie sposób zachowania.
+3. **Pobiera jedną stronę na wyraźne żądanie użytkowniczki.** Bez chodzenia
+   po linkach. To jest różnica między pobraniem a crawlingiem i to na niej
+   stoi cała ta ścieżka.
+4. **Odmawia adresów prywatnych.** Middleware rozwiązuje DNS i odrzuca
+   127.x, 10.x, 192.168.x, 172.16–31.x, 169.254.x i odpowiedniki IPv6 —
+   inaczej proxy stojące na `host: "::"` byłoby otwartą furtką do sieci
+   lokalnej maszyny. Edge function ma ten sam problem, tylko w chmurze.
+5. **Zgłasza obcięcie odpowiedzi.** Strona Sinsay ma 4,5 MB i trzyma JSON-LD
+   na bajcie ~4,44 mln, czyli **na samym końcu dokumentu**. Limit 3 MB uciął
+   ją po cichu i parser zszedł na słabsze Open Graph, oddając gorszą nazwę
+   produktu bez śladu błędu. Limit jest teraz 12 MB, a `truncated: true`
+   dopisuje ostrzeżenie widoczne na ekranie.
 
 ## Podłączenie Supabase — krok po kroku
 
