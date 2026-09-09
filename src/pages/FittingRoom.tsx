@@ -168,6 +168,7 @@ export default function FittingRoom() {
           {building && (
             <div className="bg-card rounded-2xl p-5 mb-6">
               <input
+                aria-label={t('outfitName')}
                 value={outfitName}
                 onChange={e => setOutfitName(e.target.value)}
                 placeholder={t('outfitName')}

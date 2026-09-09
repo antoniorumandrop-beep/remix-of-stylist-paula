@@ -203,3 +203,38 @@ describe('Onboarding — sensowność wpisanych wymiarów', () => {
     expect(screen.queryByText(/looks like a slip/)).not.toBeInTheDocument();
   });
 });
+
+describe('Onboarding — dostępność', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem('paula-lang', 'en');
+  });
+
+  const walkTo = (steps: number) => {
+    renderOnboarding();
+    fireEvent.change(screen.getByPlaceholderText('Your name'), { target: { value: 'Gabriela' } });
+    for (let i = 0; i < steps; i++) clickContinue();
+  };
+
+  it('names each measurement field for a screen reader', () => {
+    // The visible labels are sibling spans, so without this a screen reader
+    // announces four identical unnamed number fields.
+    walkTo(1);
+    expect(screen.getByLabelText('Bust (cm)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Waist (cm)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Hips (cm)')).toBeInTheDocument();
+  });
+
+  it('tells the two budget sliders apart', () => {
+    // They differ only by position on screen; a screen reader had no way to
+    // know which one it was on.
+    walkTo(7);
+    expect(screen.getByRole('slider', { name: 'Lowest price' })).toBeInTheDocument();
+    expect(screen.getByRole('slider', { name: 'Highest price' })).toBeInTheDocument();
+  });
+
+  it('names the height field', () => {
+    walkTo(2);
+    expect(screen.getByLabelText('Height (cm)')).toBeInTheDocument();
+  });
+});

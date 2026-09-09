@@ -261,6 +261,10 @@ export default function Onboarding() {
                             <input
                               type="number"
                               inputMode="numeric"
+                              // The visible label is a sibling span, so a
+                              // screen reader would otherwise announce four
+                              // identical unnamed number fields.
+                              aria-label={`${label} (cm)`}
                               value={proportions[key] || ''}
                               onChange={e => setProportions(p => ({ ...p, [key]: Number(e.target.value) }))}
                               className="w-20 px-3 py-2 bg-background rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-foreground/10"
@@ -370,6 +374,7 @@ export default function Onboarding() {
             <div className="flex items-center gap-4">
               <input
                 type="number"
+                aria-label={`${t('height')} (cm)`}
                 value={height}
                 onChange={e => setHeight(e.target.value)}
                 className="w-32 px-4 py-4 bg-card rounded-xl text-2xl text-center focus:outline-none focus:ring-2 focus:ring-foreground/10"
@@ -493,6 +498,7 @@ export default function Onboarding() {
                   <span className="text-xs text-muted-foreground">{t('add')}</span>
                   <input
                     type="file"
+                    aria-label={t('addInspirationPhoto')}
                     accept="image/*"
                     multiple
                     className="hidden"
@@ -606,8 +612,11 @@ export default function Onboarding() {
                 <span>{budgetRange[0]} PLN</span>
                 <span>{budgetRange[1]}+ PLN</span>
               </div>
+              {/* Two sliders that look different only by position; without
+                  names a screen reader announces the same control twice. */}
               <input
                 type="range"
+                aria-label={t('budgetMinLabel')}
                 min={50}
                 max={500}
                 step={25}
@@ -617,6 +626,7 @@ export default function Onboarding() {
               />
               <input
                 type="range"
+                aria-label={t('budgetMaxLabel')}
                 min={100}
                 max={500}
                 step={25}

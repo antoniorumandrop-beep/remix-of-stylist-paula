@@ -80,6 +80,7 @@ export function LinkImport({ onAdd }: { onAdd: (product: RawProduct) => void }) 
 
       <div className="flex gap-2">
         <input
+          aria-label={t('productLinkLabel')}
           value={url}
           onChange={e => setUrl(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && url.trim() && !busy) void load(); }}

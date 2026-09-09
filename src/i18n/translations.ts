@@ -287,6 +287,12 @@ export const translations = {
     'Travel': 'Travel',
 
     // Fit engine — measurements
+    budgetMinLabel: 'Lowest price',
+    budgetMaxLabel: 'Highest price',
+    addInspirationPhoto: 'Add an inspiration photo',
+    attachPhoto: 'Attach a photo',
+    yourMessage: 'Your message to Paula',
+    productLinkLabel: 'Link to a product page',
     measureLooksOff: 'That number looks like a slip \u2014 worth checking before you carry on.',
     measureMaybeInches: (cm: number) => `That looks like inches. In centimetres it would be around ${cm} cm.`,
     measureGuideTitle: 'How to measure',
@@ -714,6 +720,12 @@ export const translations = {
     'Travel': 'Podróże',
 
     // Fit engine — pomiary
+    budgetMinLabel: 'Cena od',
+    budgetMaxLabel: 'Cena do',
+    addInspirationPhoto: 'Dodaj zdjęcie inspiracji',
+    attachPhoto: 'Załącz zdjęcie',
+    yourMessage: 'Twoja wiadomość do Pauli',
+    productLinkLabel: 'Link do strony produktu',
     measureLooksOff: 'Ta liczba wygl\u0105da na pomy\u0142k\u0119 \u2014 warto sprawdzi\u0107, zanim p\u00f3jdziesz dalej.',
     measureMaybeInches: (cm: number) => `To wygl\u0105da na cale. W centymetrach by\u0142oby oko\u0142o ${cm} cm.`,
     measureGuideTitle: 'Jak mierzyć',

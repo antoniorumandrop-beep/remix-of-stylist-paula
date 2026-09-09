@@ -334,6 +334,9 @@ export default function SearchPage() {
                   {editingPill === pill.key ? (
                     <input
                       type="text"
+                      // Names the pill being edited; without it the field is
+                      // announced as an anonymous textbox inside a chip.
+                      aria-label={pill.label}
                       value={pillEditValue}
                       onChange={e => setPillEditValue(e.target.value)}
                       onBlur={() => savePillEdit(pill.key)}
@@ -360,6 +363,7 @@ export default function SearchPage() {
             <input
               ref={fileInputRef}
               type="file"
+              aria-label={t('attachPhoto')}
               accept="image/*"
               onChange={handlePhotoSelect}
               className="hidden"
@@ -375,6 +379,7 @@ export default function SearchPage() {
 
             <input
               type="text"
+              aria-label={t('yourMessage')}
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSend()}
