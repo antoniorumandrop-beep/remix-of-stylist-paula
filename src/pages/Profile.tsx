@@ -21,7 +21,7 @@ export default function Profile() {
     : t('notSet');
 
   const proportionsValue = profile?.source === 'measured'
-    ? `${profile.bust}/${profile.waist}/${profile.hips} cm`
+    ? `${profile.bust}/${profile.waist}/${profile.hips} cm${profile.highHip ? ` · ${t('highHip')} ${profile.highHip} cm` : ''}`
     : t('notSet');
   const shapeValue = shape
     ? `${t(shapeKey(shape.shape))} · ${t(profile?.source === 'measured' ? 'measured' : 'selected')}`

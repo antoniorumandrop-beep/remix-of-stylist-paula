@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, ChevronRight, Upload, X, Link, ImagePlus, UserRound } from 'lucide-react';
+import { Check, ChevronRight, Upload, X, Link, ImagePlus, UserRound, HelpCircle } from 'lucide-react';
 import { bodyShapes, aestheticOptions, fitOptions, occasionOptions, brands } from '@/data/mockData';
+import { MeasureGuide, type MeasureKey } from '@/components/MeasureGuide';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useBodyProfile } from '@/lib/profile';
 import { useUserPrefs } from '@/lib/prefs';
@@ -31,9 +32,15 @@ export default function Onboarding() {
     bust: 88,
     waist: 68,
     hips: 96,
+    // 0 means "not given". FFIT falls back to merging Spoon into Bottom
+    // Hourglass without it, so it stays optional and never blocks the step.
+    highHip: 0,
     torsoLength: 'Average',
     legLength: 'Long',
   });
+  const [showHighHip, setShowHighHip] = useState(false);
+  const [guide, setGuide] = useState<{ open: boolean; focus?: MeasureKey }>({ open: false });
+  const openGuide = (focus?: MeasureKey) => setGuide({ open: true, focus });
   const [height, setHeight] = useState('165');
   const [selectedAesthetics, setSelectedAesthetics] = useState<string[]>([]);
   const [selectedFit, setSelectedFit] = useState<string[]>([]);
@@ -51,10 +58,11 @@ export default function Onboarding() {
   const { prefs: savedPrefs, update: updatePrefs } = useUserPrefs();
 
   const measurementsValid = proportions.bust > 0 && proportions.waist > 0 && proportions.hips > 0;
+  const highHip = proportions.highHip > 0 ? proportions.highHip : undefined;
   const liveShape = noTape
     ? (pickedShape ? { shape: pickedShape, merged: false, diffs: null } : null)
     : measurementsValid
-      ? classifyShape({ bust: proportions.bust, waist: proportions.waist, hips: proportions.hips })
+      ? classifyShape({ bust: proportions.bust, waist: proportions.waist, hips: proportions.hips, highHip })
       : null;
 
   const persistProfile = () => {
@@ -65,7 +73,7 @@ export default function Onboarding() {
       return;
     }
     if (measurementsValid) {
-      setProfile({ source: 'measured', bust: proportions.bust, waist: proportions.waist, hips: proportions.hips, heightCm, updatedAt });
+      setProfile({ source: 'measured', bust: proportions.bust, waist: proportions.waist, hips: proportions.hips, highHip, heightCm, updatedAt });
     }
   };
 
@@ -168,9 +176,28 @@ export default function Onboarding() {
         return (
           <div>
             <h2 className="font-display text-3xl md:text-4xl mb-3">{t('yourProportions')}</h2>
-            <p className="text-muted-foreground mb-8">
+            <p className="text-muted-foreground mb-6">
               {noTape ? t('pickYourShape') : photoUploaded ? t('proportionsFromPhoto') : t('proportionsManual')}
             </p>
+
+            {/* Read before measuring, not after: the instructions are what takes
+                tape error from 13,2% to 5,7% (research-04-body-analysis.md). */}
+            {!noTape && (
+              <button
+                type="button"
+                onClick={() => openGuide()}
+                className="w-full flex items-center justify-between gap-3 px-5 py-4 mb-6 border border-border rounded-2xl hover:bg-card transition-colors text-left"
+              >
+                <span className="flex items-center gap-3">
+                  <HelpCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>
+                    <span className="text-sm font-medium block">{t('howToMeasure')}</span>
+                    <span className="text-xs text-muted-foreground">{t('measureGuideIntro')}</span>
+                  </span>
+                </span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              </button>
+            )}
 
             {noTape ? (
               <div className="grid grid-cols-1 gap-3 mb-6">
@@ -225,10 +252,23 @@ export default function Onboarding() {
                       { key: 'bust' as const, label: t('bust'), hint: t('measureBust') },
                       { key: 'waist' as const, label: t('waist'), hint: t('measureWaist') },
                       { key: 'hips' as const, label: t('hips'), hint: t('measureHips') },
+                      ...(showHighHip
+                        ? [{ key: 'highHip' as const, label: t('highHip'), hint: t('highHipHint') }]
+                        : []),
                     ].map(({ key, label, hint }) => (
                       <div key={key}>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm">{label}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm">{label}</span>
+                            <button
+                              type="button"
+                              onClick={() => openGuide(key)}
+                              aria-label={`${t('howToMeasure')}: ${label}`}
+                              className="text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              <HelpCircle className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                           <div className="flex items-center gap-2">
                             <input
                               type="number"
@@ -244,6 +284,18 @@ export default function Onboarding() {
                       </div>
                     ))}
                   </div>
+
+                  {/* Offered, never demanded: without it FFIT merges Spoon into
+                      Bottom Hourglass, which is a worse answer but still a valid one. */}
+                  {!showHighHip && (
+                    <button
+                      type="button"
+                      onClick={() => setShowHighHip(true)}
+                      className="text-xs text-muted-foreground underline underline-offset-4 mt-4"
+                    >
+                      {t('addHighHip')}
+                    </button>
+                  )}
                 </div>
               </>
             )}
@@ -258,7 +310,13 @@ export default function Onboarding() {
                   </p>
                 )}
                 {liveShape.merged && (
-                  <p className="text-xs text-muted-foreground mt-2">{t('shapeMerged')}</p>
+                  <button
+                    type="button"
+                    onClick={() => { setShowHighHip(true); openGuide('highHip'); }}
+                    className="text-xs text-muted-foreground underline underline-offset-4 mt-2 text-left"
+                  >
+                    {t('shapeMerged')}
+                  </button>
                 )}
               </div>
             )}
@@ -600,8 +658,12 @@ export default function Onboarding() {
                 </div>
               </div>
             </div>
+            {/* Must go through next(): the summary step is the only place the
+                whole answer set is written to prefs, and the footer that
+                normally calls next() is hidden here. Navigating straight to
+                /app dropped budget, occasions, brands and style on the floor. */}
             <button
-              onClick={() => navigate('/app/for-you')}
+              onClick={next}
               className="px-8 py-3.5 bg-foreground text-background rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
             >
               {t('startExploring')}
@@ -632,6 +694,13 @@ export default function Onboarding() {
       <div className="flex-1 flex items-center justify-center px-6 pt-24 pb-32">
         <div className="w-full max-w-lg">{renderStep()}</div>
       </div>
+
+      <MeasureGuide
+        open={guide.open}
+        focus={guide.focus}
+        onOpenChange={open => setGuide(g => ({ ...g, open }))}
+      />
+
 
       {step < 8 && (
         <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border px-6 py-4">
