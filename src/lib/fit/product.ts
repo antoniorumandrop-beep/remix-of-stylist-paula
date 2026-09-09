@@ -64,3 +64,29 @@ export function useProductFit(product: Product): FitResult | null {
   const { profile } = useBodyProfile();
   return useMemo(() => scoreProduct(product, profile), [product.id, profile]);
 }
+
+/**
+ * Splits a list into a highlight row and everything else, without showing
+ * anything twice.
+ *
+ * The brand page used to take the first four scored products as highlights and
+ * `slice(4)` as the remainder, falling back to the whole list when that
+ * remainder was empty. The fallback was written for the case where nothing can
+ * be scored at all — no body profile — but it also fired whenever a brand had
+ * four or fewer scored products, and then "All products" repeated the four
+ * already shown above it.
+ *
+ * Splitting by identity instead of by index fixes both cases at once, and
+ * keeps unscored products (shoes, bags — never body-fit garments) in the
+ * remainder where they belong, rather than dropping them.
+ */
+export function splitTopFit(
+  products: Product[],
+  profile: BodyProfile | null,
+  topCount = 4,
+): { top: Product[]; rest: Product[] } {
+  const ranked = sortByFit(products, profile);
+  const top = ranked.filter(p => scoreProduct(p, profile)).slice(0, topCount);
+  const shown = new Set(top.map(p => p.id));
+  return { top, rest: ranked.filter(p => !shown.has(p.id)) };
+}

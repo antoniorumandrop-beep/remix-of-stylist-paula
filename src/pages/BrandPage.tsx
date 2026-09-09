@@ -4,7 +4,7 @@ import { useCatalog } from '@/lib/catalog/useCatalog';
 import { ProductCard } from '@/components/ProductCard';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useBodyProfile } from '@/lib/profile';
-import { scoreProduct, sortByFit } from '@/lib/fit/product';
+import { splitTopFit } from '@/lib/fit/product';
 
 export default function BrandPage() {
   const { id } = useParams<{ id: string }>();
@@ -15,9 +15,7 @@ export default function BrandPage() {
   const { products, loading } = useCatalog();
   const brandProducts = products.filter(p => p.brand === brandName);
   const { profile } = useBodyProfile();
-  const topFit = sortByFit(brandProducts, profile).filter(p => scoreProduct(p, profile));
-  const bestMatches = topFit.slice(0, 4);
-  const restProducts = topFit.slice(4);
+  const { top: bestMatches, rest: restProducts } = splitTopFit(brandProducts, profile);
 
   return (
     <div className="max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-10">
@@ -42,7 +40,7 @@ export default function BrandPage() {
       <section>
         <h2 className="font-display text-xl mb-4">{t('allProducts')}</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
-          {(restProducts.length > 0 ? restProducts : brandProducts).map(product => (
+          {restProducts.map(product => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
