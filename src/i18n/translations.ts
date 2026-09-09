@@ -427,7 +427,7 @@ export const translations = {
     saved: 'Zapisane',
     alerts: 'Alerty',
     profile: 'Profil',
-    buildYourStyle: 'Brain of your style',
+    buildYourStyle: 'Twój styl',
     buildYourStyleDesc: 'Kształtuj swój profil stylu — inspiracje, preferencje i stylizacje w jednym miejscu.',
     buildYourStyleComingSoon: 'Ta sekcja powstaje. Powiedz Pauli, co chcesz tu zbudować.',
     fittingRoom: 'Przymierzalnia',
