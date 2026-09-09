@@ -1,0 +1,106 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import Onboarding from './Onboarding';
+import { LanguageProvider } from '@/i18n/LanguageContext';
+import { backend } from '@/lib/backend';
+
+/**
+ * Onboarding is the only place these answers are ever collected, so a step
+ * that does not exist is indistinguishable from a step nobody filled in: the
+ * prefs come out empty either way, and the profile screen says "not set"
+ * forever. `selectedAesthetics` and `selectedFit` had state, options and a
+ * summary row, but no step rendered them — that is the bug this walks.
+ */
+
+function renderOnboarding() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <MemoryRouter>
+      <QueryClientProvider client={client}>
+        <LanguageProvider>
+          <Onboarding />
+        </LanguageProvider>
+      </QueryClientProvider>
+    </MemoryRouter>,
+  );
+}
+
+const clickText = (text: string) => fireEvent.click(screen.getByText(text));
+
+/** The footer button; disabled until the current step is answered. */
+const clickContinue = () => {
+  const button = screen.getByText('Continue').closest('button')!;
+  expect(button).not.toBeDisabled();
+  fireEvent.click(button);
+};
+
+describe('Onboarding — the whole walk', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('collects aesthetics and fit preferences and saves them to prefs', async () => {
+    renderOnboarding();
+
+    // 0 — name. The only step that blocks on an empty answer.
+    fireEvent.change(screen.getByPlaceholderText('Your name'), { target: { value: 'Gabriela' } });
+    clickContinue();
+
+    clickContinue(); // 1 — body scan
+    clickContinue(); // 2 — proportions (defaults are already valid)
+    clickContinue(); // 3 — height
+    clickContinue(); // 4 — style inspiration
+
+    // 5 — aesthetics
+    expect(screen.getByText('Which of these feel like you?')).toBeInTheDocument();
+    clickText('Minimalist');
+    clickText('Classic');
+    clickContinue();
+
+    // 6 — how clothes should sit
+    expect(screen.getByText('How do you like clothes to sit?')).toBeInTheDocument();
+    clickText('Relaxed');
+    clickContinue();
+
+    clickContinue(); // 7 — occasions
+    clickContinue(); // 8 — budget
+    clickContinue(); // 9 — brands
+
+    // 10 — summary. The footer is gone here, so the save runs from this button.
+    clickText('Start exploring');
+
+    await waitFor(async () => {
+      const prefs = await backend.prefs.get();
+      expect(prefs.aesthetics).toEqual(['minimalist', 'classic']);
+      expect(prefs.fitPrefs).toEqual(['relaxed']);
+    });
+  });
+
+  it('saves each of the two steps on leaving it, not only at the summary', async () => {
+    // Someone who closes the tab after picking an aesthetic should not lose it.
+    renderOnboarding();
+
+    fireEvent.change(screen.getByPlaceholderText('Your name'), { target: { value: 'Gabriela' } });
+    clickContinue();
+    clickContinue();
+    clickContinue();
+    clickContinue();
+    clickContinue();
+
+    clickText('Bohemian');
+    clickContinue();
+
+    await waitFor(async () => {
+      const prefs = await backend.prefs.get();
+      expect(prefs.aesthetics).toEqual(['bohemian']);
+    });
+  });
+
+  it('shows every step, and the summary last', () => {
+    renderOnboarding();
+    expect(screen.getByText('1 / 11')).toBeInTheDocument();
+  });
+});

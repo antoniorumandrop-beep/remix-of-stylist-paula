@@ -10,7 +10,7 @@ import { classifyShape } from '@/lib/fit/shape';
 import type { BodyShape } from '@/lib/fit/types';
 import { shapeKey } from '@/lib/fit/copy';
 
-const TOTAL_STEPS = 9;
+const TOTAL_STEPS = 11;
 
 // The picker still uses the five everyday names; FFIT is finer-grained.
 const SHAPE_FROM_PICKER: Record<string, BodyShape> = {
@@ -83,6 +83,8 @@ export default function Onboarding() {
     if (step === 0 && name.trim()) void updatePrefs({ name: name.trim() });
     if (step === 2 || step === 3) persistProfile();
     if (step === 4) void updatePrefs({ inspirations: inspirationPeople, pinterestLinks });
+    if (step === 5) void updatePrefs({ aesthetics: selectedAesthetics });
+    if (step === 6) void updatePrefs({ fitPrefs: selectedFit });
     if (step === TOTAL_STEPS - 1) {
       void updatePrefs({
         name: name.trim() || savedPrefs.name,
@@ -528,6 +530,60 @@ export default function Onboarding() {
       case 5:
         return (
           <div>
+            <h2 className="font-display text-3xl md:text-4xl mb-3">{t('whichAesthetics')}</h2>
+            <p className="text-muted-foreground mb-8">{t('selectAllThatApply')}</p>
+            <div className="grid grid-cols-2 gap-3">
+              {aestheticOptions.map(opt => (
+                <button
+                  key={opt.id}
+                  onClick={() => toggleSelection(selectedAesthetics, setSelectedAesthetics, opt.id)}
+                  className={`px-5 py-4 rounded-xl text-sm text-left transition-all flex items-center gap-3 ${
+                    selectedAesthetics.includes(opt.id)
+                      ? 'bg-foreground text-background'
+                      : 'bg-card hover:bg-card/80'
+                  }`}
+                >
+                  <span
+                    className="w-4 h-4 rounded-full border border-border flex-shrink-0"
+                    style={{ backgroundColor: opt.color }}
+                    aria-hidden="true"
+                  />
+                  {t(opt.name as never)}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+
+      case 6:
+        return (
+          <div>
+            <h2 className="font-display text-3xl md:text-4xl mb-3">{t('howShouldClothesSit')}</h2>
+            {/* Descriptive, not corrective: this asks how she likes a garment to
+                sit, never what her body "needs". The answer feeds Fit Score as a
+                preference, alongside the risk arithmetic — it does not override it. */}
+            <p className="text-muted-foreground mb-8">{t('howShouldClothesSitDesc')}</p>
+            <div className="grid grid-cols-2 gap-3">
+              {fitOptions.map(opt => (
+                <button
+                  key={opt.id}
+                  onClick={() => toggleSelection(selectedFit, setSelectedFit, opt.id)}
+                  className={`px-5 py-4 rounded-xl text-sm text-left transition-all ${
+                    selectedFit.includes(opt.id)
+                      ? 'bg-foreground text-background'
+                      : 'bg-card hover:bg-card/80'
+                  }`}
+                >
+                  {t(opt.label as never)}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+
+      case 7:
+        return (
+          <div>
             <h2 className="font-display text-3xl md:text-4xl mb-3">{t('whatDoYouDressFor')}</h2>
             <p className="text-muted-foreground mb-8">{t('selectAllThatApply')}</p>
             <div className="grid grid-cols-2 gap-3">
@@ -548,7 +604,7 @@ export default function Onboarding() {
           </div>
         );
 
-      case 6:
+      case 8:
         return (
           <div>
             <h2 className="font-display text-3xl md:text-4xl mb-3">{t('usualBudget')}</h2>
@@ -593,7 +649,7 @@ export default function Onboarding() {
           </div>
         );
 
-      case 7:
+      case 9:
         return (
           <div>
             <h2 className="font-display text-3xl md:text-4xl mb-3">{t('anyBrandsYouLove')}</h2>
@@ -611,7 +667,7 @@ export default function Onboarding() {
           </div>
         );
 
-      case 8:
+      case 10:
         return (
           <div className="text-center">
             <h2 className="font-display text-4xl md:text-5xl mb-4">{t('paulaIsReady')}</h2>
@@ -702,7 +758,7 @@ export default function Onboarding() {
       />
 
 
-      {step < 8 && (
+      {step < TOTAL_STEPS - 1 && (
         <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border px-6 py-4">
           <div className="max-w-lg mx-auto flex justify-between items-center">
             <button

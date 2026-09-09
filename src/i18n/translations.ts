@@ -252,6 +252,25 @@ export const translations = {
     goBack: 'Go back',
     backToSaved: 'Back to Saved',
 
+    whichAesthetics: 'Which of these feel like you?',
+    howShouldClothesSit: 'How do you like clothes to sit?',
+    howShouldClothesSitDesc: 'This is a preference, not a rule \u2014 Paula still tells you where a cut is likely to pull.',
+
+    // Aesthetics data
+    'Minimalist': 'Minimalist',
+    'Romantic': 'Romantic',
+    'Structured / Tailored': 'Structured / Tailored',
+    'Streetwear': 'Streetwear',
+    'Bohemian': 'Bohemian',
+    'Classic': 'Classic',
+    'Oversized / Relaxed': 'Oversized / Relaxed',
+
+    // Fit preference data
+    'Fitted': 'Fitted',
+    'Relaxed': 'Relaxed',
+    'Oversized': 'Oversized',
+    'It depends on the piece': 'It depends on the piece',
+
     // Occasions data
     'Everyday / Casual': 'Everyday / Casual',
     'Office': 'Office',
@@ -649,6 +668,25 @@ export const translations = {
     collectionNotFound: 'Kolekcja nie znaleziona.',
     goBack: 'Wróć',
     backToSaved: 'Wróć do zapisanych',
+
+    whichAesthetics: 'Kt\u00f3re z nich to Ty?',
+    howShouldClothesSit: 'Jak lubisz, \u017ceby ubrania le\u017ca\u0142y?',
+    howShouldClothesSitDesc: 'To preferencja, nie regu\u0142a \u2014 Paula i tak powie Ci, gdzie dany kr\u00f3j mo\u017ce ci\u0105gn\u0105\u0107.',
+
+    // Aesthetics data
+    'Minimalist': 'Minimalistyczny',
+    'Romantic': 'Romantyczny',
+    'Structured / Tailored': 'Strukturalny / Krawiecki',
+    'Streetwear': 'Streetwear',
+    'Bohemian': 'Boho',
+    'Classic': 'Klasyczny',
+    'Oversized / Relaxed': 'Oversize / Swobodny',
+
+    // Fit preference data
+    'Fitted': 'Dopasowane',
+    'Relaxed': 'Swobodne',
+    'Oversized': 'Oversize',
+    'It depends on the piece': 'Zale\u017cy od rzeczy',
 
     // Occasions data
     'Everyday / Casual': 'Na co dzień',
