@@ -12,5 +12,5 @@ export const stylist: StylistProvider = endpoint ? remoteStylist(endpoint) : loc
 export const enrichment: EnrichmentProvider = endpoint ? remoteEnrichment(endpoint) : rulesEnrichment;
 export const aiMode: 'rules' | 'remote' = endpoint ? 'remote' : 'rules';
 
-export type { StylistProvider, StylistInput, StylistOutput, StylistMessage, ContextPill } from './stylist';
+export type { StylistProvider, StylistInput, StylistOutput, StylistMessage, ContextPill, Chip } from './stylist';
 export type { EnrichmentProvider, EnrichmentResult } from './enrichment';

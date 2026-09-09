@@ -35,9 +35,28 @@ export interface StylistInput {
   lang: Language;
 }
 
+/**
+ * A suggestion chip.
+ *
+ * `id` is what the flow branches on; `label` is only ever shown. They used to
+ * be the same string, so the search screen decided what a tap meant by
+ * comparing the visible text against `t('findSame')` and friends — flow
+ * control through translated copy. Changing a word in the Polish file, or
+ * switching language mid-conversation, silently broke the branch.
+ */
+export interface Chip {
+  id: string;
+  label: string;
+}
+
+/** Normalises a chip that arrived as a bare string (an older remote reply). */
+export function toChip(chip: Chip | string): Chip {
+  return typeof chip === 'string' ? { id: chip, label: chip } : chip;
+}
+
 export interface StylistOutput {
   reply: string;
-  chips?: string[];
+  chips?: Chip[];
   products?: Product[];
   /** The full pill set after this turn (not a delta). */
   pills: ContextPill[];
@@ -144,7 +163,11 @@ export const localStylist: StylistProvider = {
       const products = sortByFit(applyPills(catalog, nextPills), profile).slice(0, 12);
       return {
         reply: t('paulaFoundOptions', products.length),
-        chips: [t('chipSecondHand'), t('chipFreeShipping'), t('chipUnder100')],
+        chips: [
+          { id: 'second-hand', label: t('chipSecondHand') },
+          { id: 'free-shipping', label: t('chipFreeShipping') },
+          { id: 'under-100', label: t('chipUnder100') },
+        ],
         products,
         pills: nextPills,
       };
@@ -157,13 +180,22 @@ export const localStylist: StylistProvider = {
       if (nextPills.some(p => p.key === 'category')) {
         return {
           reply: t('paulaCategoryFound'),
-          chips: [t('chipEveryday'), t('chipOffice'), t('chipWedding'), t('chipDateNight')],
+          chips: [
+            { id: 'everyday', label: t('chipEveryday') },
+            { id: 'office', label: t('chipOffice') },
+            { id: 'wedding', label: t('chipWedding') },
+            { id: 'date-night', label: t('chipDateNight') },
+          ],
           pills: nextPills,
         };
       }
       return {
         reply: t('paulaGeneric'),
-        chips: [t('chipEveryday'), t('chipOffice'), t('chipSpecialEvent')],
+        chips: [
+          { id: 'everyday', label: t('chipEveryday') },
+          { id: 'office', label: t('chipOffice') },
+          { id: 'special-event', label: t('chipSpecialEvent') },
+        ],
         pills: nextPills,
       };
     }
@@ -202,10 +234,10 @@ export function remoteStylist(endpoint: string): StylistProvider {
         }),
       });
       if (!res.ok) throw new Error(`stylist failed: ${res.status}`);
-      const data = (await res.json()) as { reply: string; chips?: string[]; productIds?: string[]; pills?: ContextPill[] };
+      const data = (await res.json()) as { reply: string; chips?: (Chip | string)[]; productIds?: string[]; pills?: ContextPill[] };
       const byId = new Map(input.catalog.map(p => [p.id, p]));
       const products = data.productIds?.map(id => byId.get(id)).filter((p): p is Product => Boolean(p));
-      return { reply: data.reply, chips: data.chips, products, pills: data.pills ?? input.pills };
+      return { reply: data.reply, chips: data.chips?.map(toChip), products, pills: data.pills ?? input.pills };
     },
   };
 }

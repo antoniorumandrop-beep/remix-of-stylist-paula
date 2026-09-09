@@ -11,13 +11,13 @@ import { sortByFit } from '@/lib/fit/product';
 import { sortProducts, type SortMode } from '@/lib/catalog/sort';
 import { findDupes, discountPercent, DEMO_REFERENCE_PRICE } from '@/lib/catalog/dupes';
 import { shapeKey } from '@/lib/fit/copy';
-import { stylist, type ContextPill } from '@/lib/ai';
+import { stylist, type ContextPill, type Chip } from '@/lib/ai';
 
 interface Message {
   id: string;
   sender: 'user' | 'paula';
   text: string;
-  chips?: string[];
+  chips?: Chip[];
   photoUploaded?: boolean;
   photoUrl?: string;
 }
@@ -52,7 +52,10 @@ export default function SearchPage() {
       id: `p-${Date.now()}`,
       sender: 'paula',
       text: t('paulaSimilarFound', similar.length),
-      chips: [t('chipSecondHand'), t('chipUnder100')],
+      chips: [
+        { id: 'second-hand', label: t('chipSecondHand') },
+        { id: 'under-100', label: t('chipUnder100') },
+      ],
     }]);
   };
 
@@ -65,7 +68,10 @@ export default function SearchPage() {
       id: `p-${Date.now()}`,
       sender: 'paula',
       text: t('paulaDupesFound', dupes.length, DEMO_REFERENCE_PRICE),
-      chips: [t('chipSecondHand'), t('chipUnder100')],
+      chips: [
+        { id: 'second-hand', label: t('chipSecondHand') },
+        { id: 'under-100', label: t('chipUnder100') },
+      ],
     }]);
   };
 
@@ -78,7 +84,10 @@ export default function SearchPage() {
       id: `p-${Date.now()}`,
       sender: 'paula',
       text: t('paulaBothFound', both.length, DEMO_REFERENCE_PRICE),
-      chips: [t('chipSecondHand'), t('chipUnder100')],
+      chips: [
+        { id: 'second-hand', label: t('chipSecondHand') },
+        { id: 'under-100', label: t('chipUnder100') },
+      ],
     }]);
   };
 
@@ -100,7 +109,11 @@ export default function SearchPage() {
           id: `p-${Date.now()}`,
           sender: 'paula',
           text: t('paulaPhotoReceived'),
-          chips: [t('findSame'), t('findDupes'), t('findBoth')],
+          chips: [
+            { id: 'find-same', label: t('findSame') },
+            { id: 'find-dupes', label: t('findDupes') },
+            { id: 'find-both', label: t('findBoth') },
+          ],
         }]);
       }, 500);
     };
@@ -162,23 +175,26 @@ export default function SearchPage() {
   };
 
   const handleSend = () => addMessage(inputValue);
-  const handleChipClick = (chip: string) => {
-    if (chip === t('findSame')) {
-      setMessages(prev => [...prev, { id: `u-${Date.now()}`, sender: 'user', text: chip }]);
-      setTimeout(runSimilarSearch, 500);
+  /**
+   * Branch on the chip's id, never on its text. The visible label is
+   * translated copy — matching against it meant a reworded Polish string, or a
+   * language switch mid-conversation, silently turned a photo-search chip into
+   * an ordinary message to Paula.
+   */
+  const PHOTO_SEARCHES: Record<string, () => void> = {
+    'find-same': runSimilarSearch,
+    'find-dupes': runDupeSearch,
+    'find-both': runBothSearch,
+  };
+
+  const handleChipClick = (chip: Chip) => {
+    const search = PHOTO_SEARCHES[chip.id];
+    if (!search) {
+      addMessage(chip.label);
       return;
     }
-    if (chip === t('findDupes')) {
-      setMessages(prev => [...prev, { id: `u-${Date.now()}`, sender: 'user', text: chip }]);
-      setTimeout(runDupeSearch, 500);
-      return;
-    }
-    if (chip === t('findBoth')) {
-      setMessages(prev => [...prev, { id: `u-${Date.now()}`, sender: 'user', text: chip }]);
-      setTimeout(runBothSearch, 500);
-      return;
-    }
-    addMessage(chip);
+    setMessages(prev => [...prev, { id: `u-${Date.now()}`, sender: 'user', text: chip.label }]);
+    setTimeout(search, 500);
   };
 
 
@@ -242,11 +258,11 @@ export default function SearchPage() {
             <div className="flex flex-wrap gap-2 pl-0">
               {activeChips.map(chip => (
                 <button
-                  key={chip}
+                  key={chip.id}
                   onClick={() => handleChipClick(chip)}
                   className="px-4 py-2 border border-border rounded-full text-sm hover:bg-card transition-colors"
                 >
-                  {chip}
+                  {chip.label}
                 </button>
               ))}
             </div>
