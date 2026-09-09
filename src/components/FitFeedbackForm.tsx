@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { FEEDBACK_POINTS, useFitFeedback, type FitAnswer } from '@/lib/fitFeedback';
@@ -22,6 +22,28 @@ export function FitFeedbackForm({ productId, onDone }: FitFeedbackFormProps) {
   const existing = forProduct(productId);
   const [answers, setAnswers] = useState<Partial<Record<BodyPoint, FitAnswer>>>(existing?.answers ?? {});
 
+  /**
+   * The initial state runs once, on the first render, and at that moment the
+   * feedback query may still be pending — so the form could open empty for a
+   * product that already has answers. That is not merely a blank form:
+   * `save` replaces the whole record, so re-answering one body point would
+   * have wiped the other four. Both screens that use this form happen to read
+   * the same query first, which usually warms the cache and hides the problem;
+   * a component should not depend on its parent for that.
+   *
+   * Seeded once, and never over what she has already touched.
+   */
+  const touched = useRef(false);
+  useEffect(() => {
+    if (touched.current || !existing) return;
+    setAnswers(existing.answers);
+  }, [existing]);
+
+  const choose = (point: BodyPoint, answer: FitAnswer) => {
+    touched.current = true;
+    setAnswers(prev => ({ ...prev, [point]: answer }));
+  };
+
   const answered = Object.keys(answers).length > 0;
 
   const label = (a: FitAnswer) =>
@@ -43,7 +65,7 @@ export function FitFeedbackForm({ productId, onDone }: FitFeedbackFormProps) {
                   <button
                     key={a}
                     type="button"
-                    onClick={() => setAnswers(prev => ({ ...prev, [point]: a }))}
+                    onClick={() => choose(point, a)}
                     className={`px-3 py-1.5 rounded-full text-xs transition-all ${
                       active ? 'bg-foreground text-background' : 'bg-background hover:bg-muted'
                     }`}
