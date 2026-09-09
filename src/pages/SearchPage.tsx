@@ -10,6 +10,7 @@ import { useCatalog } from '@/lib/catalog/useCatalog';
 import { sortByFit } from '@/lib/fit/product';
 import { sortProducts, type SortMode } from '@/lib/catalog/sort';
 import { findDupes, discountPercent, DEMO_REFERENCE_PRICE } from '@/lib/catalog/dupes';
+import { loadChat, saveChat } from '@/lib/chatHistory';
 import { shapeKey } from '@/lib/fit/copy';
 import { stylist, type ContextPill, type Chip } from '@/lib/ai';
 
@@ -31,16 +32,20 @@ export default function SearchPage() {
   const inspirations = prefs.inspirations;
   const { profile, shape } = useBodyProfile();
   const { products: catalog } = useCatalog();
-  const [messages, setMessages] = useState<Message[]>([]);
+  // Restored once, at mount: the conversation has to survive a trip to a
+  // product page and back, which is the single most likely thing she does
+  // next after Paula shows her something.
+  const [restored] = useState(loadChat);
+  const [messages, setMessages] = useState<Message[]>(restored.messages);
   const [inputValue, setInputValue] = useState('');
-  const [contextPills, setContextPills] = useState<ContextPill[]>([]);
+  const [contextPills, setContextPills] = useState<ContextPill[]>(restored.pills);
   const [currentProducts, setCurrentProducts] = useState<Product[]>([]);
   const [editingPill, setEditingPill] = useState<string | null>(null);
   const [pillEditValue, setPillEditValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [dupeMode, setDupeMode] = useState(false);
-  const [dupeReference, setDupeReference] = useState(0);
+  const [dupeMode, setDupeMode] = useState(restored.dupeMode);
+  const [dupeReference, setDupeReference] = useState(restored.dupeReference);
   const [sortMode, setSortMode] = useState<SortMode>('fit');
   // Between sending and the answer nothing moved on screen, so a slow turn was
   // indistinguishable from a message that never sent.
@@ -209,6 +214,28 @@ export default function SearchPage() {
     }, 500);
   };
 
+
+  const restoredIds = restored.productIds;
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current || restoredIds.length === 0 || catalog.length === 0) return;
+    restoredRef.current = true;
+    const byId = new Map(catalog.map(p => [p.id, p]));
+    const found = restoredIds.map(id => byId.get(id)).filter((p): p is Product => Boolean(p));
+    if (found.length > 0) setCurrentProducts(found);
+  }, [restoredIds, catalog]);
+
+  // Persisting ids rather than product objects keeps the payload small and
+  // stops a stale copy of a product outliving the catalogue it came from.
+  useEffect(() => {
+    saveChat({
+      messages,
+      pills: contextPills,
+      productIds: currentProducts.map(p => p.id),
+      dupeMode,
+      dupeReference,
+    });
+  }, [messages, contextPills, currentProducts, dupeMode, dupeReference]);
 
   const sortedProducts = useMemo(
     () => sortProducts(currentProducts, profile, sortMode),

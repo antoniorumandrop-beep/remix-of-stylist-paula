@@ -32,6 +32,7 @@ const send = (text: string) => {
 describe('SearchPage — wskaźnik pisania', () => {
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
     localStorage.setItem('paula-lang', 'en');
   });
 
@@ -58,5 +59,31 @@ describe('SearchPage — wskaźnik pisania', () => {
   it('does not show the indicator before anything is sent', () => {
     renderSearch();
     expect(screen.queryByText('Paula is typing…')).not.toBeInTheDocument();
+  });
+});
+
+describe('SearchPage — rozmowa przeżywa wyjście z ekranu', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+    localStorage.setItem('paula-lang', 'en');
+  });
+
+  it('brings the conversation back after the screen is left and reopened', async () => {
+    const first = renderSearch();
+    send('szukam sukienki na wesele');
+    await waitFor(() => {
+      expect(screen.queryByText('Paula is typing…')).not.toBeInTheDocument();
+    });
+    first.unmount();
+
+    // Same as tapping a product and pressing back.
+    renderSearch();
+    expect(await screen.findByText('szukam sukienki na wesele')).toBeInTheDocument();
+  });
+
+  it('starts empty in a fresh session', () => {
+    renderSearch();
+    expect(screen.queryByText('szukam sukienki na wesele')).not.toBeInTheDocument();
   });
 });
