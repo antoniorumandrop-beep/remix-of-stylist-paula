@@ -48,9 +48,18 @@ export default function Alerts() {
       </button>
       <div className="flex items-center justify-between mb-8">
         <h1 className="font-display text-2xl lg:text-3xl">{t('alerts')}</h1>
-        <button className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5">
+        {/* Alerts are mock data and there is nothing to manage yet. A control
+            that moves when clicked and does nothing is worse than one that
+            says so. */}
+        <button
+          type="button"
+          disabled
+          title={t('featureNotReady')}
+          className="text-sm text-muted-foreground flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
           <BellOff className="w-4 h-4" />
           {t('manage')}
+          <span className="text-[10px] uppercase tracking-wide">({t('featureNotReady')})</span>
         </button>
       </div>
 

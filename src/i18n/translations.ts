@@ -252,6 +252,7 @@ export const translations = {
 
     // Collection Detail
     collectionNotFound: 'Collection not found.',
+    featureNotReady: 'Not working yet',
     notFoundTitle: 'This page does not exist',
     notFoundMessage: 'The link may be old, or the address slightly off.',
     notFoundBackHome: 'Back to Paula',
@@ -676,6 +677,7 @@ export const translations = {
 
     // Collection Detail
     collectionNotFound: 'Kolekcja nie znaleziona.',
+    featureNotReady: 'Jeszcze nie działa',
     notFoundTitle: 'Tej strony nie ma',
     notFoundMessage: 'Link może być stary albo adres odrobinę przekręcony.',
     notFoundBackHome: 'Wróć do Pauli',

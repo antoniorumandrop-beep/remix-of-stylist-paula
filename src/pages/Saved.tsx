@@ -58,7 +58,13 @@ export default function Saved() {
             <p className="text-xs text-muted-foreground">{t('getNotifiedSale')}</p>
           </div>
         </div>
-        <button className="px-4 py-2 bg-foreground text-background rounded-full text-xs font-medium hover:opacity-90 transition-opacity">
+        {/* Price alerts need a backend to watch prices; there is none yet. */}
+        <button
+          type="button"
+          disabled
+          title={t('featureNotReady')}
+          className="px-4 py-2 bg-foreground text-background rounded-full text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+        >
           {t('enable')}
         </button>
       </div>
@@ -78,9 +84,17 @@ export default function Saved() {
         )
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
-          <button className="aspect-square rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 hover:border-muted-foreground transition-colors">
+          {/* Collections are still sample data (`sampleCollections`), so there
+              is nowhere for a new one to be saved. */}
+          <button
+            type="button"
+            disabled
+            title={t('featureNotReady')}
+            className="aspect-square rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
             <Plus className="w-6 h-6 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">{t('newCollection')}</span>
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('featureNotReady')}</span>
           </button>
           {sampleCollections.map(col => (
             <div
