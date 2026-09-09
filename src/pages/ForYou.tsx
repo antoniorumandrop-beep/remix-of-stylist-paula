@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users } from 'lucide-react';
 import { getSimilarBodiesBought } from '@/data/mockData';
@@ -9,6 +9,17 @@ import { useUserPrefs } from '@/lib/prefs';
 import { useCatalog } from '@/lib/catalog/useCatalog';
 import { scoreProduct, sortByFit } from '@/lib/fit/product';
 import { sessionSeed, shuffle } from '@/lib/shuffle';
+
+/**
+ * How much of the feed is rendered at once.
+ *
+ * The whole catalogue used to go into the DOM in one go. That is survivable
+ * with a few dozen fixtures and not with a brand feed of several hundred, and
+ * the cost lands on the cheapest phone rather than on the developer's machine.
+ * Paging in chunks is the smaller fix; virtualisation only becomes worth its
+ * complexity if these pages themselves get long.
+ */
+const PAGE_SIZE = 24;
 
 export default function ForYou() {
   const navigate = useNavigate();
@@ -22,6 +33,9 @@ export default function ForYou() {
   // back does not rearrange the page underneath her.
   const feedSeed = useMemo(() => sessionSeed(), []);
   const feedProducts = useMemo(() => shuffle(products, feedSeed), [products, feedSeed]);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const visibleFeed = useMemo(() => feedProducts.slice(0, visibleCount), [feedProducts, visibleCount]);
+  const remaining = feedProducts.length - visibleFeed.length;
 
   // Social proof is still mock data (reviews live in mockData.ts), but it was
   // being computed once at module load — frozen at import time, before the
@@ -92,10 +106,22 @@ export default function ForYou() {
       <section>
         <h2 className="font-display text-xl mb-4">{t('curatedForYou')}</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
-          {feedProducts.map(product => (
+          {visibleFeed.map(product => (
             <ProductCard key={product.id} product={product} onBrandClick={b => navigate(`/app/brand/${encodeURIComponent(b)}`)} />
           ))}
         </div>
+
+        {remaining > 0 && (
+          <div className="flex justify-center mt-8">
+            <button
+              type="button"
+              onClick={() => setVisibleCount(count => count + PAGE_SIZE)}
+              className="px-6 py-3 rounded-full border border-border text-sm font-medium hover:bg-card transition-colors"
+            >
+              {t('showMore', remaining)}
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );

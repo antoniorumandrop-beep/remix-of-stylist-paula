@@ -173,6 +173,7 @@ export const translations = {
 
     // For You
     bestForProportions: 'Best for your proportions',
+    showMore: (n: number) => `Show more (${n})`,
     curatedForYou: 'Curated for you',
     trendingNow: 'Trending now',
     trending: 'Trending',
@@ -593,6 +594,7 @@ export const translations = {
 
     // For You
     bestForProportions: 'Najlepsze dla Twoich proporcji',
+    showMore: (n: number) => `Pokaż więcej (${n})`,
     curatedForYou: 'Wybrane dla Ciebie',
     trendingNow: 'Teraz popularne',
     trending: 'Popularne',
