@@ -40,6 +40,9 @@ const clickContinue = () => {
 describe('Onboarding — the whole walk', () => {
   beforeEach(() => {
     localStorage.clear();
+    // Pin the language: these tests assert on copy, and the default is Polish.
+    // Without this they would silently depend on jsdom's navigator locale.
+    localStorage.setItem('paula-lang', 'en');
   });
 
   it('collects aesthetics and fit preferences and saves them to prefs', async () => {
@@ -108,6 +111,9 @@ describe('Onboarding — the whole walk', () => {
 describe('Onboarding — budżet', () => {
   beforeEach(() => {
     localStorage.clear();
+    // Pin the language: these tests assert on copy, and the default is Polish.
+    // Without this they would silently depend on jsdom's navigator locale.
+    localStorage.setItem('paula-lang', 'en');
   });
 
   /** Walks to the budget step, which sits after the two taste steps. */
