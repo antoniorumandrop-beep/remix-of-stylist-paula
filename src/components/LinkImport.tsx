@@ -21,8 +21,8 @@ import { CATEGORIES, type RawProduct } from '@/lib/catalog/types';
 
 const SOURCE_STYLE: Record<string, string> = {
   'json-ld': 'bg-foreground/10 text-foreground',
-  'open-graph': 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
-  url: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
+  'open-graph': 'bg-amber-500/15 text-amber-700',
+  url: 'bg-amber-500/15 text-amber-700',
   guess: 'bg-muted text-muted-foreground',
 };
 

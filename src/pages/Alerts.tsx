@@ -68,12 +68,12 @@ export default function Alerts() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   {alert.type === 'price_drop' ? (
-                    <span className="flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400">
+                    <span className="flex items-center gap-1 text-xs font-medium text-green-600">
                       <TrendingDown className="w-3 h-3" />
                       {t('priceDrop')}
                     </span>
                   ) : (
-                    <span className="flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400">
+                    <span className="flex items-center gap-1 text-xs font-medium text-blue-600">
                       <Tag className="w-3 h-3" />
                       {t('backInStock')}
                     </span>
@@ -85,7 +85,7 @@ export default function Alerts() {
                 {alert.type === 'price_drop' && (
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-xs line-through text-muted-foreground">{alert.oldPrice} PLN</span>
-                    <span className="text-sm font-medium text-green-600 dark:text-green-400">{alert.newPrice} PLN</span>
+                    <span className="text-sm font-medium text-green-600">{alert.newPrice} PLN</span>
                   </div>
                 )}
               </div>

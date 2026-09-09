@@ -294,8 +294,8 @@ export default function ProductDetail() {
                   <span className="text-sm font-medium">{t('materialQualityScore')}</span>
                 </div>
                 <span className={`text-sm font-bold ${
-                  material.qualityScore >= 80 ? 'text-green-600 dark:text-green-400' :
-                  material.qualityScore >= 60 ? 'text-yellow-600 dark:text-yellow-400' :
+                  material.qualityScore >= 80 ? 'text-green-600' :
+                  material.qualityScore >= 60 ? 'text-yellow-600' :
                   'text-red-500'
                 }`}>
                   {material.qualityScore}%
@@ -355,9 +355,9 @@ export default function ProductDetail() {
                   .reduce((sum, c) => sum + c.percent, 0);
                 return (
                   <div className={`mt-3 flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${
-                    naturalPercent >= 80 ? 'bg-green-500/10 text-green-700 dark:text-green-300' :
-                    naturalPercent >= 50 ? 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-300' :
-                    'bg-red-500/10 text-red-600 dark:text-red-300'
+                    naturalPercent >= 80 ? 'bg-green-500/10 text-green-700' :
+                    naturalPercent >= 50 ? 'bg-yellow-500/10 text-yellow-700' :
+                    'bg-red-500/10 text-red-600'
                   }`}>
                     {naturalPercent >= 80 ? <Leaf className="w-3 h-3" /> : naturalPercent >= 50 ? <Leaf className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
                     {naturalPercent}% {t('naturalFibers')}
@@ -412,8 +412,8 @@ export default function ProductDetail() {
                     <span className="text-sm font-medium">{review.author}</span>
                     {review.bodyMatch && (
                       <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                        review.bodyMatch >= 85 ? 'bg-green-500/10 text-green-700 dark:text-green-300' :
-                        review.bodyMatch >= 65 ? 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-300' :
+                        review.bodyMatch >= 85 ? 'bg-green-500/10 text-green-700' :
+                        review.bodyMatch >= 65 ? 'bg-yellow-500/10 text-yellow-700' :
                         'bg-muted text-muted-foreground'
                       }`}>
                         <Users className="w-3 h-3" />
