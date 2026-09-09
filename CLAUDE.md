@@ -48,9 +48,18 @@ Mapa gniazd, czyli co dokładnie trzeba podpiąć i gdzie:
 jej tutaj — jest jedno źródło prawdy i to ono. Szkic schematu:
 `docs/supabase-schema.draft.sql`. W kodzie: `grep -rn "PLUG(" src`.
 
-Wyjątki od reguły są dwa i oba są świadome: `paula-lang` (język, czytany zanim
-istnieje jakikolwiek kontekst) i `paula.chat` w `sessionStorage` (wątek jednej
-wizyty, celowo nietrwały).
+Wyjątki od reguły są trzy i wszystkie są świadome:
+
+- `paula-lang` w `localStorage` — język, czytany zanim istnieje jakikolwiek
+  kontekst. **Odczyt i zapis są w try/catch**: przeglądarka z zablokowanymi
+  danymi witryny rzuca na samym dostępie do `localStorage`, a to dzieje się w
+  inicjalizatorze stanu przy pierwszym renderze.
+- `paula.chat` w `sessionStorage` — wątek jednej wizyty, celowo nietrwały.
+- `paula.feedSeed` w `sessionStorage` — ziarno tasowania kanału, żeby kolejność
+  nie skakała przy każdym powrocie na listę.
+
+Każdy z nich ma coś wspólnego: nie są danymi użytkowniczki, tylko stanem
+jednej przeglądarki. Wszystko, co jest jej danymi, idzie przez kontrakt.
 
 ## Komendy
 

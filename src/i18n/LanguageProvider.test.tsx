@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { memo, useState } from 'react';
 import { LanguageProvider, useLanguage } from './LanguageContext';
@@ -85,5 +85,74 @@ describe('LanguageProvider', () => {
     );
     fireEvent.click(screen.getByText('polski'));
     expect(localStorage.getItem('paula-lang')).toBe('pl');
+  });
+});
+
+describe('LanguageProvider — przeglądarka z zablokowanymi danymi witryny', () => {
+  let getItem: typeof Storage.prototype.getItem;
+  let setItem: typeof Storage.prototype.setItem;
+
+  beforeEach(() => {
+    getItem = Storage.prototype.getItem;
+    setItem = Storage.prototype.setItem;
+    // Not a hypothetical: with site data blocked the property access itself
+    // throws, and this one runs inside a state initialiser on the first render.
+    Storage.prototype.getItem = vi.fn(() => {
+      throw new DOMException('The operation is insecure.', 'SecurityError');
+    });
+    Storage.prototype.setItem = vi.fn(() => {
+      throw new DOMException('The operation is insecure.', 'SecurityError');
+    });
+  });
+
+  afterEach(() => {
+    Storage.prototype.getItem = getItem;
+    Storage.prototype.setItem = setItem;
+  });
+
+  function Reader() {
+    const { t } = useLanguage();
+    return <span data-testid="label">{t('continue')}</span>;
+  }
+
+  it('still renders instead of taking the whole app down', () => {
+    render(
+      <LanguageProvider>
+        <Reader />
+      </LanguageProvider>,
+    );
+    // jsdom reports an English browser, so English is the correct answer here.
+    // What matters is that there is an answer at all.
+    expect(screen.getByTestId('label').textContent).toBe('Continue');
+  });
+
+  it('falls back to Polish for a browser that did not ask for English', () => {
+    const language = vi.spyOn(navigator, 'language', 'get').mockReturnValue('pl-PL');
+    render(
+      <LanguageProvider>
+        <Reader />
+      </LanguageProvider>,
+    );
+    expect(screen.getByTestId('label').textContent).toBe('Dalej');
+    language.mockRestore();
+  });
+
+  it('lets her switch language for this visit even if it cannot be remembered', () => {
+    function Switcher() {
+      const { setLang, t } = useLanguage();
+      return (
+        <div>
+          <button onClick={() => setLang('en')}>english</button>
+          <span data-testid="label">{t('continue')}</span>
+        </div>
+      );
+    }
+    render(
+      <LanguageProvider>
+        <Switcher />
+      </LanguageProvider>,
+    );
+    fireEvent.click(screen.getByText('english'));
+    expect(screen.getByTestId('label').textContent).toBe('Continue');
   });
 });

@@ -32,17 +32,41 @@ export function resolveInitialLanguage(
   return 'pl';
 }
 
+/**
+ * `localStorage` does not merely return null when a browser has site data
+ * blocked — the property access itself throws. That happens here, inside a
+ * state initialiser, during the very first render, so an unguarded read takes
+ * the whole application down before anything is on screen. Reading and writing
+ * are both wrapped for that reason; losing the remembered language is a small
+ * cost, and a crash screen is not.
+ */
+function readStoredLanguage(): string | null {
+  try {
+    return localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function rememberLanguage(lang: Language): void {
+  try {
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+  } catch {
+    // She keeps the language for this visit; it just will not be remembered.
+  }
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLang] = useState<Language>(() =>
     resolveInitialLanguage(
-      localStorage.getItem(LANGUAGE_STORAGE_KEY),
+      readStoredLanguage(),
       typeof navigator === 'undefined' ? undefined : navigator.language,
     ),
   );
 
   const changeLang = useCallback((newLang: Language) => {
     setLang(newLang);
-    localStorage.setItem(LANGUAGE_STORAGE_KEY, newLang);
+    rememberLanguage(newLang);
   }, []);
 
   const t = useCallback(
