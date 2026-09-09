@@ -125,15 +125,21 @@ describe('zasady języka', () => {
  *
  * This is not hypothetical tidiness. The hand-picked body shapes carried their
  * descriptions in `data/mockData.ts`, in English, telling women which
- * silhouettes "work beautifully on you", what "creates beautiful balance" and
- * which necklines were "your best friend". It sat in the one screen for
+ * silhouettes "work beautifully on you". It sat on the one screen meant for
  * someone with no tape measure, and a guard that read only the translation
  * file could never have seen it.
+ *
+ * Whole lines are scanned rather than quoted string literals. Pairing quotes
+ * looked tidier and was wrong: on a line holding a dozen quoted fields — every
+ * row of the mock catalogue — the pairing walks out of step and reads the
+ * separators as content, so a banned word inside the twelfth field is missed.
+ * A line is a blunter unit and it does not slip.
  */
 describe('zasady języka — poza tabelą tłumaczeń', () => {
   const srcDir = resolve(__dirname, '..');
 
-  function ourStrings(): { path: string; line: number; text: string }[] {
+  /** Every line we wrote, with comments removed — comments quote the rules. */
+  function ourLines(): { path: string; line: number; text: string }[] {
     const out: { path: string; line: number; text: string }[] = [];
     const walk = (dir: string) => {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -144,12 +150,24 @@ describe('zasady języka — poza tabelą tłumaczeń', () => {
           continue;
         }
         if (!/\.tsx?$/.test(entry.name) || entry.name.includes('.test.')) continue;
-        readFileSync(full, 'utf8').split('\n').forEach((line, i) => {
-          const trimmed = line.trim();
-          if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return;
-          for (const match of line.matchAll(/(['"`])((?:\\.|(?!\1).){8,})\1/g)) {
-            out.push({ path: full.split('/src/')[1], line: i + 1, text: match[2] });
+
+        let inBlockComment = false;
+        readFileSync(full, 'utf8').split('\n').forEach((raw, i) => {
+          let line = raw;
+          if (inBlockComment) {
+            const end = line.indexOf('*/');
+            if (end === -1) return;
+            line = line.slice(end + 2);
+            inBlockComment = false;
           }
+          const open = line.indexOf('/*');
+          if (open !== -1 && line.indexOf('*/', open) === -1) {
+            inBlockComment = true;
+            line = line.slice(0, open);
+          }
+          const lineComment = line.indexOf('//');
+          if (lineComment !== -1) line = line.slice(0, lineComment);
+          if (line.trim()) out.push({ path: full.split('/src/')[1], line: i + 1, text: line });
         });
       }
     };
@@ -157,10 +175,16 @@ describe('zasady języka — poza tabelą tłumaczeń', () => {
     return out;
   }
 
+  it('czyta wszystkie nasze pliki, nie tylko tabelę', () => {
+    const lines = ourLines();
+    expect(lines.length).toBeGreaterThan(1000);
+    expect(lines.some(l => l.path.startsWith('data/'))).toBe(true);
+  });
+
   it('żaden plik nie ocenia ciała', () => {
-    const offenders = ourStrings()
+    const offenders = ourLines()
       .filter(({ text }) => FORBIDDEN.some(term => text.toLowerCase().includes(term)))
-      .map(({ path, line, text }) => `${path}:${line} — ${text}`);
+      .map(({ path, line, text }) => `${path}:${line} — ${text.trim().slice(0, 90)}`);
 
     expect(offenders, offenders.join('\n')).toEqual([]);
   });

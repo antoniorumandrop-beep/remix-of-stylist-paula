@@ -65,7 +65,7 @@ export const productReviews: Review[] = [
   { id: 'r18', productId: '12', author: 'Milena T.', rating: 5, text: 'Great Vinted find! Barely worn.', date: '2026-03-02', photoCount: 1, bodyMatch: 91, reviewerHeight: 165, reviewerShape: 'Hourglass' },
   { id: 'r19', productId: '13', author: 'Sara W.', rating: 3, text: 'Cute but synthetic fabric.', date: '2026-02-14', photoCount: 1, bodyMatch: 52, reviewerHeight: 178, reviewerShape: 'Triangle' },
   { id: 'r20', productId: '15', author: 'Klara J.', rating: 4, text: 'Perfect basics, great quality.', date: '2026-03-08', photoCount: 1, bodyMatch: 83, reviewerHeight: 164, reviewerShape: 'Hourglass' },
-  { id: 'r21', productId: '16', author: 'Ola P.', rating: 4, text: 'Flattering cut, good for the price.', date: '2026-02-22', photoCount: 1, bodyMatch: 77, reviewerHeight: 163, reviewerShape: 'Pear' },
+  { id: 'r21', productId: '16', author: 'Ola P.', rating: 4, text: 'Good cut, fair for the price.', date: '2026-02-22', photoCount: 1, bodyMatch: 77, reviewerHeight: 163, reviewerShape: 'Pear' },
   { id: 'r22', productId: '18', author: 'Maja S.', rating: 4, text: 'Elegant slip dress, second-hand gem.', date: '2026-01-18', photoCount: 1, bodyMatch: 86, reviewerHeight: 166, reviewerShape: 'Hourglass' },
   { id: 'r23', productId: '19', author: 'Natalia R.', rating: 5, text: 'Beautiful bag, holds everything.', date: '2026-03-15', photoCount: 1, bodyMatch: 79, reviewerHeight: 170, reviewerShape: 'Rectangle' },
   { id: 'r24', productId: '20', author: 'Emilia B.', rating: 4, text: 'Classic shirt, good cotton quality.', date: '2026-02-12', photoCount: 1, bodyMatch: 88, reviewerHeight: 165, reviewerShape: 'Hourglass' },
