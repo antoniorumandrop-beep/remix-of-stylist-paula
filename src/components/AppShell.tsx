@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Search, Heart, User, Bell, Globe, Sparkles, Shirt } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
@@ -54,7 +55,11 @@ export function AppShell() {
 
       {/* Main content */}
       <main className="flex-1 min-h-0 min-w-0 lg:pb-0 overflow-y-auto" style={{ paddingBottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))' }}>
-        <Outlet />
+        {/* The page area is the only thing that suspends while a lazily
+            loaded route arrives, so the navigation and the shell stay put. */}
+        <Suspense fallback={null}>
+          <Outlet />
+        </Suspense>
       </main>
 
       {/* Mobile bottom nav */}
