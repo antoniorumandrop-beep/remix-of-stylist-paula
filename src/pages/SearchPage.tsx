@@ -9,6 +9,7 @@ import { useUserPrefs } from '@/lib/prefs';
 import { useCatalog } from '@/lib/catalog/useCatalog';
 import { sortByFit } from '@/lib/fit/product';
 import { sortProducts, type SortMode } from '@/lib/catalog/sort';
+import { findDupes, discountPercent, DEMO_REFERENCE_PRICE } from '@/lib/catalog/dupes';
 import { shapeKey } from '@/lib/fit/copy';
 import { stylist, type ContextPill } from '@/lib/ai';
 
@@ -42,11 +43,9 @@ export default function SearchPage() {
   const [dupeReference, setDupeReference] = useState(0);
   const [sortMode, setSortMode] = useState<SortMode>('fit');
 
-  const referencePrice = 899;
-
   const runSimilarSearch = () => {
     const similar = sortByFit(catalog, profile, (a, b) => a.price - b.price).slice(0, 12);
-    setDupeReference(referencePrice);
+    setDupeReference(DEMO_REFERENCE_PRICE);
     setDupeMode(false);
     setCurrentProducts(similar);
     setMessages(prev => [...prev, {
@@ -58,31 +57,27 @@ export default function SearchPage() {
   };
 
   const runDupeSearch = () => {
-    const dupes = sortByFit(
-      catalog.filter(p => p.price <= referencePrice * 0.7),
-      profile,
-      (a, b) => a.price - b.price,
-    ).slice(0, 12);
-    setDupeReference(referencePrice);
+    const dupes = findDupes(catalog, profile, DEMO_REFERENCE_PRICE);
+    setDupeReference(DEMO_REFERENCE_PRICE);
     setDupeMode(true);
     setCurrentProducts(dupes);
     setMessages(prev => [...prev, {
       id: `p-${Date.now()}`,
       sender: 'paula',
-      text: t('paulaDupesFound', dupes.length, referencePrice),
+      text: t('paulaDupesFound', dupes.length, DEMO_REFERENCE_PRICE),
       chips: [t('chipSecondHand'), t('chipUnder100')],
     }]);
   };
 
   const runBothSearch = () => {
     const both = sortByFit(catalog, profile, (a, b) => a.price - b.price).slice(0, 12);
-    setDupeReference(referencePrice);
+    setDupeReference(DEMO_REFERENCE_PRICE);
     setDupeMode(true);
     setCurrentProducts(both);
     setMessages(prev => [...prev, {
       id: `p-${Date.now()}`,
       sender: 'paula',
-      text: t('paulaBothFound', both.length, referencePrice),
+      text: t('paulaBothFound', both.length, DEMO_REFERENCE_PRICE),
       chips: [t('chipSecondHand'), t('chipUnder100')],
     }]);
   };
@@ -352,9 +347,9 @@ export default function SearchPage() {
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 lg:gap-4">
               {sortedProducts.map(product => (
                 <div key={product.id} className="relative">
-                  {dupeMode && (
+                  {dupeMode && discountPercent(product.price, dupeReference) !== null && (
                     <span className="absolute z-10 top-11 left-3 text-[10px] font-medium px-2 py-0.5 rounded-full bg-background/90 backdrop-blur-sm text-foreground shadow-sm">
-                      {t('cheaperBy', Math.round((1 - product.price / dupeReference) * 100))}
+                      {t('cheaperBy', discountPercent(product.price, dupeReference))}
                     </span>
                   )}
                   <ProductCard

@@ -163,11 +163,11 @@ export const translations = {
     findBoth: 'Find both',
     findDupesHint: 'Add a photo of an outfit and I’ll find similar pieces for less',
     paulaPhotoReceived: 'Nice look! What would you like to find?',
-    paulaDupesFound: (n: number, ref: number) => `I found ${n} dupes of this look. Original estimate: ~${ref} PLN — these are cheaper and matched to your proportions.`,
+    paulaDupesFound: (n: number, ref: number) => `I found ${n} cheaper pieces, matched to your proportions. I am comparing against a demo reference of ~${ref} PLN — a placeholder, not something read from your photo.`,
     paulaSimilarFound: (n: number) => `I found ${n} pieces similar to your photo, matched to your proportions.`,
-    paulaBothFound: (n: number, ref: number) => `I found ${n} pieces similar to your photo. Items marked “% cheaper” are below the original estimate of ~${ref} PLN.`,
+    paulaBothFound: (n: number, ref: number) => `I found ${n} pieces similar to your photo. The “% cheaper” marks are measured against a demo reference of ~${ref} PLN, not against the real original.`,
     dupesTitle: 'Dupes of your photo',
-    estimatedOriginal: 'Estimated original',
+    estimatedOriginal: 'Demo reference',
     cheaperBy: (p: number) => `${p}% cheaper`,
 
 
@@ -581,11 +581,11 @@ export const translations = {
     findBoth: 'Znajdź oba',
     findDupesHint: 'Dodaj zdjęcie stylizacji, a znajdę podobne rzeczy taniej',
     paulaPhotoReceived: 'Świetna stylizacja! Co chcesz znaleźć?',
-    paulaDupesFound: (n: number, ref: number) => `Znalazłam ${n} dupes tej stylizacji. Szacowana cena oryginału: ~${ref} PLN — te są tańsze i dopasowane do Twoich proporcji.`,
+    paulaDupesFound: (n: number, ref: number) => `Znalazłam ${n} tańszych odpowiedników, dopasowanych do Twoich proporcji. Porównuję do przykładowej ceny ~${ref} PLN — to wartość demo, nie odczyt ze zdjęcia.`,
     paulaSimilarFound: (n: number) => `Znalazłam ${n} rzeczy podobnych do Twojego zdjęcia, dopasowanych do Twoich proporcji.`,
-    paulaBothFound: (n: number, ref: number) => `Znalazłam ${n} rzeczy podobnych do Twojego zdjęcia. Te oznaczone „% taniej” są poniżej szacowanej ceny oryginału ~${ref} PLN.`,
+    paulaBothFound: (n: number, ref: number) => `Znalazłam ${n} rzeczy podobnych do Twojego zdjęcia. Oznaczenia „% taniej” liczę od przykładowej ceny ~${ref} PLN, a nie od prawdziwej ceny oryginału.`,
     dupesTitle: 'Dupes z Twojego zdjęcia',
-    estimatedOriginal: 'Szacowana cena oryginału',
+    estimatedOriginal: 'Cena odniesienia (demo)',
     cheaperBy: (p: number) => `${p}% taniej`,
 
 
