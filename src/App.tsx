@@ -6,6 +6,7 @@ import { LanguageProvider } from "@/i18n/LanguageContext";
 import { BackendProvider } from "@/lib/backend/BackendProvider";
 import { RequireAuth } from "@/components/RequireAuth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { RequireProfile } from "@/components/RequireProfile";
 import Welcome from "./pages/Welcome";
 import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
@@ -35,7 +36,7 @@ const App = () => (
               <Route path="/" element={<Welcome />} />
               <Route path="/login" element={<Login />} />
               <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
-              <Route path="/app" element={<RequireAuth><AppShell /></RequireAuth>}>
+              <Route path="/app" element={<RequireAuth><RequireProfile><AppShell /></RequireProfile></RequireAuth>}>
                 <Route index element={<Navigate to="/app/search" replace />} />
                 <Route path="for-you" element={<ForYou />} />
                 <Route path="search" element={<SearchPage />} />
