@@ -19,6 +19,10 @@ export function useSaved() {
   const isSaved = useCallback((id: string) => ids.includes(id), [ids]);
   const toggle = useCallback(
     (id: string) => (ids.includes(id) ? remove.mutateAsync(id) : add.mutateAsync(id)),
+    // Same reasoning as in `profile.ts`: `mutateAsync` is stable across
+    // renders, the mutation object is not, so the narrow dependency is the
+    // correct one — depending on the object would rebuild this every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [ids, add.mutateAsync, remove.mutateAsync],
   );
   return { ids, loading: query.isPending, isSaved, toggle };

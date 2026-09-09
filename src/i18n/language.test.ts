@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveInitialLanguage } from './LanguageContext';
+import { resolveInitialLanguage } from './language';
 
 /**
  * Paula sells Polish clothes at Polish prices in Polish shops. Defaulting to

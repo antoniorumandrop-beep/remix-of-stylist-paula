@@ -60,9 +60,18 @@ export function sortByFit(
   });
 }
 
+/**
+ * Keyed on the whole product, not on its id.
+ *
+ * The id looked like a sufficient key and is not: re-importing a product keeps
+ * its id and can change its fit attributes, so the memo would keep serving a
+ * score computed from attributes the product no longer has. Scoring is pure
+ * arithmetic over a handful of attributes — cheap enough that correctness wins
+ * over skipping the recomputation on a catalogue refetch.
+ */
 export function useProductFit(product: Product): FitResult | null {
   const { profile } = useBodyProfile();
-  return useMemo(() => scoreProduct(product, profile), [product.id, profile]);
+  return useMemo(() => scoreProduct(product, profile), [product, profile]);
 }
 
 /**

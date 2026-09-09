@@ -54,7 +54,14 @@ export function useBodyProfile() {
 
   const profile = query.data ?? null;
   const shape = useMemo(() => profileShape(profile), [profile]);
+  // Depending on `mutateAsync` rather than on the mutation object is
+  // deliberate and narrower than the lint rule can see: react-query keeps
+  // `mutateAsync` stable across renders, while the mutation object itself is
+  // new every render — depending on it would rebuild these callbacks
+  // constantly, which is the opposite of what the rule is for.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const setProfile = useCallback((p: BodyProfile) => setMutation.mutateAsync(p), [setMutation.mutateAsync]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const clear = useCallback(() => clearMutation.mutateAsync(), [clearMutation.mutateAsync]);
 
   return { profile, shape, loading: query.isPending, setProfile, clear };
