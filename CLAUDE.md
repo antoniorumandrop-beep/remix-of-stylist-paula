@@ -85,6 +85,26 @@ podciąga zmiany właśnie stamtąd i tylko wtedy widzi je w podglądzie. Reguł
 „praca na branchu" i ten tryb wykluczają się przy zmianach, które mają od razu
 trafić do Lovable.
 
+## Pulapki, ktore juz raz kosztowaly
+
+- **Leniwe trasy i bramy.** Komponent bramy, ktory renderuje `null`, a potem
+  przelacza sie na leniwie ladowane dziecko, wywoluje wyjatek Reacta
+  „component suspended while responding to synchronous input" — a error
+  boundary podmienia wtedy cala aplikacje na ekran awarii. Kazda taka brama
+  potrzebuje `Suspense` bezposrednio pod soba (`RequireAuth`, `AppShell`).
+- **Wejscie na zimno to inna sciezka niz nawigacja.** Test, ktory dociera na
+  ekran, klikajac z innego ekranu, nie sprawdza zakladki ani odswiezenia.
+- **`new QueryClient()` w tescie nie ma `MutationCache`**, w ktorej siedzi
+  uniewaznianie zapytan. Uzywac `createQueryClient()`.
+- **`query.data ?? []` tworzy nowa tablice przy kazdym renderze** i psuje
+  tozsamosc callbackow nad nia. Wspolna stala `EMPTY` na poziomie modulu.
+- **Stan poczatkowy `useState` nie zaktualizuje sie, gdy zapytanie sie
+  rozwiaze.** Tak formularz „czy pasowalo?" otwieral sie pusty i kasowal
+  wczesniejsze odpowiedzi przy zapisie.
+- **Polska odmiana.** Tablice slow kluczowych dopasowujemy po rdzeniach.
+- **`localStorage` rzuca**, a nie zwraca `null`, gdy przegladarka ma
+  zablokowane dane witryny. Kazdy odczyt w `try/catch`.
+
 ## Zasady zmian
 
 - Jeden commit = jedna naprawa. Wiadomość po polsku, w trybie rozkazującym.
