@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { createQueryClient } from '@/lib/backend/queryClient';
 import ForYou from './ForYou';
 import { LanguageProvider } from '@/i18n/LanguageContext';
 import { backend } from '@/lib/backend';
@@ -12,7 +13,7 @@ import { backend } from '@/lib/backend';
  * on the cheapest phone rather than on the machine it was written on.
  */
 function renderFeed() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = createQueryClient();
   return render(
     <MemoryRouter>
       <QueryClientProvider client={client}>

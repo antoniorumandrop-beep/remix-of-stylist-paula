@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { createQueryClient } from '@/lib/backend/queryClient';
 import Onboarding from './Onboarding';
 import { LanguageProvider } from '@/i18n/LanguageContext';
 import { backend } from '@/lib/backend';
@@ -16,7 +17,7 @@ import { backend } from '@/lib/backend';
  */
 
 function renderOnboarding() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = createQueryClient();
   return render(
     <MemoryRouter>
       <QueryClientProvider client={client}>

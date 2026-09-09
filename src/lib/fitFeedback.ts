@@ -3,6 +3,9 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { backend, qk } from '@/lib/backend';
 import type { BodyPoint } from './fit/types';
 
+/** Shared empty list; see the note in `saved.ts`. */
+const EMPTY: FitFeedback[] = [];
+
 /**
  * The "did it fit?" loop. After a purchase the user tells us, per body point,
  * whether the garment was tight, fine or loose. This is the one signal that
@@ -30,7 +33,7 @@ export function useFitFeedback() {
   });
   const removeMutation = useMutation({ mutationFn: (productId: string) => backend.feedback.remove(productId) });
 
-  const all = query.data ?? [];
+  const all = query.data ?? EMPTY;
   const forProduct = useCallback(
     (productId: string) => all.find(f => f.productId === productId) ?? null,
     [all],

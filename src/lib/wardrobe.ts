@@ -21,6 +21,11 @@ export interface Outfit {
   createdAt: string;
 }
 
+/** Shared empty lists; see the note in `saved.ts`. */
+const NO_ITEMS: WardrobeItem[] = [];
+const NO_PENDING: PendingPurchase[] = [];
+const NO_OUTFITS: Outfit[] = [];
+
 /**
  * The wardrobe: things the user owns, things she clicked through to buy and
  * has not confirmed yet, and outfits built from owned items.
@@ -40,9 +45,9 @@ export function useWardrobe() {
   const create = useMutation({ mutationFn: (v: { name: string; productIds: string[] }) => backend.wardrobe.createOutfit(v.name, v.productIds) });
   const del = useMutation({ mutationFn: (id: string) => backend.wardrobe.deleteOutfit(id) });
 
-  const items = itemsQuery.data ?? [];
-  const pending = pendingQuery.data ?? [];
-  const outfits = outfitsQuery.data ?? [];
+  const items = itemsQuery.data ?? NO_ITEMS;
+  const pending = pendingQuery.data ?? NO_PENDING;
+  const outfits = outfitsQuery.data ?? NO_OUTFITS;
 
   const has = useCallback((productId: string) => items.some(i => i.productId === productId), [items]);
 

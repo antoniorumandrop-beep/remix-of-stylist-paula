@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { createQueryClient } from '@/lib/backend/queryClient';
 import { RequireProfile } from './RequireProfile';
 import { backend } from '@/lib/backend';
 
@@ -11,7 +12,7 @@ import { backend } from '@/lib/backend';
  * The app looked broken; it was only unfinished.
  */
 function renderGate() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = createQueryClient();
   return render(
     <MemoryRouter initialEntries={['/app']}>
       <QueryClientProvider client={client}>
