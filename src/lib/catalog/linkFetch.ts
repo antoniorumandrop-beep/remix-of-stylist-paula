@@ -1,4 +1,5 @@
 import { parseProductPage, type LinkDraft } from './link';
+import { classifyFetchError, type FetchErrorCode } from './fetchErrors';
 
 /**
  * Fetching the shop page.
@@ -19,25 +20,30 @@ const DEV_ENDPOINT = '/__paula/fetch-product';
 /** String discriminant for the same reason as `DraftConversion` in `link.ts`. */
 export type FetchDraftResult =
   | { status: 'ok'; draft: LinkDraft }
-  | { status: 'error'; error: string };
+  /** `error` stays for the log; `code` is what the interface renders. */
+  | { status: 'error'; error: string; code: FetchErrorCode };
 
 export async function fetchProductDraft(rawUrl: string): Promise<FetchDraftResult> {
   const trimmed = rawUrl.trim();
-  if (!trimmed) return { status: 'error', error: 'empty' };
+  if (!trimmed) return { status: 'error', error: 'empty', code: 'no-content' };
 
   let url: URL;
   try {
     url = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
   } catch {
-    return { status: 'error', error: 'notAUrl' };
+    return { status: 'error', error: 'notAUrl', code: 'not-a-url' };
   }
 
   try {
     const res = await fetch(`${DEV_ENDPOINT}?url=${encodeURIComponent(url.toString())}`);
     const body = await res.json().catch(() => ({}));
-    if (!res.ok) return { status: 'error', error: (body as { error?: string }).error ?? `HTTP ${res.status}` };
+    if (!res.ok) {
+      const { error, shopStatus } = body as { error?: string; shopStatus?: number };
+      const message = error ?? `HTTP ${res.status}`;
+      return { status: 'error', error: message, code: classifyFetchError({ status: shopStatus, message }) };
+    }
     const { html, finalUrl, truncated } = body as { html?: string; finalUrl?: string; truncated?: boolean };
-    if (!html) return { status: 'error', error: 'empty response' };
+    if (!html) return { status: 'error', error: 'empty response', code: 'no-content' };
     const draft = parseProductPage(html, finalUrl ?? url.toString());
     if (truncated) {
       // Shops put structured data at the very end of the document, so a cut-off
@@ -46,6 +52,7 @@ export async function fetchProductDraft(rawUrl: string): Promise<FetchDraftResul
     }
     return { status: 'ok', draft };
   } catch (e) {
-    return { status: 'error', error: (e as Error).message };
+    const message = (e as Error).message;
+    return { status: 'error', error: message, code: classifyFetchError({ message }) };
   }
 }

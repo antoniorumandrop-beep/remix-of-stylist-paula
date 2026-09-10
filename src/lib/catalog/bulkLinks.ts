@@ -1,5 +1,6 @@
 import { fetchProductDraft } from './linkFetch';
 import type { LinkDraft } from './link';
+import type { FetchErrorCode } from './fetchErrors';
 
 export const BULK_LIMIT = 20;
 
@@ -8,6 +9,8 @@ export interface BulkRow {
   status: 'ok' | 'error';
   draft?: LinkDraft;
   error?: string;
+  /** Stable reason, for the interface to translate. See `fetchErrors.ts`. */
+  code?: FetchErrorCode;
 }
 
 /**
@@ -50,7 +53,7 @@ export async function fetchDrafts(
     rows.push(
       result.status === 'ok'
         ? { url, status: 'ok', draft: result.draft }
-        : { url, status: 'error', error: result.error },
+        : { url, status: 'error', error: result.error, code: result.code },
     );
     onProgress?.(rows.length, urls.length);
     if (gapMs > 0 && rows.length < urls.length) {

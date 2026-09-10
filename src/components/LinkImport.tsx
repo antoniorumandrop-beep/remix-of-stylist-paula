@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link2, Loader2, Plus, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { fetchProductDraft } from '@/lib/catalog/linkFetch';
+import { fetchErrorKey } from '@/lib/catalog/fetchErrors';
 import { draftToRawProduct, type LinkDraft } from '@/lib/catalog/link';
 import { CATEGORIES, type RawProduct } from '@/lib/catalog/types';
 import { categoryLabel } from '@/lib/catalog/categories';
@@ -56,7 +57,9 @@ export function LinkImport({ onAdd }: { onAdd: (product: RawProduct) => void }) 
     setDraft(null);
     const result = await fetchProductDraft(url);
     setBusy(false);
-    if (result.status === 'error') { setError(result.error); return; }
+    // The raw message is English and technical; the code is what we can say
+    // in her language and in terms of what happened.
+    if (result.status === 'error') { setError(t(fetchErrorKey(result.code))); return; }
     setDraft(result.draft);
     setCategory(result.draft.category ?? '');
   };

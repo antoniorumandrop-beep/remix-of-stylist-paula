@@ -141,7 +141,9 @@ export function fetchProductPlugin(): Plugin {
             redirect: 'follow',
             signal: AbortSignal.timeout(15000),
           });
-          if (!page.ok) return send(502, { error: `shop returned HTTP ${page.status}` });
+          // The shop's own status travels with the answer: 403 from a bot wall
+          // and 500 from a broken page are not the same news for the user.
+          if (!page.ok) return send(502, { error: `shop returned HTTP ${page.status}`, shopStatus: page.status });
 
           const { text, truncated } = await readCapped(page);
           send(200, { html: text, finalUrl: page.url || url.toString(), truncated });

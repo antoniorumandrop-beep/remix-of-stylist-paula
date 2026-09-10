@@ -5,6 +5,7 @@ import { BULK_LIMIT, fetchDrafts, parseUrlList, type BulkRow } from '@/lib/catal
 import { draftToRawProduct } from '@/lib/catalog/link';
 import { CATEGORIES, type RawProduct } from '@/lib/catalog/types';
 import { categoryLabel } from '@/lib/catalog/categories';
+import { fetchErrorKey } from '@/lib/catalog/fetchErrors';
 import { ProductImage } from './ProductImage';
 
 /**
@@ -109,11 +110,16 @@ export function BulkLinkImport({ onAdd }: { onAdd: (products: RawProduct[]) => v
               </div>
               <div className="min-w-0 flex-1">
                 {row.status === 'error' ? (
-                  <p className="text-sm flex items-center gap-1.5 text-muted-foreground">
-                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">{row.url}</span>
-                    <span className="shrink-0">— {t('bulkFailed')}</span>
-                  </p>
+                  <div className="text-sm text-muted-foreground">
+                    <p className="flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{row.url}</span>
+                    </p>
+                    {/* The reason, not just "failed". A shop refusing a robot and a
+                        broken page are different news, and only one of them is
+                        something she can do anything about. */}
+                    <p className="text-xs mt-0.5 leading-relaxed">{t(fetchErrorKey(row.code))}</p>
+                  </div>
                 ) : (
                   <>
                     <p className="text-sm truncate">{row.draft?.name ?? row.url}</p>
@@ -151,7 +157,12 @@ export function BulkLinkImport({ onAdd }: { onAdd: (products: RawProduct[]) => v
       )}
 
       {rows && rows.length > 0 && ready.length === 0 && rows.every(r => r.status === 'error') && (
-        <p className="text-sm text-muted-foreground mt-4">{t('bulkNothingRead')}</p>
+        <>
+          <p className="text-sm text-muted-foreground mt-4">{t('bulkNothingRead')}</p>
+          {rows.some(r => r.code === 'blocked' || r.code === 'timeout') && (
+            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{t('importBlockedHint')}</p>
+          )}
+        </>
       )}
     </section>
   );
