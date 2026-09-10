@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Heart, ExternalLink, Star, Send, ImageIcon, Camera, X, Users, Check, Shirt } from 'lucide-react';
-import { getProductReviews, getProductAverageRating, getSimilarBodiesBought, productMaterials } from '@/data/mockData';
+import { getProductReviews, getProductAverageRating, productMaterials } from '@/data/mockData';
 import type { Review } from '@/data/mockData';
 import { useObjectUrls } from '@/lib/useObjectUrls';
 import { FitBadge } from '@/components/FitBadge';
@@ -22,6 +22,7 @@ import { BrandFitMemory } from '@/components/BrandFitMemory';
 import { FitFeedbackForm } from '@/components/FitFeedbackForm';
 import { MaterialPanel } from '@/components/MaterialPanel';
 import { SaveSheet } from '@/components/SaveSheet';
+import { SimilarBodiesRow } from '@/components/SimilarBodiesRow';
 import { SizeAdvicePanel } from '@/components/SizeAdvicePanel';
 import { categoryLabel } from '@/lib/catalog/categories';
 
@@ -85,10 +86,6 @@ export default function ProductDetail() {
       ? sortByFit(catalog.filter(p => p.id !== product.id && p.category === product.category), profile).slice(0, 4)
       : []),
     [catalog, product, profile],
-  );
-  const similarBodies = useMemo(
-    () => (product ? getSimilarBodiesBought(product.id, 75, 4) : []),
-    [product],
   );
 
   if (!product) {
@@ -472,27 +469,7 @@ export default function ProductDetail() {
         </div>
       </section>
 
-      {similarBodies.length > 0 && (
-        <section className="mt-16">
-          <div className="flex items-center gap-2 mb-2">
-            <Users className="w-4 h-4" />
-            <h2 className="font-display text-xl">{t('similarBodiesBought')}</h2>
-          </div>
-          <p className="text-sm text-muted-foreground mb-2">{t('similarBodiesBoughtDesc')}</p>
-          <p className="text-xs text-muted-foreground mb-6">{t('similarBodiesDemoNote')}</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
-            {similarBodies.map(({ product: p, buyersCount }) => (
-              <div key={p.id} className="flex flex-col gap-2">
-                <ProductCard product={p} />
-                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground px-2">
-                  <Users className="w-3 h-3" />
-                  {t('buyersWithSimilarBody', buyersCount)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      <SimilarBodiesRow excludeProductId={product.id} limit={4} layout="grid" />
 
       {similar.length > 0 && (
         <section className="mt-16">

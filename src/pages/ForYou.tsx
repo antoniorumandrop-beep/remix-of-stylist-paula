@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users } from 'lucide-react';
-import { getSimilarBodiesBought } from '@/data/mockData';
 import { ProductCard } from '@/components/ProductCard';
+import { SimilarBodiesRow } from '@/components/SimilarBodiesRow';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useBodyProfile } from '@/lib/profile';
 import { useUserPrefs } from '@/lib/prefs';
@@ -37,10 +37,6 @@ export default function ForYou() {
   const visibleFeed = useMemo(() => feedProducts.slice(0, visibleCount), [feedProducts, visibleCount]);
   const remaining = feedProducts.length - visibleFeed.length;
 
-  // Social proof is still mock data (reviews live in mockData.ts), but it was
-  // being computed once at module load — frozen at import time, before the
-  // catalogue existed, and unable to react to anything afterwards.
-  const similarBodiesFeed = useMemo(() => getSimilarBodiesBought('', 75, 8), []);
   const topFitProducts = useMemo(
     () => sortByFit(products, profile).filter(p => scoreProduct(p, profile)).slice(0, 8),
     [products, profile],
@@ -82,26 +78,7 @@ export default function ForYou() {
         )}
       </section>
 
-      {similarBodiesFeed.length > 0 && (
-        <section className="mb-12">
-          <div className="flex items-center gap-2 mb-1">
-            <Users className="w-4 h-4" />
-            <h2 className="font-display text-xl">{t('similarBodiesBought')}</h2>
-          </div>
-          <p className="text-sm text-muted-foreground mb-4">{t('similarBodiesBoughtDesc')}</p>
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
-            {similarBodiesFeed.map(({ product, buyersCount }) => (
-              <div key={product.id} className="min-w-[180px] max-w-[180px] flex flex-col gap-2">
-                <ProductCard product={product} onBrandClick={b => navigate(`/app/brand/${encodeURIComponent(b)}`)} />
-                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground px-2">
-                  <Users className="w-3 h-3" />
-                  {t('buyersWithSimilarBody', buyersCount)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      <SimilarBodiesRow />
 
       <section>
         <h2 className="font-display text-xl mb-4">{t('curatedForYou')}</h2>
