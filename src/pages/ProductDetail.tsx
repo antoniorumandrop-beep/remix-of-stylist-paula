@@ -362,6 +362,11 @@ export default function ProductDetail() {
           )}
         </div>
 
+        {/* Sample reviews written for the demo. Nobody has written one in Paula,
+            and a made-up opinion presented as a real one is the one thing the
+            Unfair Commercial Practices Directive names outright. */}
+        <p className="text-xs text-muted-foreground -mt-3 mb-5">{t('reviewsDemoNote')}</p>
+
         {allReviews.length > 0 ? (
           <div className="space-y-4 mb-8">
             {allReviews.map(review => (
@@ -370,11 +375,7 @@ export default function ProductDetail() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{review.author}</span>
                     {review.bodyMatch && (
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                        review.bodyMatch >= 85 ? 'bg-green-500/10 text-green-700' :
-                        review.bodyMatch >= 65 ? 'bg-yellow-500/10 text-yellow-700' :
-                        'bg-muted text-muted-foreground'
-                      }`}>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                         <Users className="w-3 h-3" />
                         {review.bodyMatch}% {t('bodyMatchLabel')}
                       </span>
@@ -477,7 +478,8 @@ export default function ProductDetail() {
             <Users className="w-4 h-4" />
             <h2 className="font-display text-xl">{t('similarBodiesBought')}</h2>
           </div>
-          <p className="text-sm text-muted-foreground mb-6">{t('similarBodiesBoughtDesc')}</p>
+          <p className="text-sm text-muted-foreground mb-2">{t('similarBodiesBoughtDesc')}</p>
+          <p className="text-xs text-muted-foreground mb-6">{t('similarBodiesDemoNote')}</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
             {similarBodies.map(({ product: p, buyersCount }) => (
               <div key={p.id} className="flex flex-col gap-2">
