@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, Trash2, Check, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Upload, Trash2, Check, AlertTriangle, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { categoryLabel } from '@/lib/catalog/categories';
@@ -49,6 +49,23 @@ export default function ImportProducts() {
   const { imported, importRaw, clearImported, importing } = useCatalogImport();
 
   const preview = () => setParsed(parseBrandFeed(text, { source: 'brand' }));
+
+  /**
+   * The eighteen real products from H&M and Zara, ready to load.
+   *
+   * Both shops answer a bot wall, so their pages cannot be read through the
+   * link importer above — the file is how these clothes reach Paula. It ships
+   * with the app rather than living in one browser's storage, so a fresh
+   * install is one click away from a catalogue with real photos, prices,
+   * compositions and size runs instead of drawn placeholders.
+   */
+  const loadSeed = async () => {
+    const res = await fetch('/katalog-hm-zara.csv');
+    if (!res.ok) { toast.error(t('adminSeedFailed')); return; }
+    const csv = await res.text();
+    setText(csv);
+    setParsed(parseBrandFeed(csv, { source: 'seed' }));
+  };
 
   /**
    * A product pulled from a link joins the same pending list as the CSV rows,
@@ -131,8 +148,18 @@ export default function ImportProducts() {
             {t('adminChooseFile')}
             <input type="file" accept=".csv,.json,.txt,text/csv,application/json" onChange={onFile} className="hidden" />
           </label>
+          <button
+            type="button"
+            onClick={loadSeed}
+            className="px-5 py-2.5 rounded-full border border-border text-sm font-medium hover:bg-card flex items-center gap-2"
+          >
+            <Sparkles className="w-4 h-4" />
+            {t('adminLoadSeed')}
+          </button>
           <span className="text-xs text-muted-foreground ml-auto">{t('adminHowEnriched', aiMode)}</span>
         </div>
+
+        <p className="text-xs text-muted-foreground mt-3 leading-relaxed max-w-2xl">{t('adminSeedNote')}</p>
 
         <details className="mt-6 bg-card rounded-xl p-4">
           <summary className="text-sm font-medium cursor-pointer">{t('adminTemplate')}</summary>

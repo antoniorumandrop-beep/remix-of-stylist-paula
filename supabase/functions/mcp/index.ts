@@ -477,7 +477,11 @@ var ALIASES = {
   polyamide: /\b(poliamid\w*|polyamide|nylon\w*)\b/,
   acrylic: /\b(akryl\w*|acrylic|acryl)\b/,
   elastane: /\b(elastan\w*|elastane|elasthan\w*|spandex|lycra)\b/,
-  leather: /\b(skor[ay]|skorzan\w*|leather|suede|zamsz\w*)\b/
+  leather: /\b(skor[ay]|skorzan\w*|leather|suede|zamsz\w*)\b/,
+  // Faux leather, and the coating on most Polish high-street shoes and bags.
+  // Zara names it outright — "100% poliuretan" — and without this the whole
+  // composition read as nothing at all.
+  polyurethane: /\b(poliuretan\w*|polyurethane|pu|tpu|ekoskor\w*|eko-skor\w*)\b/
 };
 var FIBERS = {
   linen: {
@@ -633,6 +637,21 @@ var FIBERS = {
     abrasion: 90,
     pillingResistance: 100,
     wash: "dryClean",
+    tumbleDry: false,
+    iron: "none"
+  },
+  polyurethane: {
+    id: "polyurethane",
+    nameKey: "fiberPolyurethane",
+    behaviorKey: "fiberPolyurethaneBehavior",
+    // A coating, not a woven fibre: it does not breathe and it does not pill,
+    // and it gives up long before leather does — the crease that goes white
+    // and then splits is the whole story of a PU jacket's second winter.
+    natural: false,
+    breathability: 5,
+    abrasion: 45,
+    pillingResistance: 100,
+    wash: "hand",
     tumbleDry: false,
     iron: "none"
   }

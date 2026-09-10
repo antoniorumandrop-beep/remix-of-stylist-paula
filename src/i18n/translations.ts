@@ -249,6 +249,7 @@ export const translations = {
     fiberAcrylic: 'Acrylic',
     fiberElastane: 'Elastane',
     fiberLeather: 'Leather',
+    fiberPolyurethane: 'Polyurethane',
     fiberLinenBehavior: 'Creases readily — that is simply what linen does. Very breathable, and softer with every wash.',
     fiberCottonBehavior: 'Breathable and hardy. Can shrink in a first hot wash.',
     fiberViscoseBehavior: 'Drapes and flows. Loses strength when wet and can pill over time.',
@@ -262,6 +263,7 @@ export const translations = {
     fiberAcrylicBehavior: 'Warm and light like wool, cheaper to produce. Pills quickly.',
     fiberElastaneBehavior: 'Never used on its own — a few per cent is added so the garment returns to shape.',
     fiberLeatherBehavior: 'Takes on a patina with time and moulds to the body. Never goes in the machine.',
+    fiberPolyurethaneBehavior: 'A coating, not a woven fibre — faux leather. It does not breathe at all, and a hard crease is where it eventually splits.',
     careWashCold: 'Wash at 30°C',
     careWashWarm: 'Wash at 40°C',
     careWashHand: 'Hand wash',
@@ -521,6 +523,9 @@ export const translations = {
     learnedGarmentsAnswered: (n: number) => (n === 1 ? '1 garment answered' : `${n} garments answered`),
     learnedNoPredictions: 'You have answered, but none of those garments carried a prediction to check against.',
     learnedOpenWardrobe: 'Open your wardrobe',
+    adminLoadSeed: 'Load the H&M and Zara catalogue',
+    adminSeedFailed: 'The catalogue file could not be read.',
+    adminSeedNote: '18 products read off H&M and Zara on 10 September 2026 — real photos, prices, compositions and size runs. Neither shop lets the link importer through, so this file is how they get in.',
 
     // Why a shop page could not be read
     importErrorBlocked: 'This shop refuses automated reads and answers a flat no. Paula asks under her own name and does not pretend to be a browser, so this link cannot be read here.',
@@ -869,6 +874,7 @@ export const translations = {
     fiberAcrylic: 'Akryl',
     fiberElastane: 'Elastan',
     fiberLeather: 'Skóra',
+    fiberPolyurethane: 'Poliuretan',
     fiberLinenBehavior: 'Mocno się gniecie i to zwyczajna cecha lnu. Bardzo przewiewny, z każdym praniem miększy.',
     fiberCottonBehavior: 'Przewiewna i wytrzymała. Przy pierwszym praniu w wysokiej temperaturze może się skurczyć.',
     fiberViscoseBehavior: 'Ładnie się układa i płynie. Mokra traci wytrzymałość, z czasem może się mechacić.',
@@ -882,6 +888,7 @@ export const translations = {
     fiberAcrylicBehavior: 'Ciepły i lekki jak wełna, tańszy w produkcji. Szybko się mechaci.',
     fiberElastaneBehavior: 'Nie występuje sam — dodaje się go po kilka procent, żeby rzecz wracała do kształtu.',
     fiberLeatherBehavior: 'Z czasem nabiera patyny i układa się do ciała. Nigdy nie trafia do pralki.',
+    fiberPolyurethaneBehavior: 'Powłoka, nie tkane włókno — ekoskóra. W ogóle nie oddycha, a mocne zagięcie to miejsce, w którym z czasem pęka.',
     careWashCold: 'Pranie 30°C',
     careWashWarm: 'Pranie 40°C',
     careWashHand: 'Pranie ręczne',
@@ -1149,6 +1156,9 @@ export const translations = {
     learnedGarmentsAnswered: (n: number) => `${n} ${plPlural(n, 'oceniona rzecz', 'ocenione rzeczy', 'ocenionych rzeczy')}`,
     learnedNoPredictions: 'Masz już oceny, ale przy tych rzeczach Paula niczego nie przewidziała, więc nie ma czego sprawdzać.',
     learnedOpenWardrobe: 'Otwórz szafę',
+    adminLoadSeed: 'Wczytaj katalog H&M i Zary',
+    adminSeedFailed: 'Nie udało się odczytać pliku katalogu.',
+    adminSeedNote: '18 produktów odczytanych z H&M i Zary 10 września 2026 — prawdziwe zdjęcia, ceny, składy i rozmiarówki. Żaden z tych sklepów nie przepuszcza importu z linku, więc ten plik jest drogą, którą tu trafiają.',
 
     // Dlaczego nie dało się przeczytać strony sklepu
     importErrorBlocked: 'Ten sklep odmawia automatycznego odczytu i odpowiada twardą odmową. Paula pyta pod własnym imieniem i nie udaje przeglądarki, więc tego linku nie da się tutaj odczytać.',
