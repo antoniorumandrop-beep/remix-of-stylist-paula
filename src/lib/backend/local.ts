@@ -31,6 +31,7 @@ const KEYS = {
   saved: 'paula.saved',
   collections: 'paula.collections',
   imported: 'paula.catalog.imported',
+  userProducts: 'paula.catalog.user',
 } as const;
 
 const now = () => new Date().toISOString();
@@ -221,12 +222,16 @@ function localCollections(): CollectionsRepository {
 function localCatalog(): CatalogRepository {
   const imported = () => readStored<EnrichedProduct[]>(KEYS.imported, []);
   const importedProducts = () => imported().map(enrichedToProduct);
+  const userAdded = () => readStored<EnrichedProduct[]>(KEYS.userProducts, []);
+  const userProducts = () => userAdded().map(enrichedToProduct);
   return {
     async list() {
       return [...importedProducts(), ...allProducts];
     },
     async get(id) {
-      return (await this.list()).find(p => p.id === id) ?? null;
+      // Deliberately wider than `list()`: the shared channel excludes what the
+      // user added herself, but she still has to be able to open it.
+      return [...(await this.list()), ...userProducts()].find(p => p.id === id) ?? null;
     },
     async importRaw(items) {
       // Lazy on purpose: the AI layer imports the fit engine, which imports
@@ -244,6 +249,19 @@ function localCatalog(): CatalogRepository {
     },
     async listImported() { return importedProducts(); },
     async clearImported() { removeStored(KEYS.imported); },
+
+    async addUserProduct(item) {
+      const { enrichment } = await import('@/lib/ai');
+      const { fit, enrichedBy } = await enrichment.enrich(item);
+      const entry: EnrichedProduct = { raw: item, fit, enrichedBy, enrichedAt: now() };
+      // Re-adding the same link replaces the record rather than doubling it.
+      writeStored(KEYS.userProducts, [entry, ...userAdded().filter(e => e.raw.id !== item.id)]);
+      return enrichedToProduct(entry);
+    },
+    async listUserProducts() { return userProducts(); },
+    async removeUserProduct(id) {
+      writeStored(KEYS.userProducts, userAdded().filter(e => e.raw.id !== id));
+    },
   };
 }
 

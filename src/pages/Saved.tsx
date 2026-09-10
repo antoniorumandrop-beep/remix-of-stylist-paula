@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ProductCard } from '@/components/ProductCard';
-import { Plus, Bell, Heart, Check, FolderOpen } from 'lucide-react';
+import { Plus, Bell, Heart, Check, FolderOpen, Link2 } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useSaved } from '@/lib/saved';
 import { useCatalog } from '@/lib/catalog/useCatalog';
@@ -81,6 +81,19 @@ export default function Saved() {
           {t('enable')}
         </button>
       </div>
+
+      <button
+        onClick={() => navigate('/app/add')}
+        className="w-full bg-card rounded-xl p-4 mb-6 flex items-center gap-3 text-left hover:bg-card/80 transition-colors"
+      >
+        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+          <Link2 className="w-5 h-5 text-muted-foreground" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-medium">{t('addYourOwn')}</p>
+          <p className="text-xs text-muted-foreground">{t('addYourOwnDesc')}</p>
+        </div>
+      </button>
 
       {tab === 'saved' ? (
         savedProducts.length === 0 && !loading ? (

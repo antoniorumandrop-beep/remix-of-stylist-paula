@@ -18,6 +18,7 @@ import { NotConnectedError } from './types';
  *   feedback  → table `fit_feedback`       (one row per user × product — the dataset that matters)
  *   saved     → table `saved_products`
  *   collections → tables `collections` + `collection_products` (join, ordered)
+ *   catalog.addUserProduct → table `user_products` (per-user, RLS — NOT the shared `products`)
  *   catalog   → tables `products` (raw layer) + `product_fit_attributes` (enriched layer),
  *               readable by everyone, writable by admins only
  *
@@ -54,6 +55,8 @@ export function createSupabaseBackend(): Backend {
     catalog: {
       list: notConnected('products'), get: notConnected('products'), importRaw: notConnected('products'),
       listImported: notConnected('products'), clearImported: notConnected('products'),
+      addUserProduct: notConnected('user_products'), listUserProducts: notConnected('user_products'),
+      removeUserProduct: notConnected('user_products'),
     },
   };
 }

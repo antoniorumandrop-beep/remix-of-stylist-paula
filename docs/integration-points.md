@@ -34,6 +34,7 @@ a po każdej udanej mutacji odświeżają się wszystkie zapytania
 | Pętla „czy pasowało?" | localStorage `paula.fitFeedback` | `FitFeedbackRepository` | tabela `fit_feedback` — **to jest zbiór danych, o który chodzi** |
 | Zapisane (serduszko) | localStorage `paula.saved` | `SavedRepository` | tabela `saved_products` |
 | Kolekcje | localStorage `paula.collections` | `CollectionsRepository` | tabele `collections` + `collection_products` (RLS join idzie przez rodzica) |
+| Własne rzeczy z linku | localStorage `paula.catalog.user`, ekran `/app/add` | `CatalogRepository.addUserProduct` | tabela `user_products` (per użytkowniczka, RLS) — **nie** wspólne `products` |
 | Katalog | mocki + import w localStorage `paula.catalog.imported` | `CatalogRepository` | tabele `products` (raw) + `product_fit_attributes` (enriched) |
 | Import od marki | ekran `/admin/import` (CSV/JSON → `parseBrandFeed`) | `src/lib/catalog/feed.ts`, `src/pages/ImportProducts.tsx` | ten sam ekran, zapis do `products`, polityka RLS „tylko admin" |
 | Import z linku produktowego | ekran `/admin/import`, pobranie przez middleware dev-serwera (`vite-plugins/fetch-product.ts`) | parser `src/lib/catalog/link.ts` (czysty, bez sieci), pobranie `src/lib/catalog/linkFetch.ts` | edge function `/fetch-product` — te same trzy reguły: sprawdzenie `robots.txt`, własny User-Agent, jedna strona na żądanie |

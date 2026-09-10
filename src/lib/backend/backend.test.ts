@@ -93,6 +93,44 @@ describe('backend contract (local)', () => {
     expect(await b.saved.list()).toEqual(['1']);
   });
 
+  it('catalog: what the user adds herself stays out of the shared channel', async () => {
+    const raw = {
+      id: 'user:sukienka-z-innego-sklepu',
+      source: 'user',
+      externalId: 'sukienka-z-innego-sklepu',
+      name: 'Sukienka z innego sklepu',
+      brand: 'Nieznana Marka',
+      price: 199,
+      currency: 'PLN' as const,
+      category: 'dresses',
+      url: 'https://sklep.example.pl/sukienka',
+      fetchedAt: 'now',
+    };
+    const before = (await b.catalog.list()).length;
+    const added = await b.catalog.addUserProduct(raw);
+    expect(added.name).toBe('Sukienka z innego sklepu');
+
+    // The feed, the search and the "similar products" rows all read `list()`.
+    // A piece pasted from a shop we do not carry never enters any of them.
+    const shared = await b.catalog.list();
+    expect(shared).toHaveLength(before);
+    expect(shared.some(p => p.id === raw.id)).toBe(false);
+
+    // But she has to be able to open what she added, so `get` is wider.
+    expect((await b.catalog.get(raw.id))?.name).toBe('Sukienka z innego sklepu');
+    expect(await b.catalog.listUserProducts()).toHaveLength(1);
+
+    // Pasting the same link twice replaces the record rather than doubling it.
+    await b.catalog.addUserProduct({ ...raw, price: 179 });
+    const mine = await b.catalog.listUserProducts();
+    expect(mine).toHaveLength(1);
+    expect(mine[0].price).toBe(179);
+
+    await b.catalog.removeUserProduct(raw.id);
+    expect(await b.catalog.listUserProducts()).toEqual([]);
+    expect(await b.catalog.get(raw.id)).toBeNull();
+  });
+
   it('collections: create, rename, add, remove, delete', async () => {
     expect(await b.collections.list()).toEqual([]);
 

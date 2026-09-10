@@ -138,6 +138,21 @@ export interface CatalogRepository {
   importRaw(items: RawProduct[]): Promise<number>;
   listImported(): Promise<Product[]>;
   clearImported(): Promise<void>;
+
+  /**
+   * Products the user added herself, from a link to a shop we do not carry.
+   *
+   * Kept out of `list()` on purpose, so they never reach the feed, the search
+   * results or the "similar products" rows. A pasted page gives us whatever
+   * that shop happened to publish — often no composition and no size chart —
+   * while a brand feed is filled in by the brand. Both would render an
+   * identical Fit Score badge, and the weaker one would be indistinguishable.
+   *
+   * `get()` still finds them: she has to be able to open what she added.
+   */
+  addUserProduct(item: RawProduct): Promise<Product>;
+  listUserProducts(): Promise<Product[]>;
+  removeUserProduct(id: string): Promise<void>;
 }
 
 // ---------------------------------------------------------------- root

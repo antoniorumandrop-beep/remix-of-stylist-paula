@@ -292,6 +292,15 @@ export default function ProductDetail() {
             {has(product.id) ? <><Check className="w-4 h-4" />{t('inWardrobe')}</> : <><Shirt className="w-4 h-4" />{t('addToWardrobe')}</>}
           </button>
 
+          {/* Added from a link by the user herself. She should be told what
+              that costs her: this shop's page is all we have to go on. */}
+          {product.source === 'user' && (
+            <div className="mt-6 bg-card rounded-xl p-4">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1.5">{t('yourOwnBadge')}</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">{t('yourOwnNote')}</p>
+            </div>
+          )}
+
           <div className="mt-8 space-y-4 text-sm">
             <div className="flex justify-between py-3 border-b border-border">
               <span className="text-muted-foreground">{t('category')}</span>

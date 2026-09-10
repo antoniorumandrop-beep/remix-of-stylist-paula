@@ -149,6 +149,31 @@ create table price_history (
   primary key (product_id, observed_at)
 );
 
+-- user_products ↔ CatalogRepository.addUserProduct
+-- Pieces the user pasted from a shop we do not carry. Deliberately NOT rows in
+-- `products`: that table is the shared channel behind the feed, the search and
+-- the "similar products" rows, and a pasted page gives us whatever that shop
+-- published — usually no composition and no size chart. The same Fit Score
+-- badge on much thinner data is fine on a page she opened on purpose and wrong
+-- in a recommendation.
+create table user_products (
+  id          text not null,              -- "user:<slug>"
+  user_id     uuid not null references auth.users(id) on delete cascade,
+  name        text not null,
+  brand       text not null,
+  price       numeric not null,
+  currency    text not null default 'PLN',
+  category    text not null,
+  url         text,
+  image_url   text,
+  material    text,
+  description text,
+  sizes       text,
+  fit         jsonb,                      -- the enriched layer, same shape as product_fit_attributes
+  fetched_at  timestamptz not null default now(),
+  primary key (user_id, id)
+);
+
 -- ---------------------------------------------------------------- RLS
 
 alter table body_profiles          enable row level security;
@@ -160,6 +185,7 @@ alter table fit_feedback           enable row level security;
 alter table saved_products         enable row level security;
 alter table collections            enable row level security;
 alter table collection_products    enable row level security;
+alter table user_products          enable row level security;
 alter table products               enable row level security;
 alter table product_fit_attributes enable row level security;
 alter table price_history          enable row level security;
@@ -173,6 +199,7 @@ create policy "own rows" on outfits           for all using (user_id = auth.uid(
 create policy "own rows" on fit_feedback      for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "own rows" on saved_products    for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "own rows" on collections       for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "own rows" on user_products     for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 -- The join table has no user_id of its own, so its policy has to go through
 -- the parent. Without this it would be readable by everyone.

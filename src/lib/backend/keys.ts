@@ -11,4 +11,5 @@ export const qk = {
   collections: ['collections'] as const,
   catalog: ['catalog'] as const,
   catalogImported: ['catalog', 'imported'] as const,
+  catalogUser: ['catalog', 'user'] as const,
 };

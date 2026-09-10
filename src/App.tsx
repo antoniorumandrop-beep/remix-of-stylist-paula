@@ -32,6 +32,7 @@ const Alerts = lazy(() => import("./pages/Alerts"));
 const BuildYourStyle = lazy(() => import("./pages/BuildYourStyle"));
 const FittingRoom = lazy(() => import("./pages/FittingRoom"));
 const ImportProducts = lazy(() => import("./pages/ImportProducts"));
+const AddProduct = lazy(() => import("./pages/AddProduct"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const App = () => (
@@ -65,6 +66,7 @@ const App = () => (
                   <Route path="product/:id" element={<ProductDetail />} />
                   <Route path="collection/:id" element={<CollectionDetail />} />
                   <Route path="alerts" element={<Alerts />} />
+                  <Route path="add" element={<AddProduct />} />
                   <Route path="build-your-style" element={<BuildYourStyle />} />
                   <Route path="fitting-room" element={<FittingRoom />} />
                 </Route>
