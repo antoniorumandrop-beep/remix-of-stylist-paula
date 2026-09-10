@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shirt, Plus, Trash2, Check, X, Sparkles, Heart } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useWardrobe } from '@/lib/wardrobe';
 import { useCatalog } from '@/lib/catalog/useCatalog';
 import { useFitFeedback } from '@/lib/fitFeedback';
+import { dueForFeedback } from '@/lib/feedbackQueue';
 import { FitFeedbackForm } from '@/components/FitFeedbackForm';
 import { ProductImage } from '@/components/ProductImage';
 import { SaveSheet } from '@/components/SaveSheet';
@@ -19,7 +20,7 @@ export default function FittingRoom() {
   const [outfitName, setOutfitName] = useState('');
   const [picked, setPicked] = useState<string[]>([]);
   const [feedbackFor, setFeedbackFor] = useState<string | null>(null);
-  const { forProduct } = useFitFeedback();
+  const { all: feedback, forProduct } = useFitFeedback();
 
   const { byId } = useCatalog();
   const wardrobeProducts = useMemo(
@@ -30,6 +31,30 @@ export default function FittingRoom() {
     () => pending.map(p => ({ ...p, product: byId.get(p.productId) })).filter(p => p.product),
     [pending, byId],
   );
+
+  /**
+   * The things still missing an answer, oldest first. Capped at four: the row
+   * is a reminder, not a backlog to work through, and a wall of them would be
+   * the nagging this product does not do.
+   */
+  const due = useMemo(() => {
+    const answered = new Set(feedback.map(f => f.productId));
+    return dueForFeedback(items, answered)
+      .map(i => ({ ...i, product: byId.get(i.productId) }))
+      .filter(i => i.product)
+      .slice(0, 4);
+  }, [items, feedback, byId]);
+
+  /**
+   * The form renders below the whole grid, so opening it from the row at the
+   * top of the screen left it out of sight and the click looked like it had
+   * done nothing. Keyed on the product, not on every render — otherwise the
+   * page would jump under her hand each time she taps an answer.
+   */
+  const formRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (feedbackFor) formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [feedbackFor]);
 
   const togglePick = (id: string) =>
     setPicked(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
@@ -74,6 +99,35 @@ export default function FittingRoom() {
                   className="p-2 rounded-full hover:bg-muted text-muted-foreground"
                 >
                   <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {due.length > 0 && (
+        <section className="mb-8">
+          <div className="flex items-baseline gap-2 mb-1">
+            <h2 className="text-xs font-medium tracking-widest uppercase text-muted-foreground">
+              {t('feedbackDueTitle')}
+            </h2>
+            <span className="text-xs text-muted-foreground">{t('feedbackDueCount', due.length)}</span>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">{t('feedbackDueDesc')}</p>
+          <div className="space-y-2">
+            {due.map(({ product }) => (
+              <div key={product!.id} className="bg-card rounded-2xl p-4 flex items-center gap-4">
+                <ProductImage product={product!} className="w-14 h-14 rounded-xl shrink-0 relative overflow-hidden" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{product!.name}</p>
+                  <p className="text-xs text-muted-foreground">{product!.brand}</p>
+                </div>
+                <button
+                  onClick={() => { setTab('items'); setFeedbackFor(product!.id); }}
+                  className="px-4 py-2 rounded-full bg-foreground text-background text-xs font-medium"
+                >
+                  {t('feedbackDueAnswer')}
                 </button>
               </div>
             ))}
@@ -155,7 +209,7 @@ export default function FittingRoom() {
             </div>
           )}
           {feedbackFor && (
-            <div className="mt-6 max-w-md">
+            <div ref={formRef} className="mt-6 max-w-md">
               <FitFeedbackForm productId={feedbackFor} onDone={() => setFeedbackFor(null)} />
             </div>
           )}

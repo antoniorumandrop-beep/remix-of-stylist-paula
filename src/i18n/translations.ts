@@ -521,6 +521,10 @@ export const translations = {
     learnedGarmentsAnswered: (n: number) => (n === 1 ? '1 garment answered' : `${n} garments answered`),
     learnedNoPredictions: 'You have answered, but none of those garments carried a prediction to check against.',
     learnedOpenWardrobe: 'Open your wardrobe',
+    feedbackDueTitle: 'Waiting for your answer',
+    feedbackDueDesc: 'These answers are the only way Paula knows whether she got it right.',
+    feedbackDueCount: (n: number) => (n === 1 ? '1 thing' : `${n} things`),
+    feedbackDueAnswer: 'Answer',
 
     // "How Paula works" — the ranking disclosure
     howItWorksLink: 'How Paula works this out',
@@ -1134,6 +1138,10 @@ export const translations = {
     learnedGarmentsAnswered: (n: number) => `${n} ${plPlural(n, 'oceniona rzecz', 'ocenione rzeczy', 'ocenionych rzeczy')}`,
     learnedNoPredictions: 'Masz już oceny, ale przy tych rzeczach Paula niczego nie przewidziała, więc nie ma czego sprawdzać.',
     learnedOpenWardrobe: 'Otwórz szafę',
+    feedbackDueTitle: 'Czekają na Twoją ocenę',
+    feedbackDueDesc: 'Tylko z tych odpowiedzi Paula wie, czy trafiła.',
+    feedbackDueCount: (n: number) => `${n} ${plPlural(n, 'rzecz', 'rzeczy', 'rzeczy')}`,
+    feedbackDueAnswer: 'Oceń',
 
     // „Jak działa Paula” — ujawnienie parametrów plasowania
     howItWorksLink: 'Jak Paula to liczy',
