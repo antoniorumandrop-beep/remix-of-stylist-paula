@@ -1,0 +1,175 @@
+{
+  "version": 1,
+  "sdk_version": "2.0.4",
+  "path": "/mcp",
+  "auth": {
+    "type": "none"
+  },
+  "mcp": {
+    "server": {
+      "name": "remix-of-stylist-paula",
+      "version": "0.1.0",
+      "title": "Remix of Stylist Paula"
+    },
+    "tools": [
+      {
+        "name": "classify_body_shape",
+        "title": "Classify body proportions",
+        "description": "Classify body proportions into an FFIT proportion label (hourglass, spoon, triangle, rectangle, ...) from bust, waist and hips. Returns the label, the rule that fired and the differences in cm. Descriptive arithmetic only — never an aesthetic judgement, and never weight, BMI or health.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "bust": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Bust circumference."
+            },
+            "waist": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Waist circumference."
+            },
+            "hips": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Hip circumference."
+            },
+            "highHip": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Upper hip, ~7-10 cm below the waist. Only needed to tell spoon from bottom-hourglass."
+            },
+            "unit": {
+              "type": "string",
+              "enum": [
+                "cm",
+                "in"
+              ],
+              "description": "Unit of the measurements. Defaults to cm."
+            }
+          },
+          "required": [
+            "bust",
+            "waist",
+            "hips"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_products",
+        "title": "Search the catalogue",
+        "description": "Search Paula's public product catalogue by free text, category and maximum price in PLN. Returns product id, name, brand, price and store.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Free text matched against product name and brand."
+            },
+            "category": {
+              "type": "string",
+              "enum": [
+                "dresses",
+                "tops",
+                "bottoms",
+                "skirts",
+                "outerwear",
+                "shoes",
+                "accessories"
+              ],
+              "description": "Restrict to one category."
+            },
+            "maxPrice": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Maximum price in PLN."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Maximum number of results. Defaults to 10."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "score_product_fit",
+        "title": "Score fit risk for a product",
+        "description": "Estimate fit risk per body point (bust, waist, hips, thighs, stomach) for one catalogue product, from measurements or a proportion label. Returns a score, a confidence and a tight/loose/neutral verdict with reason codes per point. This is fit risk, not an aesthetic judgement.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "productId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Product id from search_products."
+            },
+            "bust": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Bust circumference in cm."
+            },
+            "waist": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Waist circumference in cm."
+            },
+            "hips": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Hip circumference in cm."
+            },
+            "highHip": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Upper hip in cm, optional."
+            },
+            "shape": {
+              "type": "string",
+              "enum": [
+                "hourglass",
+                "bottom-hourglass",
+                "top-hourglass",
+                "spoon",
+                "triangle",
+                "inverted-triangle",
+                "rectangle",
+                "diamond",
+                "oval"
+              ],
+              "description": "Proportion label, used instead of measurements when they are not available."
+            }
+          },
+          "required": [
+            "productId"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
