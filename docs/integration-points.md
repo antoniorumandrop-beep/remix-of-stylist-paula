@@ -127,8 +127,13 @@ razu. Z magic linkiem zwróci `null`, a sesja przyjdzie przez `onAuthChange` —
 - Recenzje i „kupiły kobiety o podobnej sylwetce" — `src/data/mockData.ts`
   (`productReviews`, `getSimilarBodiesBought`). Wymaga tabeli recenzji i
   dopasowania po sylwetce z `body_profiles`.
-- Alerty cenowe — `src/pages/Alerts.tsx` na sztywno. Wymaga `price_history`
-  (tabela jest w szkicu schematu).
+- Alerty cenowe — strona mówi wprost, że śledzenie nie działa, i pokazuje
+  zapisane rzeczy z jedną, dzisiejszą ceną. Do uruchomienia potrzeba dwóch
+  rzeczy naraz: **źródła, które odświeża ceny** (feed marki albo sieć
+  afiliacyjna, nie katalog mockowy) i **tabeli `price_history`** zbieranej od
+  pierwszego dnia — bo bez 30 dni historii nie wolno pokazać ani przekreślonej
+  ceny, ani plakietki promocji (dyrektywa Omnibus). Tabela jest w szkicu
+  schematu; pilnuje tego `src/pages/priceDisplay.test.tsx`.
 - `sampleCollections` w `src/data/mockData.ts` — zostaje w pliku jako przykład
   kształtu danych, ale **nic go już nie renderuje**. Kolekcje są prawdziwe.
 - Wyszukiwanie po zdjęciu („znajdź to samo / tańsze") — `SearchPage.tsx`

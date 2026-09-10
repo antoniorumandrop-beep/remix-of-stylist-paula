@@ -308,6 +308,10 @@ export const translations = {
     // Collection Detail
     collectionNotFound: 'Collection not found.',
     productActions: 'Product actions',
+    alertsNotRunning: 'Price tracking is not running yet',
+    alertsNotRunningWhy: 'Watching a price needs a source that refreshes it, and 30 days of history per product before we may show a struck-through price or a sale badge at all.',
+    alertsWatchlist: 'What you are watching',
+    alertsWatchlistNote: 'Your saved pieces with the price we have today. When tracking starts, changes show up here.',
     itemsCount: (n: number) => `${n} ${n === 1 ? 'item' : 'items'}`,
     collectionsEmpty: 'No collections yet. Make one from any product you like.',
     collectionEmpty: 'Nothing in this collection yet.',
@@ -814,6 +818,10 @@ export const translations = {
     // Collection Detail
     collectionNotFound: 'Kolekcja nie znaleziona.',
     productActions: 'Akcje produktu',
+    alertsNotRunning: 'Śledzenie cen jeszcze nie działa',
+    alertsNotRunningWhy: 'Alert wymaga źródła, które odświeża ceny, i 30 dni historii dla każdego produktu — dopiero wtedy wolno pokazać przekreśloną cenę albo plakietkę promocji.',
+    alertsWatchlist: 'Co obserwujesz',
+    alertsWatchlistNote: 'Twoje zapisane rzeczy z ceną, którą mamy dzisiaj. Kiedy śledzenie ruszy, zmiany pojawią się tutaj.',
     // Polish counts in three forms. Until now every count on screen came from
     // mock data and happened to be 5 or more, so "1 elementów" never appeared.
     itemsCount: (n: number) => {
