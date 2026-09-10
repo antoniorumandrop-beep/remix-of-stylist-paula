@@ -26,9 +26,10 @@ test('kolekcja przeżywa odświeżenie razem z produktem', async ({ page }) => {
   // actually lives.
   await page.goto('/app/for-you');
   const card = page.locator('.group').filter({ hasText: 'PLN' }).first();
-  await card.getByRole('button', { name: 'Akcje produktu' }).click();
-  await card.getByRole('button', { name: 'Dodaj do kolekcji' }).click();
-  await card.getByRole('button', { name: 'Na wesele' }).click();
+  await card.getByRole('button', { name: 'Zapisz tę rzecz' }).click();
+  const sheet = page.getByRole('dialog');
+  await sheet.getByRole('button', { name: 'Na wesele' }).click();
+  await sheet.getByRole('button', { name: 'Gotowe' }).click();
 
   await page.goto('/app/saved');
   await page.getByRole('button', { name: 'Kolekcje' }).click();

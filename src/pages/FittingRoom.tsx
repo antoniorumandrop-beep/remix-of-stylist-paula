@@ -1,18 +1,20 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shirt, Plus, Trash2, Check, X, Sparkles } from 'lucide-react';
+import { Shirt, Plus, Trash2, Check, X, Sparkles, Heart } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useWardrobe } from '@/lib/wardrobe';
 import { useCatalog } from '@/lib/catalog/useCatalog';
 import { useFitFeedback } from '@/lib/fitFeedback';
 import { FitFeedbackForm } from '@/components/FitFeedbackForm';
 import { ProductImage } from '@/components/ProductImage';
+import { SaveSheet } from '@/components/SaveSheet';
 
 export default function FittingRoom() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { items, pending, outfits, addItem, dismissPending, removeItem, incWear, createOutfit, deleteOutfit } = useWardrobe();
   const [tab, setTab] = useState<'items' | 'outfits'>('items');
+  const [saveFor, setSaveFor] = useState<string | null>(null);
   const [building, setBuilding] = useState(false);
   const [outfitName, setOutfitName] = useState('');
   const [picked, setPicked] = useState<string[]>([]);
@@ -133,6 +135,13 @@ export default function FittingRoom() {
                           {forProduct(product!.id) ? t('editFeedback') : t('didItFit')}
                         </button>
                         <button
+                          onClick={() => setSaveFor(product!.id)}
+                          aria-label={t('saveSheetTitle')}
+                          className="p-1.5 rounded-full hover:bg-card text-muted-foreground"
+                        >
+                          <Heart className="w-3.5 h-3.5" />
+                        </button>
+                        <button
                           onClick={() => removeItem(product!.id)}
                           className="p-1.5 rounded-full hover:bg-card text-muted-foreground"
                         >
@@ -249,6 +258,16 @@ export default function FittingRoom() {
             </div>
           )}
         </section>
+      )}
+
+      {/* One dialog for the whole screen: the wardrobe can hold a lot of items
+          and each one does not need its own copy mounted. */}
+      {saveFor && byId.get(saveFor) && (
+        <SaveSheet
+          product={byId.get(saveFor)!}
+          open
+          onOpenChange={open => { if (!open) setSaveFor(null); }}
+        />
       )}
     </div>
   );

@@ -308,6 +308,11 @@ export const translations = {
     // Collection Detail
     collectionNotFound: 'Collection not found.',
     productActions: 'Product actions',
+    saveSheetTitle: 'Save this piece',
+    doneAction: 'Done',
+    copyLink: 'Copy link',
+    linkCopied: 'Link copied',
+    saveToCollectionHint: 'Pick a collection, or start a new one.',
     addYourOwn: 'Add from a link',
     addYourOwnDesc: 'Something from a shop Paula does not carry yet — paste the link and it lands in your saved things.',
     addYourOwnTitle: 'Your own pieces',
@@ -825,6 +830,11 @@ export const translations = {
     // Collection Detail
     collectionNotFound: 'Kolekcja nie znaleziona.',
     productActions: 'Akcje produktu',
+    saveSheetTitle: 'Zapisz tę rzecz',
+    doneAction: 'Gotowe',
+    copyLink: 'Kopiuj link',
+    linkCopied: 'Link skopiowany',
+    saveToCollectionHint: 'Wybierz kolekcję albo załóż nową.',
     addYourOwn: 'Dodaj z linku',
     addYourOwnDesc: 'Coś ze sklepu, którego Paula jeszcze nie ma — wklej link, a rzecz trafi do Twoich zapisanych.',
     addYourOwnTitle: 'Twoje własne rzeczy',

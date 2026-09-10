@@ -19,6 +19,7 @@ import { lengthKey, pointKey, reasonText, shapeKey, verdictKey } from '@/lib/fit
 import { useFitFeedback, type FitAnswer } from '@/lib/fitFeedback';
 import { FitFeedbackForm } from '@/components/FitFeedbackForm';
 import { MaterialPanel } from '@/components/MaterialPanel';
+import { SaveSheet } from '@/components/SaveSheet';
 import { categoryLabel } from '@/lib/catalog/categories';
 
 export default function ProductDetail() {
@@ -46,8 +47,9 @@ export default function ProductDetail() {
   const { profile, loading: profileLoading } = useBodyProfile();
   const { forProduct } = useFitFeedback();
   const { prefs } = useUserPrefs();
-  const { isSaved, toggle: toggleSaved } = useSaved();
+  const { isSaved } = useSaved();
   const [showFeedback, setShowFeedback] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
   const { products: catalog, byId, loading: catalogLoading } = useCatalog();
 
   const product = id ? byId.get(id) : undefined;
@@ -277,7 +279,8 @@ export default function ProductDetail() {
               {t('viewOn')} {product.store}
             </button>
             <button
-              onClick={() => void toggleSaved(product.id)}
+              onClick={() => setSaveOpen(true)}
+              aria-label={t('saveSheetTitle')}
               aria-pressed={isSaved(product.id)}
               className="p-3.5 border border-border rounded-full hover:bg-card transition-colors"
             >
@@ -329,6 +332,8 @@ export default function ProductDetail() {
           </div>
         </div>
       </div>
+
+      <SaveSheet product={product} open={saveOpen} onOpenChange={setSaveOpen} />
 
       <MaterialPanel composition={composition} />
 

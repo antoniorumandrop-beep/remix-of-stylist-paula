@@ -17,9 +17,11 @@ test('zapisany produkt pojawia się na liście zapisanych', async ({ page }) => 
   await expect(card).toBeVisible();
   await card.hover();
 
-  // The heart opens the actions; saving is the explicit choice inside them.
-  await card.getByRole('button').first().click();
-  await card.getByRole('button', { name: 'Zapisz', exact: true }).click();
+  // The heart opens the save dialog; saving is the explicit choice inside it.
+  await card.getByRole('button', { name: 'Zapisz tę rzecz' }).click();
+  const sheet = page.getByRole('dialog');
+  await sheet.getByRole('button', { name: 'Zapisane' }).click();
+  await sheet.getByRole('button', { name: 'Gotowe' }).click();
 
   await expect
     .poll(async () => (await readStorage<string[]>(page, KEYS.saved))?.length ?? 0)
