@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => ({
   },
   // `fetchProductPlugin` is dev-only (`apply: "serve"`): it stands in for the
   // edge function that will fetch shop pages in production. See the plugin.
-  plugins: [react(), fetchProductPlugin(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [react(), fetchProductPlugin(), mcpPlugin(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

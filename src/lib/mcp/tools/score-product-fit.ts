@@ -71,7 +71,16 @@ export default defineTool({
       content: [{ type: "text", text }],
       structuredContent: {
         product: { id: product.id, name: product.name, brand: product.brand, price: product.price },
-        fit: { score: result.score, confidence: result.confidence, points: result.points },
+        fit: {
+          score: result.score,
+          confidence: result.confidence,
+          points: result.points.map((p) => ({
+            point: p.point,
+            verdict: p.verdict,
+            risk: p.risk,
+            reasons: [...p.reasons],
+          })),
+        },
       },
     };
   },
