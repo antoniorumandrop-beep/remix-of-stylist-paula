@@ -1,3 +1,5 @@
+import { parseComposition, type CompositionInput } from '@/lib/catalog/composition';
+
 export type StretchLevel = "unknown" | "none" | "low" | "high";
 
 export interface StretchResult {
@@ -7,7 +9,6 @@ export interface StretchResult {
   elastanePercent: number | null;
 }
 
-const ELASTIC = /(elastane?|elastan|spandex|lycra|elasthan)/i;
 const KNIT = /(knit|jersey|rib(bed)?|dzianina|prazkowan)/i;
 
 /**
@@ -16,11 +17,11 @@ const KNIT = /(knit|jersey|rib(bed)?|dzianina|prazkowan)/i;
  * that decides whether a 5 cm difference is a problem or not.
  *
  * Accepts either the raw string ("95% cotton, 5% elastane") or the structured
- * composition already present in the product data.
+ * composition already present in the product data. The reading of the string
+ * itself lives in `catalog/composition.ts`, so the panel on the product page
+ * and the scoring engine cannot drift apart over what a composition says.
  */
-export function parseStretch(
-  composition: string | { name: string; percent: number }[] | null | undefined,
-): StretchResult {
+export function parseStretch(composition: CompositionInput): StretchResult {
   if (composition == null) {
     return { level: "unknown", confidence: 0, elastanePercent: null };
   }
@@ -33,19 +34,10 @@ export function parseStretch(
     return { level: "unknown", confidence: 0, elastanePercent: null };
   }
 
-  let percent: number | null = null;
-  if (Array.isArray(composition)) {
-    const hit = composition.find((c) => ELASTIC.test(c.name));
-    percent = hit ? hit.percent : null;
-  } else {
-    // "5% elastane" and "elastane 5%" both occur in real feeds.
-    const before = text.match(/(\d+(?:[.,]\d+)?)\s*%\s*[^,;]*?(?:elastane?|elastan|spandex|lycra|elasthan)/i);
-    const after = text.match(/(?:elastane?|elastan|spandex|lycra|elasthan)[^,;]*?(\d+(?:[.,]\d+)?)\s*%/i);
-    const raw = before?.[1] ?? after?.[1];
-    percent = raw === undefined ? null : parseFloat(raw.replace(",", "."));
-  }
+  const elastic = parseComposition(composition).find((entry) => entry.fiber === "elastane");
+  const percent = elastic?.percent ?? null;
 
-  if (percent !== null) {
+  if (elastic && percent !== null) {
     return {
       level: percent >= 4 ? "high" : percent >= 1 ? "low" : "none",
       confidence: 0.9,
@@ -53,7 +45,7 @@ export function parseStretch(
     };
   }
 
-  if (ELASTIC.test(text)) {
+  if (elastic) {
     // Named but without a percentage — it stretches, we just don't know how much.
     return { level: "low", confidence: 0.5, elastanePercent: null };
   }

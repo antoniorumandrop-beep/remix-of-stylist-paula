@@ -20,6 +20,8 @@ const DELIBERATELY_IDENTICAL = new Set([
   'secondHand',   // "Second-hand" — the usual Polish term
   'fit',          // the badge reads "fit 94%" in both languages
   'Streetwear',   // an aesthetic name, not translated in Polish either
+  'fiberModal',   // the fibre is called "modal" in Polish too
+  'fiberLyocell', // likewise — a trade name, not a translatable word
 ]);
 
 /** Reads the single-line string entries out of each language block. */
@@ -113,5 +115,62 @@ describe('teksty poza tabelą tłumaczeń', () => {
     // there may be no language context left to read, so its copy is fixed.
     const real = offenders.filter(o => !o.startsWith('components/ErrorBoundary.tsx'));
     expect(real, real.join('\n')).toEqual([]);
+  });
+});
+
+/**
+ * The third way English reaches the screen: `src/data/`.
+ *
+ * The first guard reads the translation table, the second reads the screens.
+ * Neither looks at the mock data, which is where the body-shape descriptions
+ * that rated women's bodies were sitting — translated headings above English
+ * sentences nobody had checked, because no test could see them.
+ *
+ * A field is either on the register below, on record as mock prose that leaves
+ * with the mock catalogue, or it is a defect. New English prose in `src/data/`
+ * fails this test.
+ */
+describe('angielska proza w danych', () => {
+  const dataDir = resolve(__dirname, '..', 'data');
+
+  /** Mock prose that is known, unrendered or short-lived. Nothing may join it. */
+  const REGISTERED = new Map<string, string>([
+    ['text', 'review bodies — mock, they go when a real catalogue arrives'],
+    ['description', 'material prose — nothing reads it since the fibre dictionary landed'],
+    ['behavior', 'likewise: the panel now generates this from the composition'],
+  ]);
+
+  function prose(): { field: string; file: string; line: number; text: string }[] {
+    const out: { field: string; file: string; line: number; text: string }[] = [];
+    for (const name of readdirSync(dataDir)) {
+      if (!name.endsWith('.ts') || name.includes('.test.')) continue;
+      readFileSync(join(dataDir, name), 'utf8').split('\n').forEach((line, i) => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('//') || trimmed.startsWith('*')) return;
+        for (const match of line.matchAll(/(\w+):\s*'((?:\\.|[^'])*)'/g)) {
+          const text = match[2];
+          if (text.length <= 25 || !text.includes(' ')) continue;
+          out.push({ field: match[1], file: name, line: i + 1, text });
+        }
+      });
+    }
+    return out;
+  }
+
+  it('nie wpuszcza nowej angielskiej prozy do src/data', () => {
+    const offenders = prose()
+      .filter(p => !REGISTERED.has(p.field))
+      .map(p => `${p.file}:${p.line} — ${p.field}: ${p.text.slice(0, 60)}`);
+
+    expect(offenders, offenders.join('\n')).toEqual([]);
+  });
+
+  it('trzyma rejestr uczciwym', () => {
+    // A field that no longer holds prose should leave the register rather than
+    // sit here excusing something that is not there any more.
+    const present = new Set(prose().map(p => p.field));
+    for (const field of REGISTERED.keys()) {
+      expect(present.has(field), `${field} nie ma już prozy — usuń go z rejestru`).toBe(true);
+    }
   });
 });

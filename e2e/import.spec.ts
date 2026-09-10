@@ -62,3 +62,47 @@ test('zaimportowane produkty można usunąć', async ({ page }) => {
   await page.getByRole('button', { name: /Usuń wszystkie zaimportowane/ }).click();
   await expect(page.getByText(/Zaimportowane produkty \(0\)/)).toBeVisible();
 });
+
+/**
+ * The panel that describes the material was switched off for imported products
+ * on purpose: the only descriptions we had were sixteen hand-written English
+ * paragraphs about mock products, and attaching an invented composition to a
+ * real garment would have been worse than showing nothing.
+ *
+ * Now the panel is generated from `material` — the field the feed actually
+ * carries — so the products that will be real are the ones it works best for.
+ * That is the claim, and this walks it from the spreadsheet to the screen.
+ */
+test('produkt z importu dostaje opis materiału policzony ze składu', async ({ page }) => {
+  await seedSignedIn(page);
+  await page.goto('/admin/import');
+
+  await page.getByPlaceholder('Wklej tutaj CSV albo JSON').fill(FEED);
+  await page.getByRole('button', { name: 'Podgląd' }).click();
+  await page.getByRole('button', { name: /Importuj/ }).click();
+  await expect(page.getByText(/Zaimportowane produkty \(2\)/)).toBeVisible();
+
+  await page.goto('/app/search');
+  const input = page.getByPlaceholder('Zapytaj Paulę o cokolwiek...');
+  await input.fill('sukienka do 300 zł');
+  await input.press('Enter');
+  await page.getByText('Sukienka kopertowa midi z wiskozy').first().click();
+
+  await expect(page.getByRole('heading', { name: 'Materiał' })).toBeVisible();
+
+  // Both fibres of "95% wiskoza, 5% elastan", named in Polish.
+  await expect(page.getByText('Wiskoza', { exact: true })).toBeVisible();
+  await expect(page.getByText('Elastan', { exact: true })).toBeVisible();
+
+  // Viscose is made from wood but chemically regenerated, so nothing here is
+  // a natural fibre — and the panel says 0% rather than rounding it up.
+  await expect(page.getByText('Włókna naturalne')).toBeVisible();
+  await expect(page.getByText('0%', { exact: true })).toBeVisible();
+
+  // 5% elastane is a stretch fabric, and the same parser says so on the
+  // product page as in the scoring engine.
+  await expect(page.getByText('Dobrze się rozciąga')).toBeVisible();
+
+  // Care is derived too: viscose wants the cool wash, not the mock's prose.
+  await expect(page.getByText('Pranie 30°C')).toBeVisible();
+});

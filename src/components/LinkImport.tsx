@@ -4,6 +4,7 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import { fetchProductDraft } from '@/lib/catalog/linkFetch';
 import { draftToRawProduct, type LinkDraft } from '@/lib/catalog/link';
 import { CATEGORIES, type RawProduct } from '@/lib/catalog/types';
+import { categoryLabel } from '@/lib/catalog/categories';
 
 /**
  * Paste a shop link, get a product.
@@ -147,15 +148,11 @@ export function LinkImport({ onAdd }: { onAdd: (product: RawProduct) => void }) 
             <select
               value={category}
               onChange={e => setCategory(e.target.value)}
-              className="px-3 py-2 rounded-xl bg-card text-sm capitalize focus:outline-none focus:ring-2 focus:ring-foreground/10"
+              className="px-3 py-2 rounded-xl bg-card text-sm focus:outline-none focus:ring-2 focus:ring-foreground/10"
             >
               <option value="">{t('linkPickCategory')}</option>
-              {/* Raw category ids, the same way every other screen shows them
-                  (`ProductDetail` capitalises the stored value). Translating
-                  them here alone would make the admin screen disagree with the
-                  app. */}
               {CATEGORIES.map(c => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c}>{categoryLabel(c, t)}</option>
               ))}
             </select>
             <button

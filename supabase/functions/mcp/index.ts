@@ -463,8 +463,246 @@ function computeFit(attrs, body) {
   return { score, confidence: Math.round(confidence * 100) / 100, shape, points };
 }
 
+// src/lib/catalog/fibers.ts
+var ALIASES = {
+  linen: /\b(len|lnu|lnian\w*|linen|flax)\b/,
+  cotton: /\b(baweln\w*|bawelny|cotton|coton)\b/,
+  viscose: /\b(wiskoz\w*|viscose|rayon)\b/,
+  modal: /\b(modal\w*)\b/,
+  lyocell: /\b(lyocell|liocel\w*|tencel)\b/,
+  wool: /\b(welna|welny|welnian\w*|wool|merino|merynos\w*)\b/,
+  cashmere: /\b(kaszmir\w*|cashmere)\b/,
+  silk: /\b(jedwab\w*|silk)\b/,
+  polyester: /\b(poliester\w*|poliestr\w*|polyester)\b/,
+  polyamide: /\b(poliamid\w*|polyamide|nylon\w*)\b/,
+  acrylic: /\b(akryl\w*|acrylic|acryl)\b/,
+  elastane: /\b(elastan\w*|elastane|elasthan\w*|spandex|lycra)\b/,
+  leather: /\b(skor[ay]|skorzan\w*|leather|suede|zamsz\w*)\b/
+};
+var FIBERS = {
+  linen: {
+    id: "linen",
+    nameKey: "fiberLinen",
+    behaviorKey: "fiberLinenBehavior",
+    natural: true,
+    breathability: 95,
+    abrasion: 80,
+    pillingResistance: 90,
+    wash: "warm",
+    tumbleDry: false,
+    iron: "high"
+  },
+  cotton: {
+    id: "cotton",
+    nameKey: "fiberCotton",
+    behaviorKey: "fiberCottonBehavior",
+    natural: true,
+    breathability: 85,
+    abrasion: 70,
+    pillingResistance: 70,
+    wash: "warm",
+    tumbleDry: true,
+    iron: "high"
+  },
+  viscose: {
+    id: "viscose",
+    nameKey: "fiberViscose",
+    behaviorKey: "fiberViscoseBehavior",
+    natural: false,
+    breathability: 75,
+    abrasion: 45,
+    pillingResistance: 40,
+    wash: "cold",
+    tumbleDry: false,
+    iron: "low"
+  },
+  modal: {
+    id: "modal",
+    nameKey: "fiberModal",
+    behaviorKey: "fiberModalBehavior",
+    natural: false,
+    breathability: 80,
+    abrasion: 60,
+    pillingResistance: 65,
+    wash: "warm",
+    tumbleDry: true,
+    iron: "medium"
+  },
+  lyocell: {
+    id: "lyocell",
+    nameKey: "fiberLyocell",
+    behaviorKey: "fiberLyocellBehavior",
+    natural: false,
+    breathability: 85,
+    abrasion: 70,
+    pillingResistance: 70,
+    wash: "warm",
+    tumbleDry: true,
+    iron: "medium"
+  },
+  wool: {
+    id: "wool",
+    nameKey: "fiberWool",
+    behaviorKey: "fiberWoolBehavior",
+    natural: true,
+    breathability: 80,
+    abrasion: 75,
+    pillingResistance: 45,
+    wash: "hand",
+    tumbleDry: false,
+    iron: "low"
+  },
+  cashmere: {
+    id: "cashmere",
+    nameKey: "fiberCashmere",
+    behaviorKey: "fiberCashmereBehavior",
+    natural: true,
+    breathability: 80,
+    abrasion: 50,
+    pillingResistance: 25,
+    wash: "hand",
+    tumbleDry: false,
+    iron: "low"
+  },
+  silk: {
+    id: "silk",
+    nameKey: "fiberSilk",
+    behaviorKey: "fiberSilkBehavior",
+    natural: true,
+    breathability: 80,
+    abrasion: 45,
+    pillingResistance: 75,
+    wash: "hand",
+    tumbleDry: false,
+    iron: "low"
+  },
+  polyester: {
+    id: "polyester",
+    nameKey: "fiberPolyester",
+    behaviorKey: "fiberPolyesterBehavior",
+    natural: false,
+    breathability: 30,
+    abrasion: 90,
+    pillingResistance: 50,
+    wash: "warm",
+    tumbleDry: true,
+    iron: "low"
+  },
+  polyamide: {
+    id: "polyamide",
+    nameKey: "fiberPolyamide",
+    behaviorKey: "fiberPolyamideBehavior",
+    natural: false,
+    breathability: 35,
+    abrasion: 92,
+    pillingResistance: 60,
+    wash: "warm",
+    tumbleDry: true,
+    iron: "low"
+  },
+  acrylic: {
+    id: "acrylic",
+    nameKey: "fiberAcrylic",
+    behaviorKey: "fiberAcrylicBehavior",
+    natural: false,
+    breathability: 35,
+    abrasion: 55,
+    pillingResistance: 20,
+    wash: "warm",
+    tumbleDry: false,
+    iron: "low"
+  },
+  elastane: {
+    id: "elastane",
+    nameKey: "fiberElastane",
+    behaviorKey: "fiberElastaneBehavior",
+    natural: false,
+    breathability: 30,
+    abrasion: 60,
+    pillingResistance: 70,
+    wash: "cold",
+    tumbleDry: false,
+    iron: "low"
+  },
+  leather: {
+    id: "leather",
+    nameKey: "fiberLeather",
+    behaviorKey: "fiberLeatherBehavior",
+    natural: true,
+    breathability: 40,
+    abrasion: 90,
+    pillingResistance: 100,
+    wash: "dryClean",
+    tumbleDry: false,
+    iron: "none"
+  }
+};
+function foldToAscii(text) {
+  return text.toLowerCase().replace(/ł/g, "l").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+function matchFiber(fragment) {
+  const folded = foldToAscii(fragment);
+  for (const id of Object.keys(ALIASES)) {
+    if (ALIASES[id].test(folded)) return id;
+  }
+  return null;
+}
+
+// src/lib/catalog/composition.ts
+var PERCENT = /(\d+(?:[.,]\d+)?)\s*%/g;
+var WORDS = /[\p{L}][\p{L} -]*/gu;
+function parseComposition(input) {
+  if (input == null) return [];
+  if (Array.isArray(input)) {
+    return input.map((part) => {
+      const fiber = matchFiber(part.name);
+      return {
+        fiber,
+        label: part.name,
+        percent: part.percent,
+        natural: fiber ? FIBERS[fiber].natural : null
+      };
+    });
+  }
+  const text = input.trim();
+  if (!text) return [];
+  const percents = [];
+  for (const match of text.matchAll(PERCENT)) {
+    percents.push({
+      value: parseFloat(match[1].replace(",", ".")),
+      at: match.index ?? 0,
+      taken: false
+    });
+  }
+  const found = [];
+  for (const match of text.matchAll(WORDS)) {
+    const label = match[0].trim();
+    const fiber = matchFiber(label);
+    if (!fiber) continue;
+    if (found.some((f) => f.fiber === fiber)) continue;
+    const at = match.index ?? 0;
+    found.push({ fiber, label, at, end: at + match[0].length });
+  }
+  if (found.length === 0) return [];
+  const entries = found.map(({ fiber, label, at, end }) => {
+    const before = percents.filter((p) => !p.taken && p.at < at).sort((a2, b) => b.at - a2.at)[0];
+    const after = percents.filter((p) => !p.taken && p.at >= end).sort((a2, b) => a2.at - b.at)[0];
+    const chosen = before ?? after;
+    if (chosen) chosen.taken = true;
+    return {
+      fiber,
+      label,
+      percent: chosen ? chosen.value : null,
+      natural: FIBERS[fiber].natural
+    };
+  });
+  if (entries.length === 1 && entries[0].percent === null && percents.length === 0) {
+    entries[0].percent = 100;
+  }
+  return entries;
+}
+
 // src/lib/fit/stretch.ts
-var ELASTIC = /(elastane?|elastan|spandex|lycra|elasthan)/i;
 var KNIT = /(knit|jersey|rib(bed)?|dzianina|prazkowan)/i;
 function parseStretch(composition) {
   if (composition == null) {
@@ -474,24 +712,16 @@ function parseStretch(composition) {
   if (!text.trim()) {
     return { level: "unknown", confidence: 0, elastanePercent: null };
   }
-  let percent = null;
-  if (Array.isArray(composition)) {
-    const hit = composition.find((c) => ELASTIC.test(c.name));
-    percent = hit ? hit.percent : null;
-  } else {
-    const before = text.match(/(\d+(?:[.,]\d+)?)\s*%\s*[^,;]*?(?:elastane?|elastan|spandex|lycra|elasthan)/i);
-    const after = text.match(/(?:elastane?|elastan|spandex|lycra|elasthan)[^,;]*?(\d+(?:[.,]\d+)?)\s*%/i);
-    const raw = before?.[1] ?? after?.[1];
-    percent = raw === void 0 ? null : parseFloat(raw.replace(",", "."));
-  }
-  if (percent !== null) {
+  const elastic = parseComposition(composition).find((entry) => entry.fiber === "elastane");
+  const percent = elastic?.percent ?? null;
+  if (elastic && percent !== null) {
     return {
       level: percent >= 4 ? "high" : percent >= 1 ? "low" : "none",
       confidence: 0.9,
       elastanePercent: percent
     };
   }
-  if (ELASTIC.test(text)) {
+  if (elastic) {
     return { level: "low", confidence: 0.5, elastanePercent: null };
   }
   if (KNIT.test(text)) {

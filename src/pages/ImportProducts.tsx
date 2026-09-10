@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, Trash2, Check, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { categoryLabel } from '@/lib/catalog/categories';
 import { parseBrandFeed, FEED_TEMPLATE_CSV, type FeedParseResult } from '@/lib/catalog/feed';
 import { useCatalogImport } from '@/lib/catalog/useCatalog';
 import { enrichFromText } from '@/lib/catalog/enrich';
@@ -153,7 +154,7 @@ export default function ImportProducts() {
                     <div key={raw.id} className="bg-card rounded-2xl p-4 flex gap-4">
                       <ProductImage product={raw} className="w-16 h-20 rounded-xl shrink-0 relative overflow-hidden" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[11px] uppercase tracking-widest text-muted-foreground">{raw.brand} · {raw.category}</p>
+                        <p className="text-[11px] uppercase tracking-widest text-muted-foreground">{raw.brand} · {categoryLabel(raw.category, t)}</p>
                         <p className="text-sm font-medium truncate">{raw.name}</p>
                         <p className="text-sm">{raw.price} PLN</p>
                         <p className="text-xs text-muted-foreground mt-1.5">

@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Heart, ExternalLink, Star, Send, Leaf, FlaskConical, Sparkles, ShieldCheck, AlertTriangle, ImageIcon, Camera, X, Users, Check, Shirt } from 'lucide-react';
-import { getProductReviews, getProductAverageRating, getProductMaterial, getSimilarBodiesBought } from '@/data/mockData';
+import { ArrowLeft, Heart, ExternalLink, Star, Send, ImageIcon, Camera, X, Users, Check, Shirt } from 'lucide-react';
+import { getProductReviews, getProductAverageRating, getSimilarBodiesBought, productMaterials } from '@/data/mockData';
 import type { Review } from '@/data/mockData';
 import { useObjectUrls } from '@/lib/useObjectUrls';
 import { FitBadge } from '@/components/FitBadge';
@@ -18,6 +18,8 @@ import { evaluateLength } from '@/lib/fit/length';
 import { lengthKey, pointKey, reasonText, shapeKey, verdictKey } from '@/lib/fit/copy';
 import { useFitFeedback, type FitAnswer } from '@/lib/fitFeedback';
 import { FitFeedbackForm } from '@/components/FitFeedbackForm';
+import { MaterialPanel } from '@/components/MaterialPanel';
+import { categoryLabel } from '@/lib/catalog/categories';
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
@@ -94,9 +96,11 @@ export default function ProductDetail() {
     );
   }
 
-  // Imported products carry their real composition; the mock quality panel
-  // only makes sense for the mock catalog.
-  const material = product.source ? null : getProductMaterial(product.id);
+  // Imported products carry their composition as free text; the mock catalogue
+  // carries it structured, in the only field of that table still worth reading.
+  // Everything the panel shows is derived from whichever of the two exists, so
+  // for the first time imported products get the panel as well.
+  const composition = product.material ?? productMaterials[product.id]?.composition ?? null;
   const { avg, count } = getProductAverageRating(product.id);
   const totalCount = count + localReviews.length;
   const feedback = forProduct(product.id);
@@ -291,7 +295,7 @@ export default function ProductDetail() {
           <div className="mt-8 space-y-4 text-sm">
             <div className="flex justify-between py-3 border-b border-border">
               <span className="text-muted-foreground">{t('category')}</span>
-              <span className="capitalize">{product.category}</span>
+              <span>{categoryLabel(product.category, t)}</span>
             </div>
             <div className="flex justify-between py-3 border-b border-border">
               <span className="text-muted-foreground">{t('store')}</span>
@@ -317,114 +321,7 @@ export default function ProductDetail() {
         </div>
       </div>
 
-      {material && (
-        <section className="mt-12">
-          <h2 className="font-display text-xl mb-6">{t('materialQuality')}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="bg-card rounded-xl p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4" />
-                  <span className="text-sm font-medium">{t('materialQualityScore')}</span>
-                </div>
-                <span className={`text-sm font-bold ${
-                  material.qualityScore >= 80 ? 'text-green-600' :
-                  material.qualityScore >= 60 ? 'text-yellow-600' :
-                  'text-red-500'
-                }`}>
-                  {material.qualityScore}%
-                </span>
-              </div>
-              <div className="h-2.5 bg-muted rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${
-                    material.qualityScore >= 80 ? 'bg-green-500' :
-                    material.qualityScore >= 60 ? 'bg-yellow-500' :
-                    'bg-red-400'
-                  }`}
-                  style={{ width: `${material.qualityScore}%` }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                {material.qualityScore >= 80 ? t('highQuality') :
-                 material.qualityScore >= 60 ? t('decentQuality') :
-                 t('lowQuality')}
-              </p>
-            </div>
-
-            <div className="bg-card rounded-xl p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <FlaskConical className="w-4 h-4" />
-                <span className="text-sm font-medium">{t('composition')}</span>
-              </div>
-              <div className="space-y-3">
-                {material.composition.map((fiber, i) => (
-                  <div key={i}>
-                    <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="flex items-center gap-1.5">
-                        {fiber.natural ? (
-                          <Leaf className="w-3 h-3 text-green-500" />
-                        ) : (
-                          <Sparkles className="w-3 h-3 text-muted-foreground" />
-                        )}
-                        {fiber.name}
-                        <span className="text-xs text-muted-foreground">
-                          {fiber.natural ? t('natural') : t('synthetic')}
-                        </span>
-                      </span>
-                      <span className="font-medium">{fiber.percent}%</span>
-                    </div>
-                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${fiber.natural ? 'bg-green-400' : 'bg-muted-foreground/40'}`}
-                        style={{ width: `${fiber.percent}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {(() => {
-                const naturalPercent = material.composition
-                  .filter(c => c.natural)
-                  .reduce((sum, c) => sum + c.percent, 0);
-                return (
-                  <div className={`mt-3 flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${
-                    naturalPercent >= 80 ? 'bg-green-500/10 text-green-700' :
-                    naturalPercent >= 50 ? 'bg-yellow-500/10 text-yellow-700' :
-                    'bg-red-500/10 text-red-600'
-                  }`}>
-                    {naturalPercent >= 80 ? <Leaf className="w-3 h-3" /> : naturalPercent >= 50 ? <Leaf className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
-                    {naturalPercent}% {t('naturalFibers')}
-                  </div>
-                );
-              })()}
-            </div>
-
-            <div className="bg-card rounded-xl p-5 flex flex-col gap-4">
-              <div>
-                <span className="text-sm font-medium block mb-2">{t('howItBehaves')}</span>
-                <p className="text-sm text-muted-foreground leading-relaxed">{material.behavior}</p>
-              </div>
-              <div>
-                <span className="text-sm font-medium block mb-2">{t('care')}</span>
-                <div className="flex flex-wrap gap-2">
-                  {material.care.map((tip, i) => (
-                    <span key={i} className="px-3 py-1.5 bg-muted rounded-full text-xs text-muted-foreground">
-                      {tip}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              {material.description && (
-                <div>
-                  <span className="text-sm font-medium block mb-2">{t('materialDescription')}</span>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{material.description}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
+      <MaterialPanel composition={composition} />
 
       <section className="mt-16">
         <div className="flex items-center gap-3 mb-6">
