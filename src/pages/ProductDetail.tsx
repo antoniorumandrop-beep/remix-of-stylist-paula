@@ -20,6 +20,7 @@ import { useFitFeedback, type FitAnswer } from '@/lib/fitFeedback';
 import { FitFeedbackForm } from '@/components/FitFeedbackForm';
 import { MaterialPanel } from '@/components/MaterialPanel';
 import { SaveSheet } from '@/components/SaveSheet';
+import { SizeAdvicePanel } from '@/components/SizeAdvicePanel';
 import { categoryLabel } from '@/lib/catalog/categories';
 
 export default function ProductDetail() {
@@ -249,6 +250,13 @@ export default function ProductDetail() {
               </button>
             </div>
           ) : null}
+
+          {/* Only for a measured profile: a shape picked off a list has no
+              circumferences, and a size read from a picked shape would be a
+              guess wearing the same typeface as a calculation. */}
+          {profile?.source === 'measured' && (
+            <SizeAdvicePanel product={product} profile={profile} />
+          )}
 
           {owned && (
             <div className="mt-4">
