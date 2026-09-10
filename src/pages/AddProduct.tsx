@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trash2 } from 'lucide-react';
 import { LinkImport } from '@/components/LinkImport';
+import { BulkLinkImport } from '@/components/BulkLinkImport';
 import { ProductCard } from '@/components/ProductCard';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useUserProducts } from '@/lib/catalog/useCatalog';
@@ -24,13 +25,18 @@ export default function AddProduct() {
 
   // `LinkImport` hands back a `RawProduct` built with the default source; the
   // id has to carry `user` so nothing downstream can mistake it for a feed.
-  const handleAdd = (product: RawProduct) => {
-    const mine: RawProduct = {
-      ...product,
-      source: 'user',
-      id: `user:${product.externalId}`,
-    };
-    void add(mine);
+  const asMine = (product: RawProduct): RawProduct => ({
+    ...product,
+    source: 'user',
+    id: `user:${product.externalId}`,
+  });
+
+  const handleAdd = (product: RawProduct) => { void add(asMine(product)); };
+
+  const handleAddMany = async (products: RawProduct[]) => {
+    // One at a time: each add enriches the product, and the local adapter
+    // rewrites the whole list, so parallel calls would lose each other.
+    for (const product of products) await add(asMine(product));
   };
 
   return (
@@ -44,6 +50,8 @@ export default function AddProduct() {
       <p className="text-sm text-muted-foreground mb-8">{t('addYourOwnDesc')}</p>
 
       <LinkImport onAdd={handleAdd} />
+
+      <BulkLinkImport onAdd={products => void handleAddMany(products)} />
 
       <h2 className="text-sm font-medium mb-4">{t('addYourOwnTitle')}</h2>
       {products.length === 0 ? (

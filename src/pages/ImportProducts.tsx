@@ -11,6 +11,7 @@ import type { FitAttributes } from '@/lib/fit/attributes';
 import type { RawProduct } from '@/lib/catalog/types';
 import { ProductImage } from '@/components/ProductImage';
 import { LinkImport } from '@/components/LinkImport';
+import { BulkLinkImport } from '@/components/BulkLinkImport';
 import { aiMode } from '@/lib/ai';
 
 /**
@@ -55,11 +56,16 @@ export default function ImportProducts() {
    * import button. One product can come from two intake paths; it must not
    * come from two code paths.
    */
-  const addFromLink = (product: RawProduct) => {
+  const addFromLink = (product: RawProduct) => addManyFromLinks([product]);
+
+  const addManyFromLinks = (incoming: RawProduct[]) => {
     setParsed(prev => {
       const products = prev?.products ?? [];
-      if (products.some(p => p.id === product.id)) return prev;
-      return { products: [...products, product], errors: prev?.errors ?? [] };
+      const fresh = incoming.filter(
+        p => !products.some(existing => existing.id === p.id),
+      );
+      if (fresh.length === 0) return prev;
+      return { products: [...products, ...fresh], errors: prev?.errors ?? [] };
     });
   };
 
@@ -100,6 +106,8 @@ export default function ImportProducts() {
         <p className="text-sm text-muted-foreground mb-8 max-w-2xl">{t('adminImportDesc')}</p>
 
         <LinkImport onAdd={addFromLink} />
+
+        <BulkLinkImport onAdd={addManyFromLinks} />
 
         <textarea
           value={text}
