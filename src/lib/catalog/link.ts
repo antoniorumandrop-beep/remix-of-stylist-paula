@@ -208,18 +208,106 @@ function imagesFrom(value: unknown): string[] {
   return [];
 }
 
-function offersFrom(node: JsonObject): JsonObject[] {
-  const raw = node.offers;
+/**
+ * An offer plus the size it belongs to.
+ *
+ * On a plain `Product` the size sits on the offer. On a `ProductGroup` it sits
+ * on the variant one level up, and the offer underneath carries only a price.
+ * Carrying the pair keeps `sizesFrom` working for both without asking it which
+ * shape it is looking at.
+ */
+interface OfferLike {
+  offer: JsonObject;
+  size?: string;
+}
+
+function flattenOffers(raw: unknown, size?: string): OfferLike[] {
   const list = Array.isArray(raw) ? raw : [raw];
-  const out: JsonObject[] = [];
+  const out: OfferLike[] = [];
   for (const item of list) {
     if (!isObject(item)) continue;
     // An AggregateOffer wraps the real offers one level down.
     const nested = item.offers;
-    if (Array.isArray(nested)) out.push(...nested.filter(isObject));
-    out.push(item);
+    if (Array.isArray(nested)) out.push(...nested.filter(isObject).map(o => ({ offer: o, size })));
+    out.push({ offer: item, size });
   }
   return out;
+}
+
+function offersFrom(node: JsonObject): OfferLike[] {
+  return flattenOffers(node.offers);
+}
+
+/**
+ * The variants that belong to the link the user actually pasted.
+ *
+ * H&M's `hasVariant` lists every colour of the style — 360 entries on a pair
+ * of jeans — and each variant's offer names its own product page. Zara keeps
+ * the colour in a `v1` query parameter and does the same. Taking the first
+ * variant would put another colour's photo and stock on the page and look
+ * entirely successful doing it.
+ *
+ * Matched on the offer's own URL: same path, and the same `v1` when the link
+ * carries one. A shop that publishes no per-variant URL gets all its variants
+ * back rather than none — half a record beats an empty one.
+ */
+export function variantsForUrl(node: JsonObject, url: string): JsonObject[] {
+  const raw = node.hasVariant;
+  if (!Array.isArray(raw)) return [];
+  const variants = raw.filter(isObject);
+  if (variants.length === 0) return [];
+
+  let wanted: URL;
+  try {
+    wanted = new URL(url);
+  } catch {
+    return variants;
+  }
+  const wantedVariantId = wanted.searchParams.get('v1');
+
+  const matching = variants.filter(variant => {
+    const offers = flattenOffers(variant.offers);
+    return offers.some(({ offer }) => {
+      const href = asText(offer.url);
+      if (!href) return false;
+      let candidate: URL;
+      try {
+        candidate = new URL(href, url);
+      } catch {
+        return false;
+      }
+      if (candidate.pathname !== wanted.pathname) return false;
+      if (!wantedVariantId) return true;
+      return candidate.searchParams.get('v1') === wantedVariantId;
+    });
+  });
+
+  return matching.length > 0 ? matching : variants;
+}
+
+/**
+ * Composition with the shares in it.
+ *
+ * Zara publishes `material: "welna/poliamid/elastan"` — the fibres with no
+ * percentages, which tells the stretch model nothing — and the real
+ * composition, "88% welna, 8% poliamid, 4% elastan", one field over in
+ * `additionalProperty`. The research line "no shop publishes composition" was
+ * measured on five other shops and does not hold here.
+ *
+ * Only a value that actually carries a percentage wins over `material`; a
+ * second `Composition` entry (lining, sole) is left alone.
+ */
+export function compositionFrom(node: JsonObject): string | undefined {
+  const raw = node.additionalProperty;
+  const list = Array.isArray(raw) ? raw : [raw];
+  for (const item of list) {
+    if (!isObject(item)) continue;
+    const id = asText(item.propertyID) ?? asText(item.name);
+    if (!id || !/composition|sk[lł]ad/i.test(id)) continue;
+    const value = asText(item.value);
+    if (value && /\d\s*%/.test(value)) return value;
+  }
+  return undefined;
 }
 
 /**
@@ -228,7 +316,7 @@ function offersFrom(node: JsonObject): JsonObject[] {
  * available ones, because "34-42, but only 40 is left" is a different product
  * to a woman than "34-42".
  */
-function sizesFrom(offers: JsonObject[]): { sizes?: string; stock: 'unknown' | 'in' | 'out' } {
+function sizesFrom(offers: OfferLike[]): { sizes?: string; stock: 'unknown' | 'in' | 'out' } {
   const inStock: string[] = [];
   const all: string[] = [];
   // A shop that publishes no `availability` is telling us nothing, not telling
@@ -237,7 +325,7 @@ function sizesFrom(offers: JsonObject[]): { sizes?: string; stock: 'unknown' | '
   // stock" on a perfectly available dress. Absence and denial are different.
   let stated = false;
   let anyInStock = false;
-  for (const offer of offers) {
+  for (const { offer, size: variantSize } of offers) {
     const availability = asText(offer.availability)?.toLowerCase();
     let available = false;
     if (availability) {
@@ -245,7 +333,7 @@ function sizesFrom(offers: JsonObject[]): { sizes?: string; stock: 'unknown' | '
       available = availability.includes('instock') || availability.includes('limited') || availability.includes('preorder');
       if (available) anyInStock = true;
     }
-    const size = asText(offer.size ?? offer.sku_size ?? (isObject(offer.itemOffered) ? offer.itemOffered.size : undefined));
+    const size = variantSize ?? asText(offer.size ?? offer.sku_size ?? (isObject(offer.itemOffered) ? offer.itemOffered.size : undefined));
     if (!size) continue;
     if (!all.includes(size)) all.push(size);
     if (available && !inStock.includes(size)) inStock.push(size);
@@ -309,15 +397,22 @@ export function parseProductPage(html: string, url: string): LinkDraft {
   };
 
   if (product) {
+    // A ProductGroup keeps price, photo, sizes and stock in `hasVariant`, and
+    // often nothing at all at the top — H&M and Zara both do. Narrowed to the
+    // colour the link points at; see `variantsForUrl`.
+    const variants = variantsForUrl(product, url);
+
     set('name', asText(product.name), 'json-ld');
     set('brand', asText(product.brand ?? product.manufacturer), 'json-ld');
     set('description', asText(product.description), 'json-ld');
-    set('material', asText(product.material), 'json-ld');
+    // Percentages first, the bare fibre list second.
+    set('material', compositionFrom(product) ?? asText(product.material), 'json-ld');
     set('category', normalizeCategory(asText(product.category) ?? '') ?? undefined, 'json-ld');
     takeImage(imagesFrom(product.image), 'json-ld');
+    if (!draft.imageUrl) takeImage(variants.flatMap(v => imagesFrom(v.image)), 'json-ld');
 
-    const offers = offersFrom(product);
-    for (const offer of offers) {
+    const offers = [...offersFrom(product), ...variants.flatMap(v => flattenOffers(v.offers, asText(v.size)))];
+    for (const { offer } of offers) {
       const price = parsePrice(asText(offer.price ?? offer.lowPrice) ?? '');
       if (price !== null) {
         set('price', price, 'json-ld');
