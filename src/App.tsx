@@ -33,6 +33,7 @@ const BuildYourStyle = lazy(() => import("./pages/BuildYourStyle"));
 const FittingRoom = lazy(() => import("./pages/FittingRoom"));
 const ImportProducts = lazy(() => import("./pages/ImportProducts"));
 const AddProduct = lazy(() => import("./pages/AddProduct"));
+const HowItWorks = lazy(() => import("./pages/HowItWorks"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const App = () => (
@@ -69,6 +70,7 @@ const App = () => (
                   <Route path="add" element={<AddProduct />} />
                   <Route path="build-your-style" element={<BuildYourStyle />} />
                   <Route path="fitting-room" element={<FittingRoom />} />
+                  <Route path="how-it-works" element={<HowItWorks />} />
                 </Route>
                 {/* Brand-side tooling, not linked from the app's navigation. */}
                 <Route path="/admin/import" element={<RequireAuth><ImportProducts /></RequireAuth>} />

@@ -25,6 +25,7 @@ const GATED = [
   '/app/alerts',
   '/app/add',
   '/app/fitting-room',
+  '/app/how-it-works',
   '/app/build-your-style',
   '/app/product/1',
   '/app/brand/COS',

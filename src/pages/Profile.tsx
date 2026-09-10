@@ -177,6 +177,12 @@ export default function Profile() {
 
       <div className="mt-8 pt-8 border-t border-border flex flex-col gap-4 items-start">
         <button
+          onClick={() => navigate('/app/how-it-works')}
+          className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
+        >
+          {t('howItWorksLink')}
+        </button>
+        <button
           onClick={() => navigate('/onboarding')}
           className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
         >

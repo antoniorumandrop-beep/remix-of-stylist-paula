@@ -19,7 +19,15 @@ import { classifyShape } from "./shape";
  * by asking "did it fit?" — which is how v2 of this function will be trained.
  */
 
-const WEIGHTS: Record<BodyPoint, number> = {
+/**
+ * How much each body point can take off the score.
+ *
+ * Exported because the "how Paula works" screen prints these numbers, and a
+ * screen that explains the ranking has to read the ranking rather than repeat
+ * it from memory — the explanation is a legal obligation, and a stale one is
+ * worse than none.
+ */
+export const WEIGHTS: Record<BodyPoint, number> = {
   bust: 20,
   waist: 20,
   hips: 25,

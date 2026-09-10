@@ -234,6 +234,13 @@ export default function ProductDetail() {
                 {lengthNote && (
                   <p className="text-xs text-muted-foreground mt-4">{t(lengthKey(lengthNote.note))}</p>
                 )}
+                {/* The number is only worth reading if its rules can be read too. */}
+                <button
+                  onClick={() => navigate('/app/how-it-works')}
+                  className="mt-4 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
+                >
+                  {t('howItWorksLink')}
+                </button>
               </div>
             </div>
           ) : !profile && !profileLoading ? (
