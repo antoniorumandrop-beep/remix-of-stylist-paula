@@ -1,6 +1,7 @@
 import type {
-  AuthProvider, Backend, CatalogRepository, FitFeedbackRepository, PrefsRepository,
-  ProfileRepository, SavedRepository, Session, UserPrefs, WardrobeRepository,
+  AuthProvider, Backend, CatalogRepository, Collection, CollectionsRepository,
+  FitFeedbackRepository, PrefsRepository, ProfileRepository, SavedRepository,
+  Session, UserPrefs, WardrobeRepository,
 } from './types';
 import { readStored, removeStored, writeStored } from './storage';
 import type { BodyProfile } from '@/lib/profile';
@@ -28,6 +29,7 @@ const KEYS = {
   outfits: 'paula.outfits',
   feedback: 'paula.fitFeedback',
   saved: 'paula.saved',
+  collections: 'paula.collections',
   imported: 'paula.catalog.imported',
 } as const;
 
@@ -178,6 +180,44 @@ function localSaved(): SavedRepository {
   };
 }
 
+function localCollections(): CollectionsRepository {
+  const all = () => readStored<Collection[]>(KEYS.collections, []);
+  const write = (next: Collection[]) => writeStored(KEYS.collections, next);
+  const patch = (id: string, change: (c: Collection) => Collection) =>
+    write(all().map(c => (c.id === id ? change(c) : c)));
+
+  return {
+    async list() { return all(); },
+    async create(name, emoji = null) {
+      const collection: Collection = {
+        id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        name: name.trim(),
+        emoji,
+        productIds: [],
+        createdAt: now(),
+      };
+      write([collection, ...all()]);
+      return collection;
+    },
+    async rename(id, name) {
+      patch(id, c => ({ ...c, name: name.trim() }));
+    },
+    async remove(id) {
+      write(all().filter(c => c.id !== id));
+    },
+    async addProduct(id, productId) {
+      // Newest first, and adding something twice is a no-op rather than an
+      // error: the menu on a product card cannot know what is already inside.
+      patch(id, c => (c.productIds.includes(productId)
+        ? c
+        : { ...c, productIds: [productId, ...c.productIds] }));
+    },
+    async removeProduct(id, productId) {
+      patch(id, c => ({ ...c, productIds: c.productIds.filter(p => p !== productId) }));
+    },
+  };
+}
+
 function localCatalog(): CatalogRepository {
   const imported = () => readStored<EnrichedProduct[]>(KEYS.imported, []);
   const importedProducts = () => imported().map(enrichedToProduct);
@@ -216,6 +256,7 @@ export function createLocalBackend(): Backend {
     wardrobe: localWardrobe(),
     feedback: localFeedback(),
     saved: localSaved(),
+    collections: localCollections(),
     catalog: localCatalog(),
   };
 }

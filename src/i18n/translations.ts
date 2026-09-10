@@ -307,6 +307,16 @@ export const translations = {
 
     // Collection Detail
     collectionNotFound: 'Collection not found.',
+    productActions: 'Product actions',
+    itemsCount: (n: number) => `${n} ${n === 1 ? 'item' : 'items'}`,
+    collectionsEmpty: 'No collections yet. Make one from any product you like.',
+    collectionEmpty: 'Nothing in this collection yet.',
+    collectionNamePlaceholder: 'Collection name',
+    createAction: 'Create',
+    renameAction: 'Rename',
+    removeFromCollection: 'Remove from collection',
+    deleteCollection: 'Delete collection',
+    deleteCollectionConfirm: 'Delete this collection? The products stay where they were.',
     shapePickHourglass: 'Shoulders and hips close in width, waist clearly narrower.',
     shapePickPear: 'Hips wider than shoulders — a straight cut usually pulls at the hip before the waist.',
     shapePickRectangle: 'Bust, waist and hips close in measurement; a fitted waist often sits loose.',
@@ -803,6 +813,24 @@ export const translations = {
 
     // Collection Detail
     collectionNotFound: 'Kolekcja nie znaleziona.',
+    productActions: 'Akcje produktu',
+    // Polish counts in three forms. Until now every count on screen came from
+    // mock data and happened to be 5 or more, so "1 elementów" never appeared.
+    itemsCount: (n: number) => {
+      const last = n % 10;
+      const teens = n % 100;
+      if (n === 1) return '1 element';
+      if (last >= 2 && last <= 4 && (teens < 12 || teens > 14)) return `${n} elementy`;
+      return `${n} elementów`;
+    },
+    collectionsEmpty: 'Nie masz jeszcze kolekcji. Załóż ją przy dowolnym produkcie.',
+    collectionEmpty: 'W tej kolekcji nic jeszcze nie ma.',
+    collectionNamePlaceholder: 'Nazwa kolekcji',
+    createAction: 'Utwórz',
+    renameAction: 'Zmień nazwę',
+    removeFromCollection: 'Usuń z kolekcji',
+    deleteCollection: 'Usuń kolekcję',
+    deleteCollectionConfirm: 'Usunąć tę kolekcję? Produkty zostaną tam, gdzie były.',
     shapePickHourglass: 'Ramiona i biodra zbliżone szerokością, talia wyraźnie węższa.',
     shapePickPear: 'Biodra szersze od ramion — prosty krój zwykle ciągnie w biodrze wcześniej niż w talii.',
     shapePickRectangle: 'Biust, talia i biodra o zbliżonych obwodach; zaznaczona talia często zostaje luźna.',

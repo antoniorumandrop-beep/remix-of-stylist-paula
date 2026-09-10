@@ -93,6 +93,51 @@ describe('backend contract (local)', () => {
     expect(await b.saved.list()).toEqual(['1']);
   });
 
+  it('collections: create, rename, add, remove, delete', async () => {
+    expect(await b.collections.list()).toEqual([]);
+
+    const wedding = await b.collections.create('Na wesele');
+    const winter = await b.collections.create('Zima', '❄️');
+    // Newest first, the same order as saved products.
+    expect((await b.collections.list()).map(c => c.name)).toEqual(['Zima', 'Na wesele']);
+    expect(winter.emoji).toBe('❄️');
+    // An emoji is never assigned for the user, only chosen by her.
+    expect(wedding.emoji).toBeNull();
+    expect(wedding.productIds).toEqual([]);
+
+    await b.collections.addProduct(wedding.id, '1');
+    await b.collections.addProduct(wedding.id, '2');
+    // The menu on a product card cannot know what is already inside, so
+    // adding twice has to be a no-op rather than a duplicate or an error.
+    await b.collections.addProduct(wedding.id, '1');
+    const withProducts = (await b.collections.list()).find(c => c.id === wedding.id);
+    expect(withProducts?.productIds).toEqual(['2', '1']);
+
+    await b.collections.rename(wedding.id, '  Na ślub  ');
+    expect((await b.collections.list()).find(c => c.id === wedding.id)?.name).toBe('Na ślub');
+
+    await b.collections.removeProduct(wedding.id, '2');
+    expect((await b.collections.list()).find(c => c.id === wedding.id)?.productIds).toEqual(['1']);
+
+    await b.collections.remove(wedding.id);
+    expect((await b.collections.list()).map(c => c.name)).toEqual(['Zima']);
+  });
+
+  it('collections: a collection is not an outfit, even though the shape matches', async () => {
+    const c = await b.collections.create('Na wesele');
+    await b.collections.addProduct(c.id, '1');
+    await b.wardrobe.createOutfit('Look na wesele', ['1', '2']);
+
+    // Two separate stores. Deleting one must not touch the other — this is
+    // the whole reason they were not merged.
+    const outfits = await b.wardrobe.listOutfits();
+    await b.wardrobe.deleteOutfit(outfits[0].id);
+    expect((await b.collections.list())[0].productIds).toEqual(['1']);
+
+    await b.collections.remove(c.id);
+    expect(await b.collections.list()).toEqual([]);
+  });
+
   it('catalog: imported products come first, carry fit attributes, and can be cleared', async () => {
     const mockCount = (await b.catalog.list()).length;
     expect(mockCount).toBeGreaterThan(0);

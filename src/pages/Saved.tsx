@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { sampleCollections } from '@/data/mockData';
 import { ProductCard } from '@/components/ProductCard';
-import { Plus, Bell, Heart } from 'lucide-react';
+import { Plus, Bell, Heart, Check, FolderOpen } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useSaved } from '@/lib/saved';
 import { useCatalog } from '@/lib/catalog/useCatalog';
+import { useCollections } from '@/lib/collections';
+import { ProductImage } from '@/components/ProductImage';
 
 export default function Saved() {
   const [tab, setTab] = useState<'saved' | 'collections'>('saved');
@@ -13,6 +14,18 @@ export default function Saved() {
   const { t } = useLanguage();
   const { ids, loading } = useSaved();
   const { byId } = useCatalog();
+  const { collections, loading: collectionsLoading, createWith } = useCollections();
+  const [naming, setNaming] = useState(false);
+  const [newName, setNewName] = useState('');
+
+  const submitNewCollection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = newName.trim();
+    if (!name) return;
+    await createWith(name);
+    setNewName('');
+    setNaming(false);
+  };
   const savedProducts = ids.map(id => byId.get(id)).filter(Boolean) as NonNullable<ReturnType<typeof byId.get>>[];
 
   return (
@@ -83,39 +96,72 @@ export default function Saved() {
           </div>
         )
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
-          {/* Collections are still sample data (`sampleCollections`), so there
-              is nowhere for a new one to be saved. */}
-          <button
-            type="button"
-            disabled
-            title={t('featureNotReady')}
-            className="aspect-square rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <Plus className="w-6 h-6 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">{t('newCollection')}</span>
-            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('featureNotReady')}</span>
-          </button>
-          {sampleCollections.map(col => (
-            <div
-              key={col.id}
-              className="group cursor-pointer"
-              onClick={() => navigate(`/app/collection/${col.id}`)}
-            >
-              <div className="aspect-square rounded-2xl bg-card overflow-hidden mb-3 relative">
-                <div className="grid grid-cols-2 gap-0.5 p-3 h-full">
-                  {[0, 1, 2, 3].map(i => (
-                    <div key={i} className="bg-muted rounded-lg" />
-                  ))}
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
+            {naming ? (
+              <form
+                onSubmit={submitNewCollection}
+                className="aspect-square rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-3 p-4"
+              >
+                <input
+                  autoFocus
+                  value={newName}
+                  onChange={e => setNewName(e.target.value)}
+                  onBlur={() => { if (!newName.trim()) setNaming(false); }}
+                  placeholder={t('collectionNamePlaceholder')}
+                  className="w-full bg-card rounded-xl px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-foreground/10"
+                />
+                <button
+                  type="submit"
+                  disabled={!newName.trim()}
+                  className="px-4 py-2 rounded-full bg-foreground text-background text-xs font-medium disabled:opacity-40 flex items-center gap-1.5"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  {t('createAction')}
+                </button>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setNaming(true)}
+                className="aspect-square rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 hover:border-foreground/30 transition-colors"
+              >
+                <Plus className="w-6 h-6 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">{t('newCollection')}</span>
+              </button>
+            )}
+            {collections.map(col => {
+              const cover = col.productIds.slice(0, 4).map(id => byId.get(id)).filter(Boolean);
+              return (
+                <div
+                  key={col.id}
+                  className="group cursor-pointer"
+                  onClick={() => navigate(`/app/collection/${col.id}`)}
+                >
+                  <div className="aspect-square rounded-2xl bg-card overflow-hidden mb-3 relative">
+                    <div className="grid grid-cols-2 gap-0.5 p-3 h-full">
+                      {[0, 1, 2, 3].map(i => (
+                        <div key={i} className="bg-muted rounded-lg overflow-hidden">
+                          {cover[i] && <ProductImage product={cover[i]} className="w-full h-full" />}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-sm font-medium">
+                    {col.emoji ? `${col.emoji} ` : ''}{col.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{t('itemsCount', col.productIds.length)}</p>
                 </div>
-              </div>
-              <p className="text-sm font-medium">
-                {col.emoji} {col.name}
-              </p>
-              <p className="text-xs text-muted-foreground">{col.items.length} {t('items')}</p>
+              );
+            })}
+          </div>
+          {collections.length === 0 && !collectionsLoading && !naming && (
+            <div className="text-center py-10">
+              <FolderOpen className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">{t('collectionsEmpty')}</p>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );

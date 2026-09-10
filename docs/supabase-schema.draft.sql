@@ -81,6 +81,31 @@ create table saved_products (
   primary key (user_id, product_id)
 );
 
+-- collections ↔ CollectionsRepository
+-- Deliberately separate from `outfits`, even though the columns line up. An
+-- outfit is a set of clothes worn together; a collection is a shelf things are
+-- put on. One table would make "delete this outfit" quietly empty a shelf.
+create table collections (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  name       text not null,
+  emoji      text,                        -- chosen by the user, never assigned for her
+  created_at timestamptz not null default now()
+);
+
+-- The join. `position` keeps the newest-first order the app shows; a plain
+-- text[] column on `collections` could not have the foreign key below, and the
+-- catalogue is refreshed underneath these rows.
+create table collection_products (
+  collection_id uuid not null references collections(id) on delete cascade,
+  product_id    text not null references products(id),
+  position      integer not null default 0,
+  added_at      timestamptz not null default now(),
+  primary key (collection_id, product_id)
+);
+
+create index on collection_products (collection_id, position);
+
 -- ---------------------------------------------------------------- catalog
 
 -- products ↔ RawProduct (src/lib/catalog/types.ts) — the RAW layer.
@@ -133,6 +158,8 @@ alter table pending_purchases      enable row level security;
 alter table outfits                enable row level security;
 alter table fit_feedback           enable row level security;
 alter table saved_products         enable row level security;
+alter table collections            enable row level security;
+alter table collection_products    enable row level security;
 alter table products               enable row level security;
 alter table product_fit_attributes enable row level security;
 alter table price_history          enable row level security;
@@ -145,6 +172,13 @@ create policy "own rows" on pending_purchases for all using (user_id = auth.uid(
 create policy "own rows" on outfits           for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "own rows" on fit_feedback      for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "own rows" on saved_products    for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "own rows" on collections       for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- The join table has no user_id of its own, so its policy has to go through
+-- the parent. Without this it would be readable by everyone.
+create policy "own rows" on collection_products for all
+  using (exists (select 1 from collections c where c.id = collection_id and c.user_id = auth.uid()))
+  with check (exists (select 1 from collections c where c.id = collection_id and c.user_id = auth.uid()));
 
 -- Catalog: everyone reads, only admins write (admin = a role claim or an
 -- `admins` table — decide when the first real brand is onboarded).

@@ -39,3 +39,29 @@ describe('translate', () => {
     expect(value.length).toBeGreaterThan(0);
   });
 });
+
+describe('liczebniki', () => {
+  const pl = (n: number) => translate('pl', 'itemsCount', n);
+
+  it('odmienia po polsku we wszystkich trzech formach', () => {
+    expect(pl(1)).toBe('1 element');
+    expect(pl(2)).toBe('2 elementy');
+    expect(pl(4)).toBe('4 elementy');
+    expect(pl(5)).toBe('5 elementów');
+    expect(pl(0)).toBe('0 elementów');
+  });
+
+  it('nie daje się nabrać na nastki i setki', () => {
+    // 12-14 take the genitive despite ending in 2-4; 22 goes back to "elementy".
+    expect(pl(12)).toBe('12 elementów');
+    expect(pl(14)).toBe('14 elementów');
+    expect(pl(22)).toBe('22 elementy');
+    expect(pl(112)).toBe('112 elementów');
+    expect(pl(122)).toBe('122 elementy');
+  });
+
+  it('po angielsku wystarczy liczba pojedyncza i mnoga', () => {
+    expect(translate('en', 'itemsCount', 1)).toBe('1 item');
+    expect(translate('en', 'itemsCount', 3)).toBe('3 items');
+  });
+});

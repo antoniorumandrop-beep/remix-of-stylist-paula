@@ -33,6 +33,7 @@ a po każdej udanej mutacji odświeżają się wszystkie zapytania
 | Szafa, „czy kupiłaś?", stylizacje | localStorage | `WardrobeRepository` | `wardrobe_items`, `pending_purchases`, `outfits` |
 | Pętla „czy pasowało?" | localStorage `paula.fitFeedback` | `FitFeedbackRepository` | tabela `fit_feedback` — **to jest zbiór danych, o który chodzi** |
 | Zapisane (serduszko) | localStorage `paula.saved` | `SavedRepository` | tabela `saved_products` |
+| Kolekcje | localStorage `paula.collections` | `CollectionsRepository` | tabele `collections` + `collection_products` (RLS join idzie przez rodzica) |
 | Katalog | mocki + import w localStorage `paula.catalog.imported` | `CatalogRepository` | tabele `products` (raw) + `product_fit_attributes` (enriched) |
 | Import od marki | ekran `/admin/import` (CSV/JSON → `parseBrandFeed`) | `src/lib/catalog/feed.ts`, `src/pages/ImportProducts.tsx` | ten sam ekran, zapis do `products`, polityka RLS „tylko admin" |
 | Import z linku produktowego | ekran `/admin/import`, pobranie przez middleware dev-serwera (`vite-plugins/fetch-product.ts`) | parser `src/lib/catalog/link.ts` (czysty, bez sieci), pobranie `src/lib/catalog/linkFetch.ts` | edge function `/fetch-product` — te same trzy reguły: sprawdzenie `robots.txt`, własny User-Agent, jedna strona na żądanie |
@@ -126,10 +127,10 @@ razu. Z magic linkiem zwróci `null`, a sesja przyjdzie przez `onAuthChange` —
 - Recenzje i „kupiły kobiety o podobnej sylwetce" — `src/data/mockData.ts`
   (`productReviews`, `getSimilarBodiesBought`). Wymaga tabeli recenzji i
   dopasowania po sylwetce z `body_profiles`.
-- Kolekcje w „Zapisane" — `sampleCollections` w mockach; serduszko działa
-  naprawdę, kolekcje nie.
 - Alerty cenowe — `src/pages/Alerts.tsx` na sztywno. Wymaga `price_history`
   (tabela jest w szkicu schematu).
+- `sampleCollections` w `src/data/mockData.ts` — zostaje w pliku jako przykład
+  kształtu danych, ale **nic go już nie renderuje**. Kolekcje są prawdziwe.
 - Wyszukiwanie po zdjęciu („znajdź to samo / tańsze") — `SearchPage.tsx`
   sortuje katalog po dopasowaniu, nie patrzy na zdjęcie. To zadanie dla
   `/stylist` z wejściem obrazowym.

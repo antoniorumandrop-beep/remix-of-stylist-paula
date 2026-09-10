@@ -8,6 +8,7 @@ export const qk = {
   wardrobeOutfits: ['wardrobe', 'outfits'] as const,
   feedback: ['feedback'] as const,
   saved: ['saved'] as const,
+  collections: ['collections'] as const,
   catalog: ['catalog'] as const,
   catalogImported: ['catalog', 'imported'] as const,
 };

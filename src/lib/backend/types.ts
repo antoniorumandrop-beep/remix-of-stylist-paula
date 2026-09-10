@@ -93,6 +93,37 @@ export interface SavedRepository {
   remove(productId: string): Promise<void>;
 }
 
+/**
+ * A folder of saved things, named by the user.
+ *
+ * Deliberately not an `Outfit`, even though the stored shape is identical —
+ * `wardrobe.createOutfit(name, productIds)` already exists. An outfit is a set
+ * of clothes worn together; a collection is a shelf things are put on. Merging
+ * them because the columns line up would make "delete this outfit" quietly
+ * empty a shelf.
+ *
+ * Products are held by id, not embedded: a collection has to survive the
+ * catalogue being refreshed underneath it.
+ */
+export interface Collection {
+  id: string;
+  name: string;
+  /** Optional, chosen by the user. Never assigned for her. */
+  emoji: string | null;
+  productIds: string[];
+  createdAt: string;
+}
+
+export interface CollectionsRepository {
+  list(): Promise<Collection[]>;
+  create(name: string, emoji?: string | null): Promise<Collection>;
+  rename(id: string, name: string): Promise<void>;
+  remove(id: string): Promise<void>;
+  /** Adding a product that is already there is not an error and not a duplicate. */
+  addProduct(id: string, productId: string): Promise<void>;
+  removeProduct(id: string, productId: string): Promise<void>;
+}
+
 // ---------------------------------------------------------------- catalog
 
 export interface CatalogRepository {
@@ -119,6 +150,7 @@ export interface Backend {
   wardrobe: WardrobeRepository;
   feedback: FitFeedbackRepository;
   saved: SavedRepository;
+  collections: CollectionsRepository;
   catalog: CatalogRepository;
 }
 

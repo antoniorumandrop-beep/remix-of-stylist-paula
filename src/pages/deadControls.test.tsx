@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createQueryClient } from '@/lib/backend/queryClient';
@@ -11,10 +11,15 @@ import Alerts from './Alerts';
  * Controls that move when clicked and do nothing.
  *
  * Three of them were still on screen: "Manage" on the alerts page, "Enable"
- * for price-drop alerts, and "New collection". Each needs a backend that does
- * not exist yet. Saying so is the same rule this project already applies to
- * the demo reference price and to the review form — a feature we cannot
- * perform announces that, rather than miming it.
+ * for price-drop alerts, and "New collection". Each needed a backend that did
+ * not exist. Saying so is the same rule this project already applies to the
+ * demo reference price and to the review form — a feature we cannot perform
+ * announces that, rather than miming it.
+ *
+ * "New collection" has since left this file: collections are real now, and
+ * `collections.test.tsx` checks that the button does what it says. A control
+ * that starts working belongs in a test of the feature, not in the register of
+ * things that do not.
  */
 function renderPage(page: 'saved' | 'alerts') {
   return render(
@@ -37,17 +42,6 @@ describe('kontrolki, które jeszcze nie działają', () => {
     const enable = await screen.findByRole('button', { name: /Włącz/ });
     expect(enable).toBeDisabled();
     expect(enable).toHaveAttribute('title', 'Jeszcze nie działa');
-  });
-
-  it('nie oferuje tworzenia kolekcji, których nie ma gdzie zapisać', async () => {
-    renderPage('saved');
-    const collections = await screen.findByRole('button', { name: /Kolekcje/ });
-    fireEvent.click(collections);
-
-    await waitFor(() => {
-      const create = screen.getByRole('button', { name: /Nowa kolekcja/ });
-      expect(create).toBeDisabled();
-    });
   });
 
   it('nie oferuje zarządzania alertami, które są atrapą', async () => {
