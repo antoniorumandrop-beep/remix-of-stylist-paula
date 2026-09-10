@@ -17,6 +17,8 @@ import { getProductFitAttributes, scoreProduct, sortByFit } from '@/lib/fit/prod
 import { evaluateLength } from '@/lib/fit/length';
 import { lengthKey, pointKey, reasonText, shapeKey, verdictKey } from '@/lib/fit/copy';
 import { useFitFeedback, type FitAnswer } from '@/lib/fitFeedback';
+import { predictionMatches } from '@/lib/fit/learning';
+import { BrandFitMemory } from '@/components/BrandFitMemory';
 import { FitFeedbackForm } from '@/components/FitFeedbackForm';
 import { MaterialPanel } from '@/components/MaterialPanel';
 import { SaveSheet } from '@/components/SaveSheet';
@@ -110,11 +112,6 @@ export default function ProductDetail() {
   const owned = has(product.id);
   const feedbackLabel = (a: FitAnswer) =>
     a === 'tight' ? t('feedbackTight') : a === 'ok' ? t('feedbackOk') : t('feedbackLoose');
-  // A prediction "matches" when the user's answer agrees with the verdict.
-  const predictionMatches = (verdict: string, answer: FitAnswer) =>
-    (verdict === 'tight' && answer === 'tight') ||
-    (verdict === 'loose' && answer === 'loose') ||
-    (verdict === 'neutral' && answer === 'ok');
 
   const handleSubmitReview = () => {
     if (!reviewText.trim()) return;
@@ -257,6 +254,8 @@ export default function ProductDetail() {
           {profile?.source === 'measured' && (
             <SizeAdvicePanel product={product} profile={profile} />
           )}
+
+          <BrandFitMemory brand={product.brand} />
 
           {owned && (
             <div className="mt-4">

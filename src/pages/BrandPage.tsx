@@ -5,6 +5,7 @@ import { ProductCard } from '@/components/ProductCard';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useBodyProfile } from '@/lib/profile';
 import { splitTopFit } from '@/lib/fit/product';
+import { BrandFitMemory } from '@/components/BrandFitMemory';
 
 export default function BrandPage() {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +25,10 @@ export default function BrandPage() {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="font-display text-2xl lg:text-3xl">{brandName}</h1>
+      </div>
+
+      <div className="mb-8 max-w-xl">
+        <BrandFitMemory brand={brandName} />
       </div>
 
       {bestMatches.length > 0 && (

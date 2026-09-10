@@ -5,6 +5,7 @@ import { useBodyProfile } from '@/lib/profile';
 import { useUserPrefs } from '@/lib/prefs';
 import { useAuth, useSession } from '@/lib/auth';
 import { shapeKey } from '@/lib/fit/copy';
+import { FitLearningPanel } from '@/components/FitLearningPanel';
 import type { TranslationKey } from '@/i18n/translations';
 
 export default function Profile() {
@@ -150,6 +151,8 @@ export default function Profile() {
           <p className="text-xs text-muted-foreground mt-3">{t('profileEmptyFooter')}</p>
         </div>
       )}
+
+      <FitLearningPanel />
 
       <div className="text-xs text-muted-foreground uppercase tracking-widest px-4 mb-2">
         {t('profileYourDetails')}

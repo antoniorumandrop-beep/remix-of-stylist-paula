@@ -1,3 +1,5 @@
+import { plPlural } from './plural';
+
 export const translations = {
   en: {
     // Nav
@@ -499,6 +501,24 @@ export const translations = {
     editFeedback: 'Edit',
     predictionMatched: 'Paula got this right.',
     predictionMissed: 'Paula predicted differently — this helps her learn.',
+
+    // What Paula does with those answers
+    brandMemoryTitle: (brand: string) => `What you told Paula about ${brand}`,
+    brandMemoryGarments: (n: number) =>
+      n === 1 ? '1 garment of this brand carries your answer.' : `${n} garments of this brand carry your answers.`,
+    brandMemoryMostOften: 'Most often',
+    brandMemoryNote: 'Your own answers, not other people\u2019s reviews. Fit Score does not change because of them — it stands next to them.',
+    learnedTitle: 'What Paula has learned',
+    learnedEmpty: 'Nothing yet. Answer \u201cdid it fit?\u201d for things in your wardrobe and you will see here how often Paula gets it right.',
+    learnedHits: (hits: number, total: number) => `${hits} of ${total}`,
+    learnedHitsDesc: 'times Paula\u2019s prediction agreed with your answer',
+    learnedUnknownNote: 'Only the points where Paula actually predicted something are counted. \u201cCannot tell\u201d stays out of the sum.',
+    learnedProfileNote: 'Counted against your current profile. Remeasure and the number can move.',
+    learnedPointsTitle: 'Point by point',
+    learnedBrandsTitle: 'Brands you already know',
+    learnedGarmentsAnswered: (n: number) => (n === 1 ? '1 garment answered' : `${n} garments answered`),
+    learnedNoPredictions: 'You have answered, but none of those garments carried a prediction to check against.',
+    learnedOpenWardrobe: 'Open your wardrobe',
     signOut: 'Sign out',
     sizes: 'Sizes',
     signingIn: 'Signing in…',
@@ -1056,6 +1076,24 @@ export const translations = {
     editFeedback: 'Zmień',
     predictionMatched: 'Paula trafiła.',
     predictionMissed: 'Paula przewidziała inaczej — to jej pomaga się uczyć.',
+
+    // Co Paula robi z tymi odpowiedziami
+    brandMemoryTitle: (brand: string) => `Co powiedziałaś Pauli o marce ${brand}`,
+    brandMemoryGarments: (n: number) =>
+      `${n} ${plPlural(n, 'rzecz tej marki ma', 'rzeczy tej marki mają', 'rzeczy tej marki ma')} Twoją ocenę.`,
+    brandMemoryMostOften: 'Najczęściej',
+    brandMemoryNote: 'To Twoje własne odpowiedzi, nie opinie innych osób. Fit Score się przez nie nie zmienia — stoi obok nich.',
+    learnedTitle: 'Czego Paula się nauczyła',
+    learnedEmpty: 'Jeszcze nic. Odpowiedz „czy pasowało?” przy rzeczach ze swojej szafy, a zobaczysz tutaj, jak często Paula trafia.',
+    learnedHits: (hits: number, total: number) => `${hits} z ${total}`,
+    learnedHitsDesc: 'tyle razy przewidywanie Pauli zgodziło się z Twoją oceną',
+    learnedUnknownNote: 'Liczymy tylko te punkty, w których Paula coś przewidziała. „Nie wiem” nie wchodzi do rachunku.',
+    learnedProfileNote: 'Liczone na Twoim dzisiejszym profilu. Po zmianie wymiarów liczba może się przesunąć.',
+    learnedPointsTitle: 'Punkt po punkcie',
+    learnedBrandsTitle: 'Marki, które już znasz',
+    learnedGarmentsAnswered: (n: number) => `${n} ${plPlural(n, 'oceniona rzecz', 'ocenione rzeczy', 'ocenionych rzeczy')}`,
+    learnedNoPredictions: 'Masz już oceny, ale przy tych rzeczach Paula niczego nie przewidziała, więc nie ma czego sprawdzać.',
+    learnedOpenWardrobe: 'Otwórz szafę',
     signOut: 'Wyloguj się',
     sizes: 'Rozmiary',
     signingIn: 'Logowanie…',
