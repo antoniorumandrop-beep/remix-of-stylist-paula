@@ -38,7 +38,9 @@ język łamie licencję, nie tylko styl.
 ## Architektura
 
 **Ekrany rozmawiają z danymi wyłącznie przez interfejsy z
-`src/lib/backend/types.ts`.** Nowa funkcja nie dodaje ani jednego
+`src/lib/backend/types.ts`.** Dotyczy to także wygenerowanego klienta
+Supabase: importuje go jedynie `src/lib/backend/supabase.ts`, i to jest test
+(`src/lib/backend/importBoundary.test.ts`), a nie ustalenie. Nowa funkcja nie dodaje ani jednego
 bezpośredniego odwołania do `localStorage`, ani do Supabase. Dziś działa
 adapter lokalny (`src/lib/backend/local.ts`), jutro ten sam kontrakt obsłuży
 Supabase — i to jest jedyny powód, dla którego ta zamiana będzie tania.
@@ -104,6 +106,16 @@ trafić do Lovable.
 - **Polska odmiana.** Tablice slow kluczowych dopasowujemy po rdzeniach.
 - **`localStorage` rzuca**, a nie zwraca `null`, gdy przegladarka ma
   zablokowane dane witryny. Kazdy odczyt w `try/catch`.
+- **Reguła zapisana w dokumencie nie obowiązuje.** Trzy rzeczy naprawione w
+  sesji 4 były już opisane — zakaz przekreślonych cen (Omnibus), zakaz
+  angielskiej prozy w `src/data/`, granica importu klienta Supabase — i
+  wszystkie trzy i tak weszły do kodu. Regułę, która ma obowiązywać, piszemy
+  jako test: `priceDisplay.test.tsx`, `i18n/coverage.test.ts`,
+  `backend/importBoundary.test.ts`, `i18n/language-doctrine.test.ts`.
+- **Liczba pokazana jako procent z kolorowym paskiem czyta się jak pomiar.**
+  `qualityScore` (88, 65, 82…) był wymyślony per produkt i wyglądał
+  wiarygodniej niż Fit Score, który jest liczony naprawdę. Jeśli liczby nie da
+  się wyprowadzić regułą, którą można wypisać obok niej — nie pokazujemy jej.
 
 ## Zasady zmian
 
@@ -117,8 +129,14 @@ trafić do Lovable.
 
 ## Czego nie robimy
 
-- **Nie włączamy Supabase do końca projektu** — konto należy do właścicielki
-  produktu. Wszystko ma być gotowe do podpięcia, nic podpięte.
+- **Nie robimy z aplikacji zależnej od Lovable Cloud.** Cloud jest włączony od
+  2026-09-10 na projekcie właścicielki produktu (ona właścicielem, Antonio
+  administratorem), więc reguła „nie włączamy Supabase" przestała opisywać
+  rzeczywistość. Zastąpiła ją węższa: **domyślnym backendem zostaje `local`**,
+  a `src/integrations/supabase/client.ts` importuje wyłącznie
+  `src/lib/backend/supabase.ts` (pilnuje `importBoundary.test.ts`). Do `.env`
+  nie wchodzi nic poza kluczem publicznym. Serwer MCP stoi na `auth: none`,
+  więc żadne jego narzędzie nie dotyka danych użytkowniczki.
 - **Nie zapisujemy zdjęć sylwetki**, dopóki nie powstanie awatar i nie
   zostanie zamknięta ścieżka RODO.
 - Nie dodajemy funkcji, które udają, że działają. Jeśli czegoś nie umiemy
