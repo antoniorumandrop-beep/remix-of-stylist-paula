@@ -20,6 +20,12 @@ const KEYS: Record<Category, TranslationKey> = {
   accessories: 'categoryAccessories',
 };
 
+/** The category id we recognise, or an empty string when we do not know it. */
+export function categoryOf(category: string | undefined): string {
+  const key = category?.toLowerCase() ?? '';
+  return key in KEYS ? key : '';
+}
+
 /**
  * The label for a category id, or the id itself when a feed sends one we do
  * not know yet — an unfamiliar category should still be readable, not blank.

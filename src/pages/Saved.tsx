@@ -152,10 +152,16 @@ export default function Saved() {
                   onClick={() => navigate(`/app/collection/${col.id}`)}
                 >
                   <div className="aspect-square rounded-2xl bg-card overflow-hidden mb-3 relative">
-                    <div className="grid grid-cols-2 gap-0.5 p-3 h-full">
-                      {[0, 1, 2, 3].map(i => (
-                        <div key={i} className="bg-muted rounded-lg overflow-hidden">
-                          {cover[i] && <ProductImage product={cover[i]} className="w-full h-full" />}
+                    {/* One item gets the whole tile, two get a column each. A
+                        fixed 2×2 left half the cover empty on a new collection. */}
+                    <div
+                      className={`grid gap-0.5 p-3 h-full ${
+                        cover.length <= 1 ? 'grid-cols-1' : 'grid-cols-2'
+                      }`}
+                    >
+                      {(cover.length === 0 ? [null] : cover).map((p, i) => (
+                        <div key={i} className="bg-muted rounded-lg overflow-hidden relative">
+                          {p && <ProductImage product={p} className="absolute inset-0 w-full h-full" />}
                         </div>
                       ))}
                     </div>
