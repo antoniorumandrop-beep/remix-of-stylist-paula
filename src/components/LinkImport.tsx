@@ -23,6 +23,9 @@ import { categoryLabel } from '@/lib/catalog/categories';
 
 const SOURCE_STYLE: Record<string, string> = {
   'json-ld': 'bg-foreground/10 text-foreground',
+  // The shop stating a fact about its own garment, just outside the standard —
+  // as hard a source as JSON-LD, so it reads the same.
+  'shop-json': 'bg-foreground/10 text-foreground',
   'open-graph': 'bg-amber-500/15 text-amber-700',
   url: 'bg-amber-500/15 text-amber-700',
   guess: 'bg-muted text-muted-foreground',

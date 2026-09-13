@@ -27,6 +27,7 @@ const fixture = (name: string) => readFileSync(resolve(__dirname, '__fixtures__'
 
 const HM_URL = 'https://www2.hm.com/pl_pl/productpage.0941666089.html';
 const ZARA_URL = 'https://www.zara.com/pl/pl/spodnie-z-zaszewkami-z-we%C5%82na-kolekcja-zw-p02017305.html?v1=565703986';
+const RESERVED_URL = 'https://www.reserved.com/pl/pl/lniana-sukienka-midi-3-838kb-88x';
 
 describe('H&M — ProductGroup z wariantami', () => {
   const draft = parseProductPage(fixture('hm-jeans-0941666089.html'), HM_URL);
@@ -92,5 +93,44 @@ describe('Zara — ProductGroup ze składem w additionalProperty', () => {
 
   it('nie ostrzega o braku składu, skoro skład jest', () => {
     expect(draft.warnings.join(' ')).not.toContain('no fabric composition');
+  });
+});
+
+describe('Reserved — skład i rozmiary leżą poza JSON-LD', () => {
+  const draft = parseProductPage(fixture('reserved-sukienka-838kb-88x.html'), RESERVED_URL);
+
+  it('bierze nazwę, markę i cenę z JSON-LD', () => {
+    expect(draft.name).toBe('Lniana sukienka midi');
+    expect(draft.brand).toBe('Reserved');
+    expect(draft.price).toBe(229.99);
+  });
+
+  it('czyta skład, którego JSON-LD nie zawiera', () => {
+    // The five LPP shops publish it in their own page JSON only. Before this,
+    // every product imported from them reached Paula with no composition, so
+    // the stretch model guessed from the product name.
+    expect(draft.material).toBe('100% LEN');
+    expect(draft.provenance.material).toBe('shop-json');
+  });
+
+  it('a ten skład przechodzi przez nasz parser składu', () => {
+    const entries = parseComposition(draft.material);
+    expect(entries.map(e => e.fiber)).toEqual(['linen']);
+    expect(naturalShare(entries)).toBe(100);
+  });
+
+  it('podaje tylko rozmiar, który da się kupić', () => {
+    // XS, S, M and L are all stockQuantity 0 on this page.
+    expect(draft.sizes).toBe('XL');
+    expect(draft.provenance.sizes).toBe('shop-json');
+  });
+
+  it('nie ostrzega o braku składu, skoro skład jest', () => {
+    expect(draft.warnings.join(' ')).not.toContain('no fabric composition');
+  });
+
+  it('nie ogłasza wyprzedania, skoro jeden rozmiar został', () => {
+    expect(draft.availability).toBeUndefined();
+    expect(draft.warnings.join(' ')).not.toContain('out of stock');
   });
 });

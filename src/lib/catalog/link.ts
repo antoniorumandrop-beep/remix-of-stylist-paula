@@ -1,5 +1,6 @@
 import type { RawProduct } from './types';
 import { normalizeCategory, parsePrice, slugify } from './feed';
+import { readShopJson } from './shopJson';
 
 /**
  * "Paste a link, get the product."
@@ -31,7 +32,7 @@ import { normalizeCategory, parsePrice, slugify } from './feed';
  */
 
 /** Where a field came from. Shown in the UI so a wrong pick is visible, not silent. */
-export type FieldSource = 'json-ld' | 'open-graph' | 'url' | 'guess';
+export type FieldSource = 'json-ld' | 'shop-json' | 'open-graph' | 'url' | 'guess';
 
 export interface LinkDraft {
   url: string;
@@ -428,6 +429,20 @@ export function parseProductPage(html: string, url: string): LinkDraft {
     }
   } else {
     draft.warnings.push('no JSON-LD Product on the page — falling back to Open Graph, which is the weaker source');
+  }
+
+  // The shop's own page JSON, after JSON-LD and before Open Graph. The five
+  // LPP shops publish the composition and the size run there and nowhere else,
+  // so without this every Reserved, Sinsay, House, Cropp and Mohito product
+  // arrived with an empty `material` and an empty `sizes` while both sat in
+  // the HTML. It is still the shop stating a fact about its own garment, which
+  // is why it outranks Open Graph — see `shopJson.ts`.
+  const shop = readShopJson(html);
+  set('material', shop.material, 'shop-json');
+  set('sizes', shop.sizes, 'shop-json');
+  if (shop.stock === 'out' && !draft.availability) {
+    draft.warnings.push('every size the page lists reads as out of stock');
+    set('availability', 'out-of-stock', 'shop-json');
   }
 
   // Open Graph fills the holes. Never the other way round: see the Answear trap.
