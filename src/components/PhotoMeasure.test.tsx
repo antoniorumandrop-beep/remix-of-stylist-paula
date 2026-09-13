@@ -28,7 +28,9 @@ function fakePhoto() {
   return new File([new Uint8Array([1, 2, 3])], 'ja.jpg', { type: 'image/jpeg' });
 }
 
-function pickPhoto() {
+/** Talia z taśmy kotwiczy pomiar, więc bez niej nie da się wybrać pliku. */
+function pickPhoto(waist = '70') {
+  fireEvent.change(screen.getByLabelText('Twoja talia, zmierzona taśmą'), { target: { value: waist } });
   const input = screen.getByTestId('photo-input') as HTMLInputElement;
   fireEvent.change(input, { target: { files: [fakePhoto()] } });
 }
@@ -97,5 +99,26 @@ describe('ekran pomiaru ze zdjęcia', () => {
     pickPhoto();
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
     expect(screen.getByRole('alert').textContent).toMatch(/jednej osoby/i);
+  });
+
+  it('kotwiczy odczyt na talii z taśmy, zanim cokolwiek pokaże', async () => {
+    // Prawdziwy odczyt drugiej osoby z 2026-09-13: model podał 93,1 / 75,6 /
+    // 105,8, a taśma mówiła 82,5 / 65 / 95. Przesunięcie o −10,6 sprowadza
+    // biust i biodra do taśmy z dokładnością do 0,2 cm — i to jest jedyny
+    // powód, dla którego ten ekran w ogóle pyta o talię.
+    vi.spyOn(photoMeasure, 'measureFromPhoto').mockResolvedValue({
+      status: 'ok',
+      measurements: { bust: 93.1, waist: 75.6, hips: 105.8 },
+    });
+    const onMeasured = renderPhotoMeasure();
+
+    pickPhoto('65');
+    await waitFor(() => expect(screen.getByText('82.5 cm')).toBeInTheDocument());
+    expect(screen.getByText('95.2 cm')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(/Użyj tych wymiarów/i));
+    expect(onMeasured).toHaveBeenCalledWith(
+      expect.objectContaining({ bust: 82.5, waist: 65, hips: 95.2 }),
+    );
   });
 });

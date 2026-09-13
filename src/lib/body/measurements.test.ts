@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  anchorToWaist,
   CLOTHING_FIELDS,
   hasCoreMeasurements,
   pickClothingMeasurements,
@@ -118,5 +119,45 @@ describe('checkPhotoFile', () => {
   it('dalej odmawia rzeczy, które obrazem nie są', () => {
     expect(checkPhotoFile(file('application/pdf'))).toBe('bad-file');
     expect(checkPhotoFile(file('image/jpeg', 13_000_000))).toBe('bad-file');
+  });
+});
+
+describe('anchorToWaist', () => {
+  /**
+   * Liczby z pomiaru dwóch ciał 2026-09-13. To nie są przykłady wymyślone pod
+   * test — to jest ten pomiar, na którym stoi cała ta funkcja, więc gdyby
+   * kiedyś przestała go odtwarzać, znaczyłoby to, że przestała robić to, po co
+   * powstała.
+   */
+  it('sprowadza pomiar kobiety do taśmy z dokładnością do 0,2 cm', () => {
+    const fromPhoto = { bust: 93.1, waist: 75.6, hips: 105.8, heightCm: 166.2 };
+    const anchored = anchorToWaist(fromPhoto, 65);
+    expect(anchored.waist).toBe(65);
+    expect(anchored.bust).toBeCloseTo(82.5, 1);   // taśma: 82,5
+    expect(anchored.hips).toBeCloseTo(95.2, 1);   // taśma: 95,0
+  });
+
+  it('sprowadza pomiar drugiego ciała tak samo', () => {
+    const fromPhoto = { bust: 106.0, waist: 92.3, hips: 109.2 };
+    const anchored = anchorToWaist(fromPhoto, 93);
+    expect(anchored.hips).toBeCloseTo(109.9, 1);  // taśma: 110,0
+  });
+
+  it('nie rusza wzrostu, bo to nie jest obwód', () => {
+    // Model myli się we wzroście inaczej niż w obwodach — na jednym ciele o
+    // 7 cm w dół, na drugim o 5 w górę. Wspólne przesunięcie tego nie opisuje.
+    const anchored = anchorToWaist({ bust: 93.1, waist: 75.6, heightCm: 166.2 }, 65);
+    expect(anchored.heightCm).toBe(166.2);
+  });
+
+  it('przesuwa też pozostałe obwody, nie tylko trzy główne', () => {
+    const anchored = anchorToWaist({ waist: 75.6, thigh: 59.2, upperArm: 29.5 }, 65);
+    expect(anchored.thigh).toBeCloseTo(48.6, 1);
+    expect(anchored.upperArm).toBeCloseTo(18.9, 1);
+  });
+
+  it('oddaje pomiar bez zmian, gdy nie ma czym kotwiczyć', () => {
+    const withoutWaist = { bust: 93.1, hips: 105.8 };
+    expect(anchorToWaist(withoutWaist, 65)).toEqual(withoutWaist);
   });
 });

@@ -2,10 +2,18 @@ import { useRef, useState } from 'react';
 import { Camera, Info, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { measureFromPhoto, type PhotoMeasureError } from '@/lib/body/photoMeasure';
-import type { ClothingMeasurements } from '@/lib/body/measurements';
+import { anchorToWaist, type ClothingMeasurements } from '@/lib/body/measurements';
 
 /**
  * Pomiar ze zdjęcia — uzupełnienie ścieżki z taśmą, nigdy jej zamiennik.
+ *
+ * **Jedna liczba przychodzi z taśmy: talia.** Zmierzone na dwóch ciałach
+ * 2026-09-13: model trafia proporcje ciała, ale myli się co do jego rozmiaru —
+ * o 10,6 cm na osobie oddalonej od średniej, i to na wszystkich trzech obwodach
+ * naraz. Talia z taśmy mówi, o ile się pomylił, i o tyle przesuwamy resztę;
+ * biust i biodra wychodzą wtedy w granicach 0,2 cm. Talia jest kotwicą, bo to
+ * jedyny obwód, który człowiek znajduje na sobie bez pomyłki — a biust i biodra
+ * to właśnie te, których samemu porządnie się nie zmierzy.
  *
  * Dwie rzeczy w tym pliku są wymogiem, nie decyzją graficzną:
  *
@@ -34,6 +42,9 @@ interface Props {
   onMeasured: (m: ClothingMeasurements & Record<'bust' | 'waist' | 'hips', number>) => void;
 }
 
+/** Obwód talii poza tym zakresem to literówka albo cale wzięte za centymetry. */
+const WAIST_RANGE = { min: 40, max: 200 };
+
 type State =
   | { phase: 'idle' }
   | { phase: 'working' }
@@ -44,6 +55,11 @@ export function PhotoMeasure({ onMeasured }: Props) {
   const { t } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<State>({ phase: 'idle' });
+  const [waist, setWaist] = useState('');
+  const waistCm = Number(waist);
+  const waistReady = Number.isFinite(waistCm)
+    && waistCm >= WAIST_RANGE.min
+    && waistCm <= WAIST_RANGE.max;
 
   async function handleFile(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -60,7 +76,8 @@ export function PhotoMeasure({ onMeasured }: Props) {
       setState({ phase: 'error', code: result.code });
       return;
     }
-    setState({ phase: 'done', measurements: result.measurements });
+    const anchored = anchorToWaist(result.measurements, waistCm) as typeof result.measurements;
+    setState({ phase: 'done', measurements: anchored });
   }
 
   return (
@@ -78,10 +95,30 @@ export function PhotoMeasure({ onMeasured }: Props) {
         <p className="text-xs text-muted-foreground leading-relaxed">{t('photoAiActNotice')}</p>
       </div>
 
+      {/* Kotwica z taśmy. Bez niej zdjęcie daje liczby potrafiące być o 10 cm
+          obok, więc przycisk wyboru pliku jest do tego czasu zablokowany. */}
+      <label className="flex items-center justify-between gap-3 mb-4">
+        <span className="text-sm">
+          {t('photoWaistAnchor')}
+          <span className="block text-xs text-muted-foreground mt-0.5">{t('photoWaistWhy')}</span>
+        </span>
+        <span className="flex items-center gap-1.5 shrink-0">
+          <input
+            type="number"
+            inputMode="numeric"
+            aria-label={t('photoWaistAnchor')}
+            value={waist}
+            onChange={e => setWaist(e.target.value)}
+            className="w-20 px-3 py-2 bg-card rounded-xl text-center text-sm focus:outline-none focus:ring-2 focus:ring-foreground/10"
+          />
+          <span className="text-xs text-muted-foreground">cm</span>
+        </span>
+      </label>
+
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp"
         onChange={handleFile}
         className="hidden"
         data-testid="photo-input"
@@ -116,13 +153,16 @@ export function PhotoMeasure({ onMeasured }: Props) {
         <>
           <button
             type="button"
-            disabled={state.phase === 'working'}
+            disabled={state.phase === 'working' || !waistReady}
             onClick={() => inputRef.current?.click()}
             className="w-full px-4 py-3 rounded-xl border border-border text-sm hover:bg-card transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {state.phase === 'working' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             {state.phase === 'working' ? t('photoMeasuring') : t('photoPick')}
           </button>
+          {!waistReady && state.phase !== 'working' && (
+            <p className="text-xs text-muted-foreground mt-3">{t('photoWaistFirst')}</p>
+          )}
           {state.phase === 'error' && (
             <p role="alert" className="text-xs text-muted-foreground mt-3">
               {t(ERROR_KEY[state.code] as Parameters<typeof t>[0])}

@@ -181,8 +181,9 @@ describe('Onboarding — sensowność wpisanych wymiarów', () => {
     clickContinue(); // 1 → 2, proporcje
   };
 
-  const field = (label: string) =>
-    screen.getAllByRole('spinbutton').at(['Bust', 'Waist', 'Hips'].indexOf(label))!;
+  // Po dołożeniu kotwicy z taśmy w panelu zdjęcia na tym kroku jest więcej niż
+  // trzy pola liczbowe, więc szukanie po kolejności zaczęło trafiać w cudze.
+  const field = (label: string) => screen.getByLabelText(`${label} (cm)`);
 
   it('says nothing about ordinary measurements', () => {
     goToProportions();
@@ -275,6 +276,8 @@ describe('Onboarding — pomiar ze zdjęcia', () => {
     fireEvent.change(screen.getByLabelText('Height (cm)'), { target: { value: '179' } });
     clickContinue(); // 1 → 2, proporcje ze zdjęciem
 
+    // Talia z taśmy jest kotwicą pomiaru — bez niej wybór pliku jest zablokowany.
+    fireEvent.change(screen.getByLabelText('Your waist, with a tape'), { target: { value: '93' } });
     fireEvent.change(screen.getByTestId('photo-input'), {
       target: { files: [new File([new Uint8Array([1])], 'ja.jpg', { type: 'image/jpeg' })] },
     });

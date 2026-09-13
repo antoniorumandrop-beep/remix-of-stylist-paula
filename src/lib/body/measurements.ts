@@ -105,3 +105,38 @@ export function hasCoreMeasurements(m: ClothingMeasurements): m is ClothingMeasu
   Record<'bust' | 'waist' | 'hips', number> {
   return typeof m.bust === 'number' && typeof m.waist === 'number' && typeof m.hips === 'number';
 }
+
+/**
+ * Kotwiczenie pomiaru ze zdjęcia jedną liczbą z taśmy.
+ *
+ * Zmierzone na dwóch ciałach 2026-09-13: model myli się co do **rozmiaru**
+ * ciała, ale nie co do **proporcji**. Na osobie oddalonej od środka rozkładu
+ * wyszło +10,6 cm na biuście, +10,6 na talii i +10,8 na biodrach — trzy prawie
+ * identyczne błędy. Skoro przesunięcie jest wspólne, wystarczy je zmierzyć na
+ * jednym obwodzie i odjąć od pozostałych.
+ *
+ * Wynik po zakotwiczeniu na talii: biust 0,0 cm błędu i biodra +0,2 cm na
+ * ciele kobiety, biodra −0,1 cm na drugim. Pełny wywód i zastrzeżenia:
+ * `docs/photo-measurement.md`.
+ *
+ * Kotwicą jest **talia**, bo to jedyny obwód, który człowiek znajduje na sobie
+ * bez pomyłki — biust i biodra to właśnie te, których nie da się porządnie
+ * zmierzyć samemu i po które sięgamy do zdjęcia.
+ */
+export function anchorToWaist(
+  fromPhoto: ClothingMeasurements,
+  waistFromTape: number,
+): ClothingMeasurements {
+  if (typeof fromPhoto.waist !== 'number') return fromPhoto;
+  const offset = waistFromTape - fromPhoto.waist;
+  const shifted: ClothingMeasurements = {};
+  for (const field of CLOTHING_FIELDS) {
+    const value = fromPhoto[field];
+    if (typeof value !== 'number') continue;
+    // Wzrostu nie ruszamy: przesunięcie jest wspólne dla **obwodów**, a wzrost
+    // nie jest obwodem i model myli się w nim inaczej (i tak go nie czytamy).
+    shifted[field] = field === 'heightCm' ? value : Math.round((value + offset) * 10) / 10;
+  }
+  shifted.waist = waistFromTape;
+  return shifted;
+}
