@@ -136,7 +136,13 @@ trafić do Lovable.
   a `src/integrations/supabase/client.ts` importuje wyłącznie
   `src/lib/backend/supabase.ts` (pilnuje `importBoundary.test.ts`). Do `.env`
   nie wchodzi nic poza kluczem publicznym. Serwer MCP stoi na `auth: none`,
-  więc żadne jego narzędzie nie dotyka danych użytkowniczki.
+  więc żadne jego narzędzie nie dotyka danych użytkowniczki. Sprawdzone
+  2026-09-13: żadne z trzech narzędzi (`classify_body_shape`,
+  `search_products`, `score_product_fit`) nie importuje z
+  `src/lib/backend/**` — biorą pomiary jako parametry wywołania i czytają
+  wyłącznie wspólny katalog mockowy i czysty silnik dopasowania, więc
+  `auth: none` nie wystawia niczyjego profilu. `mcpBoundary.test.ts` pilnuje,
+  żeby to zostało prawdą.
 - **Nie zapisujemy zdjęć sylwetki**, dopóki nie powstanie awatar i nie
   zostanie zamknięta ścieżka RODO.
 - Nie dodajemy funkcji, które udają, że działają. Jeśli czegoś nie umiemy
