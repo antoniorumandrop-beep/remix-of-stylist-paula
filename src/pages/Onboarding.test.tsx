@@ -168,11 +168,17 @@ describe('Onboarding — sensowność wpisanych wymiarów', () => {
     localStorage.setItem('paula-lang', 'en');
   });
 
-  /** Walks to the proportions step, which is now the second one. */
+  /**
+   * Idzie do kroku proporcji. Od 2026-09-13 jest trzeci, nie drugi: wzrost
+   * pytamy przed zdjęciem, bo jest jedyną liczbą, której model ze zdjęcia nie
+   * umie odczytać (mylił się o 8,9 cm) — a bez niego nie ma jak sprawdzić, czy
+   * to, co model odczytał, w ogóle trzyma się kupy.
+   */
   const goToProportions = () => {
     renderOnboarding();
     fireEvent.change(screen.getByPlaceholderText('Your name'), { target: { value: 'Gabriela' } });
-    clickContinue();
+    clickContinue(); // 0 → 1, wzrost
+    clickContinue(); // 1 → 2, proporcje
   };
 
   const field = (label: string) =>
@@ -220,7 +226,7 @@ describe('Onboarding — dostępność', () => {
   it('names each measurement field for a screen reader', () => {
     // The visible labels are sibling spans, so without this a screen reader
     // announces four identical unnamed number fields.
-    walkTo(1);
+    walkTo(2);
     expect(screen.getByLabelText('Bust (cm)')).toBeInTheDocument();
     expect(screen.getByLabelText('Waist (cm)')).toBeInTheDocument();
     expect(screen.getByLabelText('Hips (cm)')).toBeInTheDocument();
@@ -235,7 +241,7 @@ describe('Onboarding — dostępność', () => {
   });
 
   it('names the height field', () => {
-    walkTo(2);
+    walkTo(1);
     expect(screen.getByLabelText('Height (cm)')).toBeInTheDocument();
   });
 });
@@ -265,7 +271,9 @@ describe('Onboarding — pomiar ze zdjęcia', () => {
 
     renderOnboarding();
     fireEvent.change(screen.getByPlaceholderText('Your name'), { target: { value: 'Antonio' } });
-    clickContinue();
+    clickContinue(); // 0 → 1, wzrost
+    fireEvent.change(screen.getByLabelText('Height (cm)'), { target: { value: '179' } });
+    clickContinue(); // 1 → 2, proporcje ze zdjęciem
 
     fireEvent.change(screen.getByTestId('photo-input'), {
       target: { files: [new File([new Uint8Array([1])], 'ja.jpg', { type: 'image/jpeg' })] },
@@ -277,9 +285,10 @@ describe('Onboarding — pomiar ze zdjęcia', () => {
     expect((screen.getByLabelText('Waist (cm)') as HTMLInputElement).value).toBe('93');
     expect((screen.getByLabelText('Hips (cm)') as HTMLInputElement).value).toBe('109');
 
-    clickContinue();
-    // 165 to wartość domyślna kroku wzrostu. Gdyby zdjęcie ją nadpisało,
-    // stałoby tu 170 — i użytkowniczka nosiłaby cudzy wzrost bez ostrzeżenia.
-    expect((screen.getByLabelText('Height (cm)') as HTMLInputElement).value).toBe('165');
+    // Wracamy na krok wzrostu: ma stać tam liczba, którą podał człowiek.
+    // Gdyby zdjęcie ją nadpisało, stałoby tu 170 — i użytkowniczka nosiłaby
+    // cudzy wzrost, nie wiedząc o tym.
+    fireEvent.click(screen.getByText('Back'));
+    expect((screen.getByLabelText('Height (cm)') as HTMLInputElement).value).toBe('179');
   });
 });

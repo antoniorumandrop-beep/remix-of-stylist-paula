@@ -133,7 +133,7 @@ export default function Onboarding() {
 
   const canProceed = () => {
     if (step === 0) return name.length > 0;
-    if (step === 1) return noTape ? pickedShape !== null : measurementsValid;
+    if (step === 2) return noTape ? pickedShape !== null : measurementsValid;
     return true;
   };
 
@@ -162,6 +162,27 @@ export default function Onboarding() {
         );
 
       case 1:
+        return (
+          <div>
+            <h2 className="font-display text-3xl md:text-4xl mb-3">{t('howTallAreYou')}</h2>
+            <p className="text-muted-foreground mb-8">{t('heightHelps')}</p>
+            <div className="flex items-center gap-4">
+              <input
+                type="number"
+                aria-label={`${t('height')} (cm)`}
+                value={height}
+                onChange={e => setHeight(e.target.value)}
+                className="w-32 px-4 py-4 bg-card rounded-xl text-2xl text-center focus:outline-none focus:ring-2 focus:ring-foreground/10"
+              />
+              <span className="text-lg text-muted-foreground">cm</span>
+            </div>
+            {measurementNote('height', Number(height)) && (
+              <p className="text-xs mt-3 text-amber-700">{measurementNote('height', Number(height))}</p>
+            )}
+          </div>
+        );
+
+      case 2:
         return (
           <div>
             <h2 className="font-display text-3xl md:text-4xl mb-3">{t('yourProportions')}</h2>
@@ -387,27 +408,6 @@ export default function Onboarding() {
                   </div>
                 </div>
               </div>
-            )}
-          </div>
-        );
-
-      case 2:
-        return (
-          <div>
-            <h2 className="font-display text-3xl md:text-4xl mb-3">{t('howTallAreYou')}</h2>
-            <p className="text-muted-foreground mb-8">{t('heightHelps')}</p>
-            <div className="flex items-center gap-4">
-              <input
-                type="number"
-                aria-label={`${t('height')} (cm)`}
-                value={height}
-                onChange={e => setHeight(e.target.value)}
-                className="w-32 px-4 py-4 bg-card rounded-xl text-2xl text-center focus:outline-none focus:ring-2 focus:ring-foreground/10"
-              />
-              <span className="text-lg text-muted-foreground">cm</span>
-            </div>
-            {measurementNote('height', Number(height)) && (
-              <p className="text-xs mt-3 text-amber-700">{measurementNote('height', Number(height))}</p>
             )}
           </div>
         );
