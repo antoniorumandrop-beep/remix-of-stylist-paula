@@ -75,3 +75,53 @@ przy rekonstrukcji z jednego zdjęcia) i nie podlega reżimowi AI Act, bo dane
 wpisane ręcznie nie są biometryczne. Zdjęcie jest uzupełnieniem dla kogoś, kto
 taśmy nie ma pod ręką — nigdy zamiennikiem. Ekran musi to mówić wprost, a nie
 sugerować, że nowsze znaczy lepsze.
+
+## Co zmierzyliśmy — 2026-09-13, jedno ciało, osiem zdjęć
+
+Pierwszy pomiar na żywym człowieku, przy taśmie krawieckiej jako odniesieniu.
+Osiem zdjęć jednej osoby: sześć z kamerki (720×480), dwa z telefonu (2316×3088),
+w tym bok, plecy i ręce nad głową.
+
+| wymiar | taśma | średnia ze zdjęć od przodu | błąd | rozrzut między zdjęciami |
+|---|---|---|---|---|
+| talia | 93,0 | 92,9 | **−0,1 cm** | 3,1 cm |
+| biodra | 110,0 | 108,9 | **−1,1 cm** | 1,5 cm |
+| klatka | 103,5 | 107,2 | +3,7 cm | 2,9 cm |
+| wzrost | 179 | 170,1 | **−8,9 cm** | 0,6 cm |
+
+Cztery wnioski, każdy zmieniający coś w kodzie albo w planie.
+
+**1. Obwody są lepsze, niż zakładał research.** `bodytech-*` przewidywał 5–8 cm
+błędu przy rekonstrukcji z jednego zdjęcia. Talia wyszła o 0,1 cm, biodra o 1,1.
+To jest dokładność, przy której Fit Score liczony ze zdjęcia ma sens.
+
+**2. Wzrost jest nie do użycia — i model był go najpewniejszy.** Rozrzut 0,6 cm
+przy błędzie 8,9 cm to precyzja bez trafności: model powtarzalnie wskazuje złe
+miejsce. Powód jest strukturalny, nie naprawialny lepszym zdjęciem — jedno
+ujęcie nie zawiera odniesienia skali, więc model zgaduje wzrost z proporcji
+ciała i ciąży ku średniej populacyjnej. **Dlatego wzrostu ze zdjęcia nie
+bierzemy w ogóle.** Podaje go użytkowniczka; to jedyna liczba, którą człowiek
+zna bez taśmy. Pilnuje tego test w `Onboarding.test.tsx`.
+
+**3. Przeskalowanie siatki do prawdziwego wzrostu psuje wszystko.** Sprawdzone,
+bo to pierwsza rzecz, która przychodzi do głowy: mnożnik 1,054 wyprowadza talię
+na +4,4 cm, a klatkę na +9,0 cm. Czyli błąd wzrostu **nie jest** błędem skali —
+model widzi krępsze ciało o właściwych obwodach, a nie to samo ciało zmniejszone.
+
+**4. Rozdzielczość nie jest dźwignią.** Dwadzieścia razy więcej pikseli
+(0,35 → 7,2 Mpix) nie przesunęło wyniku w żadną stronę — zdjęcia z telefonu
+wpadły w środek chmury tych z kamerki. Błąd siedzi w geometrii, nie w ostrości:
+z jednego ujęcia widać szerokość, a głębokość trzeba wywnioskować. Dźwignią jest
+drugie ujęcie z boku (Krok 4), nie lepszy aparat.
+
+**Poza ma znaczenie i trzeba ją narzucić.** Bok i plecy zaniżają *każdy* wymiar
+naraz — to przechył, nie szum, więc uśrednianie póz go nie usunie. Zdjęcia od
+przodu zwężają rozrzut talii z 8,2 cm do 3,1 cm.
+
+### Czego ten pomiar NIE dowodzi
+
+Jedno ciało to nie walidacja. Ta osoba ma obwody blisko średniej populacyjnej, a
+model ciąży ku średniej — więc część tej celności może być zbiegiem
+okoliczności, tym samym, który zaniżył wzrost o 9 cm. **Drugi pomiar musi być na
+ciele daleko od środka rozkładu**, inaczej nie odróżnimy działającego narzędzia
+od modelu, który trafnie zgaduje przeciętną.

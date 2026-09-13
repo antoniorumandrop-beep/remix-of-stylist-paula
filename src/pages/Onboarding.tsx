@@ -194,13 +194,20 @@ export default function Onboarding() {
             {!noTape && (
               <PhotoMeasure
                 onMeasured={m => {
+                  // Wzrostu ze zdjęcia NIE bierzemy, choć model go podaje.
+                  // Zmierzone 2026-09-13 na sześciu zdjęciach jednej osoby:
+                  // obwody trafione (talia −0,1 cm, biodra −1,1 cm), a wzrost
+                  // zaniżony o 8,9 cm — i to najrówniej ze wszystkiego, bo
+                  // rozrzut wyniósł 0,6 cm. Model był najpewniejszy dokładnie
+                  // tam, gdzie mylił się najbardziej. Wzrost jest jedyną
+                  // liczbą, którą człowiek zna bez taśmy, więc pochodzi od
+                  // niego. Szczegóły: docs/photo-measurement.md.
                   setProportions(prev => ({
                     ...prev,
                     bust: Math.round(m.bust),
                     waist: Math.round(m.waist),
                     hips: Math.round(m.hips),
                   }));
-                  if (m.heightCm) setHeight(String(Math.round(m.heightCm)));
                 }}
               />
             )}

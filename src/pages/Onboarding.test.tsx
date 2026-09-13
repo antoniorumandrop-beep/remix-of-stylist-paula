@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -7,6 +7,7 @@ import { createQueryClient } from '@/lib/backend/queryClient';
 import Onboarding from './Onboarding';
 import { LanguageProvider } from '@/i18n/LanguageContext';
 import { backend } from '@/lib/backend';
+import * as photoMeasure from '@/lib/body/photoMeasure';
 
 /**
  * Onboarding is the only place these answers are ever collected, so a step
@@ -236,5 +237,49 @@ describe('Onboarding — dostępność', () => {
   it('names the height field', () => {
     walkTo(2);
     expect(screen.getByLabelText('Height (cm)')).toBeInTheDocument();
+  });
+});
+
+describe('Onboarding — pomiar ze zdjęcia', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem('paula-lang', 'en');
+    vi.restoreAllMocks();
+  });
+
+  /**
+   * Wzrost ze zdjęcia jest odrzucany świadomie.
+   *
+   * Zmierzone 2026-09-13 na sześciu zdjęciach jednej osoby, przy taśmie jako
+   * odniesieniu: talia −0,1 cm, biodra −1,1 cm, **wzrost −8,9 cm**. I wzrost
+   * był przy tym najrówniejszy ze wszystkiego — rozrzut 0,6 cm — czyli model
+   * był najpewniejszy dokładnie tam, gdzie mylił się najbardziej. Gdyby ktoś
+   * kiedyś „dokończył" tę funkcję, dopisując brakujące przypisanie wzrostu,
+   * ten test ma go zatrzymać.
+   */
+  it('bierze ze zdjęcia obwody, ale nigdy wzrostu', async () => {
+    vi.spyOn(photoMeasure, 'measureFromPhoto').mockResolvedValue({
+      status: 'ok',
+      measurements: { bust: 107, waist: 93, hips: 109, heightCm: 170 },
+    });
+
+    renderOnboarding();
+    fireEvent.change(screen.getByPlaceholderText('Your name'), { target: { value: 'Antonio' } });
+    clickContinue();
+
+    fireEvent.change(screen.getByTestId('photo-input'), {
+      target: { files: [new File([new Uint8Array([1])], 'ja.jpg', { type: 'image/jpeg' })] },
+    });
+    await waitFor(() => screen.getByText('Use these measurements'));
+    fireEvent.click(screen.getByText('Use these measurements'));
+
+    expect((screen.getByLabelText('Bust (cm)') as HTMLInputElement).value).toBe('107');
+    expect((screen.getByLabelText('Waist (cm)') as HTMLInputElement).value).toBe('93');
+    expect((screen.getByLabelText('Hips (cm)') as HTMLInputElement).value).toBe('109');
+
+    clickContinue();
+    // 165 to wartość domyślna kroku wzrostu. Gdyby zdjęcie ją nadpisało,
+    // stałoby tu 170 — i użytkowniczka nosiłaby cudzy wzrost bez ostrzeżenia.
+    expect((screen.getByLabelText('Height (cm)') as HTMLInputElement).value).toBe('165');
   });
 });
