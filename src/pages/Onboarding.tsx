@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronRight, X, Link, ImagePlus, UserRound, HelpCircle } from 'lucide-react';
 import { bodyShapes, aestheticOptions, fitOptions, occasionOptions, brands } from '@/data/mockData';
 import { MeasureGuide, type MeasureKey } from '@/components/MeasureGuide';
+import { PhotoMeasure } from '@/components/PhotoMeasure';
 import { useLanguage } from '@/i18n/LanguageContext';
 import type { TranslationKey } from '@/i18n/translations';
 import { useBodyProfile } from '@/lib/profile';
@@ -185,6 +186,23 @@ export default function Onboarding() {
                 </span>
                 <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               </button>
+            )}
+
+            {/* Zdjęcie stoi obok taśmy, nie zamiast niej: uzupełnienie dla
+                kogoś, kto centymetra nie ma pod ręką. Ekran mówi to wprost,
+                bo pomiar taśmą jest dokładniejszy. */}
+            {!noTape && (
+              <PhotoMeasure
+                onMeasured={m => {
+                  setProportions(prev => ({
+                    ...prev,
+                    bust: Math.round(m.bust),
+                    waist: Math.round(m.waist),
+                    hips: Math.round(m.hips),
+                  }));
+                  if (m.heightCm) setHeight(String(Math.round(m.heightCm)));
+                }}
+              />
             )}
 
             {noTape ? (
