@@ -212,3 +212,81 @@ modelu.
 **Czego to nadal nie rozstrzyga.** Wszystkie dziesięć zdjęć to jedno ciało.
 Pytanie, czy model odpowiada na kształt, czy recytuje przeciętną, wymaga drugiego
 ciała i jest jedynym otwartym pytaniem tej ścieżki.
+
+## Drugie ciało — test rozstrzygający (2026-09-13, wieczorem)
+
+Druga osoba, kobieta, 161 cm, zmierzona taśmą tego samego wieczoru. Ciało
+wyraźnie inne od pierwszego: talia 65 wobec 93, wzrost 161 wobec 179.
+
+| | taśma A | model A | błąd | taśma M | model M | błąd |
+|---|---|---|---|---|---|---|
+| biust | 103,5 | 106,0 | +2,5 | 82,5 | 93,1 | **+10,6** |
+| talia | 93,0 | 92,3 | −0,7 | 65,0 | 75,6 | **+10,6** |
+| biodra | 110,0 | 109,2 | −0,8 | 95,0 | 105,8 | **+10,8** |
+| wzrost | 179 | 171,9 | −7,1 | 161 | 166,2 | +5,2 |
+
+### Jako przymiar w centymetrach: to nie działa
+
+**Celność na pierwszym ciele była przypadkiem.** Antonio siedzi blisko środka
+rozkładu, na którym model się uczył, więc trafiał. Druga osoba leży od tego
+środka daleko i model mylił się o **10,6 cm na wszystkich trzech obwodach**.
+To pięciokrotność progu 1–2 cm, który postawiliśmy jako wymaganie.
+
+Model **odpowiada** na ciało — liczby drugiej osoby są wyraźnie niższe, więc nie
+recytuje jednej średniej. Ale odpowiada za słabo. Z prawdziwej rozpiętości
+między tymi dwoma ciałami zostaje w modelu:
+
+| wymiar | rozpiętość prawdziwa | w modelu | zostało |
+|---|---|---|---|
+| biust | 21,0 | 12,9 | 61% |
+| talia | 28,0 | 16,7 | 60% |
+| wzrost | 18,0 | 5,7 | 32% |
+| biodra | 15,0 | 3,4 | **23%** |
+
+Przy biodrach model widzi 3,4 cm różnicy tam, gdzie jest 15. Odkręcenie tego
+mnożnikiem wymagałoby 4,4× — a rozrzut samego modelu między dwoma zdjęciami tej
+samej osoby to około 1,5 cm, więc po takim wzmocnieniu zostałoby 6,6 cm szumu.
+Poprawka wzmocniłaby szum bardziej niż sygnał.
+
+**I dwa punkty to za mało, żeby wybrać poprawkę.** Do tych danych pasuje
+równie dobrze ściśnięcie liniowe i stałe przesunięcie zależne od osoby, a każde
+z nich każe zrobić co innego. Trzecie ciało je rozdziela.
+
+### Jako klasyfikator sylwetki: to działa, i to bardzo dobrze
+
+Popatrzeć na błędy drugiej osoby jeszcze raz: **+10,6, +10,6, +10,8.** Prawie
+identyczne. Model myli się co do *rozmiaru* ciała, ale niemal wcale co do
+*proporcji* — a FFIT nie czyta obwodów, tylko różnice między nimi:
+
+| | biodra − talia | biust − biodra |
+|---|---|---|
+| MP, taśma | 30,0 | −12,5 |
+| MP, zdjęcie | **30,2** | **−12,7** |
+| Antonio, taśma | 17,0 | −6,5 |
+| Antonio, zdjęcie | **16,9** | −3,2 |
+
+Klasyfikacja zgadza się na obu ciałach. Zdjęcie drugiej osoby daje
+`bottom-hourglass (merged)`, a jej taśma **z ukrytym górnym biodrem daje
+dokładnie to samo** — różnica wobec pełnego pomiaru (`spoon`) bierze się
+wyłącznie z górnego biodra, którego zdjęcie nie dostarcza i o którym FFIT z
+góry mówi, że bez niego łączy te dwie sylwetki.
+
+### Co z tego wynika dla produktu
+
+Ścieżka zdjęciowa przestaje być „zmierz się" i staje się **„znajdź swoją
+sylwetkę"**. To nie jest pocieszenie po nieudanym pomiarze — to jest dokładnie
+to, czego Fit Score używa, i to, co `CLAUDE.md` nazywa jedyną obroną przed
+skomodytyzowaniem przymierzania przez Google.
+
+Konsekwencja w kodzie jest natychmiastowa: **ekran zdjęcia nie może dalej
+wpisywać centymetrów do pól pomiarów**, bo wpisuje liczby, o których wiemy, że
+potrafią być o 10 cm obok. Reguła projektu mówi to wprost — liczby, której nie
+da się wyprowadzić regułą wypisaną obok niej, nie pokazujemy.
+
+### Do zamknięcia
+
+- **Kadr.** Zdjęcia pierwszej osoby były bez stóp, drugiej bez pełnej głowy.
+  Ścisnięcia rzędu 3–4× to nie tłumaczy, ale zanim uznamy liczby za ostateczne,
+  przydaje się po jednym czystym zdjęciu na osobę.
+- **Trzecie ciało.** Rozdziela dwie hipotezy o naturze błędu i pozwala
+  *sprawdzić* zachowanie różnic, zamiast dopasowywać poprawkę do dwóch punktów.
