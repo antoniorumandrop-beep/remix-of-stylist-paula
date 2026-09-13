@@ -136,8 +136,6 @@ describe('angielska proza w danych', () => {
   /** Mock prose that is known, unrendered or short-lived. Nothing may join it. */
   const REGISTERED = new Map<string, string>([
     ['text', 'review bodies — mock, they go when a real catalogue arrives'],
-    ['description', 'material prose — nothing reads it since the fibre dictionary landed'],
-    ['behavior', 'likewise: the panel now generates this from the composition'],
   ]);
 
   function prose(): { field: string; file: string; line: number; text: string }[] {

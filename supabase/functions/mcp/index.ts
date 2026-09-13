@@ -93,108 +93,63 @@ import { z as z2 } from "npm:zod@^3.25.76";
 var productMaterials = {
   "1": {
     composition: [{ name: "Linen", percent: 70, natural: true }, { name: "Cotton", percent: 30, natural: true }],
-    qualityScore: 88,
-    description: "Natural linen-cotton blend, soft to the touch and breathable.",
-    care: ["Wash 30\xB0C", "Do not tumble dry", "Iron on medium heat"],
-    behavior: "The fabric wrinkles slightly \u2014 a natural linen characteristic. Gets softer with every wash. Breathable, perfect for summer."
+    qualityScore: 88
   },
   "2": {
     composition: [{ name: "Viscose", percent: 100, natural: false }],
-    qualityScore: 65,
-    description: "Medium-weight viscose, drapes beautifully.",
-    care: ["Wash 30\xB0C", "Iron on low heat"],
-    behavior: "Drapes well and flows nicely. May pill with extended wear. Viscose is derived from wood fibers but chemically processed."
+    qualityScore: 65
   },
   "3": {
     composition: [{ name: "Organic Cotton", percent: 98, natural: true }, { name: "Elastane", percent: 2, natural: false }],
-    qualityScore: 82,
-    description: "Certified organic cotton with minimal elastane.",
-    care: ["Wash 40\xB0C", "Tumble dry OK"],
-    behavior: "Strong, breathable fabric. Holds shape thanks to elastane. Gets softer with every wash."
+    qualityScore: 82
   },
   "4": {
     composition: [{ name: "Wool", percent: 80, natural: true }, { name: "Polyester", percent: 20, natural: false }],
-    qualityScore: 91,
-    description: "High-quality wool blend, holds its shape exceptionally well.",
-    care: ["Dry clean only", "Do not machine wash"],
-    behavior: "Holds structure well, resists wrinkling. Polyester adds durability. Suitable for all seasons."
+    qualityScore: 91
   },
   "5": {
     composition: [{ name: "Silk", percent: 100, natural: true }],
-    qualityScore: 95,
-    description: "Pure silk, luxurious and delicate.",
-    care: ["Hand wash", "Dry clean", "Do not wring"],
-    behavior: "Silk drapes beautifully with a natural sheen. Delicate fabric requiring careful handling. Thermoregulating \u2014 cools in summer, warms in winter."
+    qualityScore: 95
   },
   "6": {
     composition: [{ name: "Polyester", percent: 65, natural: false }, { name: "Viscose", percent: 30, natural: false }, { name: "Elastane", percent: 5, natural: false }],
-    qualityScore: 55,
-    description: "Synthetic blend, comfortable and easy care.",
-    care: ["Wash 30\xB0C", "Tumble dry OK"],
-    behavior: "Wrinkle-resistant and easy to maintain. May not breathe as well as natural fabrics. Can build static with heavy wear."
+    qualityScore: 55
   },
   "7": {
     composition: [{ name: "Genuine Leather", percent: 100, natural: true }],
-    qualityScore: 85,
-    description: "Genuine leather, second-hand in very good condition.",
-    care: ["Clean with leather conditioner", "Store away from moisture"],
-    behavior: "Leather develops a patina over time, adding character. Molds to your foot. Durable material built to last."
+    qualityScore: 85
   },
   "8": {
     composition: [{ name: "Satin (Polyester)", percent: 100, natural: false }],
-    qualityScore: 60,
-    description: "Polyester satin with a subtle sheen.",
-    care: ["Hand wash", "Iron on low heat"],
-    behavior: "Smooth and flowing drape. Doesn't breathe as well as natural silk satin. May build static."
+    qualityScore: 60
   },
   "9": {
     composition: [{ name: "Wool", percent: 55, natural: true }, { name: "Cotton", percent: 40, natural: true }, { name: "Elastane", percent: 5, natural: false }],
-    qualityScore: 89,
-    description: "High-quality wool-cotton blend by Massimo Dutti.",
-    care: ["Dry clean", "Iron on medium heat"],
-    behavior: "Holds shape excellently, professional look. Breathable thanks to natural fibers. Durable fabric."
+    qualityScore: 89
   },
   "10": {
     composition: [{ name: "Cotton", percent: 50, natural: true }, { name: "Polyester", percent: 50, natural: false }],
-    qualityScore: 45,
-    description: "Standard cotton-polyester blend.",
-    care: ["Wash 40\xB0C", "Tumble dry OK"],
-    behavior: "Decent fabric at this price point. May pill after many washes. Polyester reduces wrinkling but also breathability."
+    qualityScore: 45
   },
   "13": {
     composition: [{ name: "Acrylic", percent: 80, natural: false }, { name: "Polyester", percent: 20, natural: false }],
-    qualityScore: 35,
-    description: "Synthetic fabric, budget option.",
-    care: ["Wash 30\xB0C", "Do not iron"],
-    behavior: "Lightweight and soft to touch, but fully synthetic. May pill and build static. For everyday wear, not built to last."
+    qualityScore: 35
   },
   "14": {
     composition: [{ name: "Linen", percent: 55, natural: true }, { name: "Cotton", percent: 40, natural: true }, { name: "Elastane", percent: 5, natural: false }],
-    qualityScore: 84,
-    description: "Linen-cotton blend, light and airy.",
-    care: ["Wash 30\xB0C", "Iron on medium heat"],
-    behavior: "Natural wrinkling adds character. Very breathable for warm days. Elastane ensures comfort of movement."
+    qualityScore: 84
   },
   "15": {
     composition: [{ name: "Organic Cotton", percent: 95, natural: true }, { name: "Elastane", percent: 5, natural: false }],
-    qualityScore: 78,
-    description: "Ribbed organic cotton, soft and stretchy.",
-    care: ["Wash 40\xB0C", "Tumble dry OK"],
-    behavior: "Fits close to the body, breathable. Holds shape after washing. Ribbed texture adds a subtle visual effect."
+    qualityScore: 78
   },
   "17": {
     composition: [{ name: "Cotton", percent: 98, natural: true }, { name: "Elastane", percent: 2, natural: false }],
-    qualityScore: 75,
-    description: "Heavy cotton denim with a touch of elastane.",
-    care: ["Wash 30\xB0C", "Wash inside out"],
-    behavior: "Classic denim \u2014 durable and molds to your body over time. The less you wash, the longer the color lasts."
+    qualityScore: 75
   },
   "20": {
     composition: [{ name: "Cotton", percent: 100, natural: true }],
-    qualityScore: 83,
-    description: "Poplin cotton, light and crisp to touch.",
-    care: ["Wash 40\xB0C", "Iron on high heat"],
-    behavior: "Classic shirt fabric, breathable and durable. Requires ironing. Gets softer over time."
+    qualityScore: 83
   }
 };
 var allProducts = [
