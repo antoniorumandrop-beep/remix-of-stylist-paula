@@ -91,3 +91,50 @@ describe('readShopJson — sytuacje, w których łatwo o cichy błąd', () => {
     expect(readShopJson(html).material).toBe('100% BAWEŁNA');
   });
 });
+
+describe('readShopJson — strona niesie też rozmiary cudzych produktów', () => {
+  /**
+   * Found by importing nine real LPP products and reading what landed: a
+   * House dress came back in sizes 35–41 and a pair of Sinsay joggers in
+   * 39–44. Both are shoe size runs, belonging to the "you may also like"
+   * products further down the same page.
+   *
+   * The live jogger page carries three size blocks — 486JH-99X (shoes),
+   * 449JM-77X, and 620JM-77X, which is the one the URL and the JSON-LD `sku`
+   * point at. Taking the first block is how a dress gets shoe sizes and looks
+   * entirely plausible doing it.
+   */
+  const fixture = (name: string) => readFileSync(resolve(__dirname, '__fixtures__', name), 'utf8');
+  const jogger = fixture('sinsay-jogger-620jm-77x.html');
+
+  it('bierze blok tego produktu, nie pierwszy na stronie', () => {
+    expect(readShopJson(jogger, '620JM-77X').sizes).toBe('XS, S, M');
+  });
+
+  it('milczy, gdy żaden blok nie należy do tego produktu', () => {
+    // Better no size run than someone else's: a wrong one is invisible.
+    expect(readShopJson(jogger, '999ZZ-11X').sizes).toBeUndefined();
+  });
+
+  it('milczy, gdy nie wiadomo, którego produktu szukać, a bloków jest kilka', () => {
+    expect(readShopJson(jogger).sizes).toBeUndefined();
+  });
+
+  it('bierze jedyny blok na stronie także bez sku', () => {
+    // One block is not ambiguous, and most pages have exactly one.
+    const html = `<script>return {"sizes":[{"isInStock":true,"sizeName":"M"}]};</script>`;
+    expect(readShopJson(html).sizes).toBe('M');
+  });
+
+  it('nie bierze składu, gdy strona podaje kilka różnych', () => {
+    // One `"material"` per page on all four shops measured, but the size
+    // blocks taught us what a second copy costs.
+    const html = `<script>return {"material":"100% LEN","x":{"material":"100% POLIESTER"}};</script>`;
+    expect(readShopJson(html).material).toBeUndefined();
+  });
+
+  it('bierze skład powtórzony tą samą wartością', () => {
+    const html = `<script>return {"material":"100% LEN","x":{"material":"100% LEN"}};</script>`;
+    expect(readShopJson(html).material).toBe('100% LEN');
+  });
+});

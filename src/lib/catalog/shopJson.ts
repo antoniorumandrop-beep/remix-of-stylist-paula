@@ -32,6 +32,8 @@ export interface ShopJsonFacts {
 interface SizeEntry {
   sizeName?: unknown;
   isInStock?: unknown;
+  /** Per-size SKU, e.g. "620JM-77X-XS" — the product id with the size appended. */
+  sku?: unknown;
 }
 
 /** JSON-LD is `parseProductPage`'s job; this module reads what it leaves out. */
@@ -65,16 +67,27 @@ function sliceBalanced(text: string, start: number): string | undefined {
   return undefined;
 }
 
-/** A JSON string value for `key`, with its escapes resolved. */
+/**
+ * A JSON string value for `key` — but only when the page agrees with itself.
+ *
+ * Every LPP page measured carries exactly one `"material"`, and it belongs to
+ * the product the URL points at. If a page ever carries two different ones,
+ * the first is as likely to be a recommended product's as this one's, and a
+ * wrong composition feeds the stretch model silently. Same lesson the size
+ * blocks taught, applied before it costs anything.
+ */
 function readString(text: string, key: string): string | undefined {
-  const match = new RegExp(`"${key}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`).exec(text);
-  if (!match) return undefined;
-  try {
-    const value = JSON.parse(`"${match[1]}"`) as string;
-    return value.trim() || undefined;
-  } catch {
-    return undefined;
+  const re = new RegExp(`"${key}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`, 'g');
+  const seen = new Set<string>();
+  for (let m = re.exec(text); m !== null; m = re.exec(text)) {
+    try {
+      const value = (JSON.parse(`"${m[1]}"`) as string).trim();
+      if (value) seen.add(value);
+    } catch {
+      // A value we cannot decode is one we do not have.
+    }
   }
+  return seen.size === 1 ? [...seen][0] : undefined;
 }
 
 /**
@@ -86,8 +99,9 @@ function readString(text: string, key: string): string | undefined {
  * anything about stock, so picking the first match yields a size run that
  * looks right and quietly ignores what is actually buyable.
  */
-function readSizeEntries(text: string): SizeEntry[] | undefined {
+function readSizeEntries(text: string, sku?: string): SizeEntry[] | undefined {
   const marker = /"sizes"\s*:\s*\[/g;
+  const blocks: SizeEntry[][] = [];
   for (let m = marker.exec(text); m !== null; m = marker.exec(text)) {
     const open = text.indexOf('[', m.index);
     const slice = sliceBalanced(text, open);
@@ -102,15 +116,34 @@ function readSizeEntries(text: string): SizeEntry[] | undefined {
     const entries = parsed.filter(
       (item): item is SizeEntry => typeof item === 'object' && item !== null && 'sizeName' in item,
     );
-    if (entries.length > 0) return entries;
+    if (entries.length > 0) blocks.push(entries);
   }
-  return undefined;
+
+  if (blocks.length === 0) return undefined;
+
+  // The page also sells the products it recommends, and theirs are shaped
+  // identically. Match on the per-size SKU, which starts with the product id.
+  if (sku) {
+    const wanted = sku.trim().toLowerCase();
+    return blocks.find(entries =>
+      entries.some(e => typeof e.sku === 'string' && e.sku.toLowerCase().startsWith(wanted)),
+    );
+  }
+
+  // Without an id there is nothing to match on, so one block is an answer and
+  // several are a coin toss. A size run belonging to a different garment is
+  // invisible once imported — it looks exactly like this product's.
+  return blocks.length === 1 ? blocks[0] : undefined;
 }
 
-export function readShopJson(html: string): ShopJsonFacts {
+/**
+ * @param sku The product's own id, from JSON-LD. Without it the size run is
+ * only read when the page carries exactly one — see `readSizeEntries`.
+ */
+export function readShopJson(html: string, sku?: string): ShopJsonFacts {
   const text = withoutJsonLd(html);
   const material = readString(text, 'material');
-  const entries = readSizeEntries(text);
+  const entries = readSizeEntries(text, sku);
   if (!entries) return { material, stock: 'unknown' };
 
   // Same rule as `sizesFrom` in link.ts, and for the same reason: a shop that

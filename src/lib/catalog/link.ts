@@ -437,7 +437,10 @@ export function parseProductPage(html: string, url: string): LinkDraft {
   // arrived with an empty `material` and an empty `sizes` while both sat in
   // the HTML. It is still the shop stating a fact about its own garment, which
   // is why it outranks Open Graph — see `shopJson.ts`.
-  const shop = readShopJson(html);
+  // The `sku` decides which size block on the page belongs to this garment:
+  // LPP pages carry one block per recommended product too, all shaped the
+  // same. A House dress came back in sizes 35-41 — the shoes below it.
+  const shop = readShopJson(html, product ? asText(product.sku) : undefined);
   set('material', shop.material, 'shop-json');
   set('sizes', shop.sizes, 'shop-json');
   if (shop.stock === 'out' && !draft.availability) {

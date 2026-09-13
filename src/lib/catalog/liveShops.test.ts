@@ -134,3 +134,23 @@ describe('Reserved — skład i rozmiary leżą poza JSON-LD', () => {
     expect(draft.warnings.join(' ')).not.toContain('out of stock');
   });
 });
+
+describe('Sinsay — na stronie są też rozmiary produktów polecanych', () => {
+  const draft = parseProductPage(
+    fixture('sinsay-jogger-620jm-77x.html'),
+    'https://www.sinsay.com/pl/pl/spodnie-jogger-slim-fit-620jm-77x',
+  );
+
+  it('bierze rozmiary tych spodni, a nie butów spod nich', () => {
+    // The page carries three size blocks: 486JH-99X is a shoe run (39-46),
+    // 449JM-77X another garment, 620JM-77X this one. Before the SKU match
+    // these joggers imported in sizes 39, 42, 43, 44.
+    expect(draft.sizes).toBe('XS, S, M');
+    expect(draft.provenance.sizes).toBe('shop-json');
+  });
+
+  it('czyta skład i kategorię z nazwy', () => {
+    expect(draft.material).toBe('60% BAWEŁNA, 40% POLIESTER');
+    expect(draft.category).toBe('bottoms');
+  });
+});
