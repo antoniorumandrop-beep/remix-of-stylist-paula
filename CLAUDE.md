@@ -78,14 +78,14 @@ Po każdej zmianie: `tsc` i `vitest` muszą przechodzić.
 ## Praca z Lovable
 
 **Lovable commituje do `main`.** Zawsze `git pull` przed rozpoczęciem pracy —
-inaczej commit powstaje na nieaktualnej bazie i push się odbija. Przy większych
-zmianach pracować na branchu i scalać świadomie.
+inaczej commit powstaje na nieaktualnej bazie i push się odbija.
 
-Uwaga na rozjazd, do rozstrzygnięcia z właścicielem repozytorium: dotychczasowy
-tryb pracy w tym projekcie to commit i push prosto na `main`, bo Lovable
-podciąga zmiany właśnie stamtąd i tylko wtedy widzi je w podglądzie. Reguła
-„praca na branchu" i ten tryb wykluczają się przy zmianach, które mają od razu
-trafić do Lovable.
+**Pracujemy prosto na `main`** (decyzja Antonia z 2026-09-13, [P10]). Powód jest
+jeden i twardy: Lovable podciąga zmiany wyłącznie z `main`, więc praca na
+branchu oznacza, że Gabriela nie widzi w podglądzie niczego, co powstało. Bramą
+jakości są testy przed commitem, nie branch. Wcześniejsza reguła „przy większych
+zmianach pracować na branchu" opisywała praktykę, której w tym projekcie nigdy
+nie było — została usunięta zamiast być dalej ignorowana.
 
 ## Pulapki, ktore juz raz kosztowaly
 
@@ -143,8 +143,13 @@ trafić do Lovable.
   wyłącznie wspólny katalog mockowy i czysty silnik dopasowania, więc
   `auth: none` nie wystawia niczyjego profilu. `mcpBoundary.test.ts` pilnuje,
   żeby to zostało prawdą.
-- **Nie zapisujemy zdjęć sylwetki**, dopóki nie powstanie awatar i nie
-  zostanie zamknięta ścieżka RODO.
+- **Zapis zdjęcia sylwetki jest świadomy albo nie ma go wcale.** Od 2026-09-13
+  budujemy pomiar ze zdjęcia, więc reguła „nie zapisujemy zdjęć" przestała
+  opisywać rzeczywistość. Zastąpiła ją węższa: każda ścieżka, którą przechodzi
+  obraz, ma zaprojektowane miejsce zapisu, czas życia i sposób skasowania —
+  nigdy przypadkowy efekt uboczny (log body requestu, cache z inputem, Sentry z
+  załącznikiem). Zdjęcia wgrywają wyłącznie Antonio i Gabriela, testując na
+  sobie, dopóki produkt nie jest skończony i przejrzany prawnie.
 - Nie dodajemy funkcji, które udają, że działają. Jeśli czegoś nie umiemy
   policzyć, mówimy to wprost w interfejsie — patrz nota „demo" przy opiniach i
   przy cenie odniesienia dla dupes.
