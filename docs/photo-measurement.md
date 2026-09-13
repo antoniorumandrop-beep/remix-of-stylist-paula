@@ -183,3 +183,32 @@ Czego **nie** wiemy i co trzeba zmierzyć, zanim cokolwiek z tego wejdzie do
 planu: ile wynosi błąd wzrostu na zdjęciu z widocznymi stopami, i czy model
 odpowiada na kształt ciała, czy na wyuczoną przeciętną. Pierwsze rozstrzyga
 jedno zdjęcie. Drugie — drugie ciało.
+
+### Zdjęcie całej sylwetki — hipoteza o stopach sprawdzona i odrzucona
+
+Dwa zdjęcia z widocznymi stopami, ta sama osoba, ta sama taśma.
+
+| | taśma | bez stóp (5 zdjęć od przodu) | **ze stopami (2 zdjęcia)** |
+|---|---|---|---|
+| wzrost | 179 | 170,1 (−8,9) | **171,9 (−7,1)** |
+| klatka | 103,5 | 107,2 (+3,7) | **106,0 (+2,5)** |
+| talia | 93,0 | 92,9 (−0,1) | **92,3 (−0,7)** |
+| biodra | 110,0 | 108,9 (−1,1) | **109,2 (−0,8)** |
+
+**Pokazanie stóp poprawiło wzrost o 1,8 cm, a nie o 9.** Hipoteza „model nie
+widział, gdzie kończą się nogi" tłumaczy jedną piątą błędu i nie jest jego
+przyczyną. Zaniżanie wzrostu jest własnością modelu, nie kadru — powtórzone na
+dziesięciu zdjęciach, czterech kadrach i dwóch aparatach.
+
+Decyzja o braniu wzrostu od człowieka stoi więc na zmierzonym fakcie, nie na
+domyśle, i nie ma sensu do niej wracać przy lepszym zdjęciu.
+
+**Obwody poprawiły się nieznacznie i wszystkie w dobrą stronę** — klatka
+najbardziej, z +3,7 na +2,5. Talia i biodra mieszczą się w progu 1–2 cm, który
+Antonio postawił jako wymaganie; klatka jeszcze nie, ale ze zdjęcia z boku
+wychodziła +0,8, więc ścieżka do tego progu jest widoczna i nie wymaga innego
+modelu.
+
+**Czego to nadal nie rozstrzyga.** Wszystkie dziesięć zdjęć to jedno ciało.
+Pytanie, czy model odpowiada na kształt, czy recytuje przeciętną, wymaga drugiego
+ciała i jest jedynym otwartym pytaniem tej ścieżki.
