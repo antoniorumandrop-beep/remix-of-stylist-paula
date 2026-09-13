@@ -14,7 +14,12 @@ import { NotConnectedError } from './types';
  *   auth      → supabase.auth (magic link + Google OAuth); `Session.userId` = auth.uid()
  *   profile   → table `body_profiles`      (one row per user, RLS: user_id = auth.uid())
  *   prefs     → table `user_prefs`         (one row per user)
- *   wardrobe  → tables `wardrobe_items`, `pending_purchases`, `outfits`
+ *   wardrobe  → tables `wardrobe_items`, `pending_purchases`, `outfits` (+ `outfit_items`)
+ *   photos    → Storage bucket `fit-photos`, private, one folder per user
+ *               (`<auth.uid()>/<photo id>`); `Outfit.photoIds` keeps the object
+ *               names, so the screens never learn what a bucket is. The copy
+ *               telling her where her photos are reads `backend.name`, so it
+ *               stops saying "on your device" the moment this adapter is live.
  *   feedback  → table `fit_feedback`       (one row per user × product — the dataset that matters)
  *   saved     → table `saved_products`
  *   collections → tables `collections` + `collection_products` (join, ordered)
@@ -43,7 +48,16 @@ export function createSupabaseBackend(): Backend {
       removeItem: notConnected('wardrobe_items'), incrementWear: notConnected('wardrobe_items'),
       listPending: notConnected('pending_purchases'), markPending: notConnected('pending_purchases'),
       dismissPending: notConnected('pending_purchases'),
-      listOutfits: notConnected('outfits'), createOutfit: notConnected('outfits'), deleteOutfit: notConnected('outfits'),
+      listOutfits: notConnected('outfits'), createOutfit: notConnected('outfits'),
+      updateOutfit: notConnected('outfits'), deleteOutfit: notConnected('outfits'),
+    },
+    photos: {
+      put: notConnected('storage.fit-photos'),
+      get: notConnected('storage.fit-photos'),
+      remove: notConnected('storage.fit-photos'),
+      // Not "is there a bucket" but "can this browser keep photos at all" —
+      // with a server behind it, the answer stops depending on the browser.
+      available: () => true,
     },
     feedback: { list: notConnected('fit_feedback'), save: notConnected('fit_feedback'), remove: notConnected('fit_feedback') },
     saved: { list: notConnected('saved_products'), add: notConnected('saved_products'), remove: notConnected('saved_products') },

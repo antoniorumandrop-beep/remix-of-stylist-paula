@@ -66,12 +66,78 @@ describe('backend contract (local)', () => {
     await b.wardrobe.addItem('2');
     await b.wardrobe.incrementWear('1');
     expect((await b.wardrobe.listItems()).find(i => i.productId === '1')?.timesWorn).toBe(1);
-    const outfit = await b.wardrobe.createOutfit('Work', ['1', '2']);
+    const outfit = await b.wardrobe.createOutfit({
+      name: 'Work',
+      items: [
+        { label: 'marynarka', productId: '1' },
+        { label: 'spódnica, H&M', productId: '2' },
+        { label: '', productId: '3' },
+      ],
+      photoIds: [],
+    });
     expect((await b.wardrobe.listOutfits())[0].id).toBe(outfit.id);
+
+    // Giving the skirt away does not unhappen the day she wore it: the row she
+    // named stays and only loses the link to a product she no longer owns.
     await b.wardrobe.removeItem('2');
-    expect((await b.wardrobe.listOutfits())[0].productIds).toEqual(['1']);
+    expect((await b.wardrobe.listOutfits())[0].items).toEqual([
+      { label: 'marynarka', productId: '1' },
+      { label: 'spódnica, H&M', productId: null },
+      { label: '', productId: '3' },
+    ]);
+
+    // A row that was never anything but a product id has nothing left to show.
+    await b.wardrobe.removeItem('3');
+    expect((await b.wardrobe.listOutfits())[0].items).toEqual([
+      { label: 'marynarka', productId: '1' },
+      { label: 'spódnica, H&M', productId: null },
+    ]);
+
     await b.wardrobe.deleteOutfit(outfit.id);
     expect(await b.wardrobe.listOutfits()).toHaveLength(0);
+  });
+
+  it('fits: a fit is photos plus what she says she has on', async () => {
+    const fit = await b.wardrobe.createOutfit({
+      name: 'Sobota',
+      items: [{ label: 'sweter oversize, Zara' }, { label: 'jeansy, second hand' }],
+      photoIds: ['p-1', 'p-2'],
+    });
+    expect(fit.photoIds).toEqual(['p-1', 'p-2']);
+    expect(fit.items.map(i => i.label)).toEqual(['sweter oversize, Zara', 'jeansy, second hand']);
+
+    await b.wardrobe.updateOutfit(fit.id, {
+      name: 'Sobota, kawa',
+      items: [{ label: 'sweter oversize, Zara', productId: '7' }],
+      photoIds: ['p-2'],
+    });
+    const after = (await b.wardrobe.listOutfits())[0];
+    expect(after.name).toBe('Sobota, kawa');
+    expect(after.photoIds).toEqual(['p-2']);
+    expect(after.items).toEqual([{ label: 'sweter oversize, Zara', productId: '7' }]);
+
+    // Updating something that is not there changes nothing and does not throw.
+    await b.wardrobe.updateOutfit('nie-ma-takiego', { name: 'x', items: [], photoIds: [] });
+    expect(await b.wardrobe.listOutfits()).toHaveLength(1);
+  });
+
+  it('fits: two created in the same millisecond get different ids', async () => {
+    const a = await b.wardrobe.createOutfit({ name: 'A', items: [], photoIds: [] });
+    const c = await b.wardrobe.createOutfit({ name: 'B', items: [], photoIds: [] });
+    expect(a.id).not.toBe(c.id);
+    await b.wardrobe.deleteOutfit(a.id);
+    expect((await b.wardrobe.listOutfits()).map(o => o.name)).toEqual(['B']);
+  });
+
+  it('fits: stylizacje zapisane przed zdjęciami czytają się dalej', async () => {
+    // Exactly the shape earlier builds wrote, straight into storage.
+    localStorage.setItem('paula.outfits', JSON.stringify([
+      { id: 'o-1', name: 'Na wesele', productIds: ['1', '2'], createdAt: '2026-09-01T10:00:00.000Z' },
+    ]));
+    const [legacy] = await b.wardrobe.listOutfits();
+    expect(legacy.name).toBe('Na wesele');
+    expect(legacy.photoIds).toEqual([]);
+    expect(legacy.items).toEqual([{ label: '', productId: '1' }, { label: '', productId: '2' }]);
   });
 
   it('feedback: one entry per product, replaced on save', async () => {
@@ -164,7 +230,11 @@ describe('backend contract (local)', () => {
   it('collections: a collection is not an outfit, even though the shape matches', async () => {
     const c = await b.collections.create('Na wesele');
     await b.collections.addProduct(c.id, '1');
-    await b.wardrobe.createOutfit('Look na wesele', ['1', '2']);
+    await b.wardrobe.createOutfit({
+      name: 'Look na wesele',
+      items: [{ label: '', productId: '1' }, { label: '', productId: '2' }],
+      photoIds: [],
+    });
 
     // Two separate stores. Deleting one must not touch the other — this is
     // the whole reason they were not merged.

@@ -14,11 +14,45 @@ export interface PendingPurchase {
   clickedAt: string;
 }
 
+/**
+ * One garment in a fit, as she names it herself.
+ *
+ * `label` is the whole point and it is never derived from a product: most of
+ * what she wears is not in our catalogue, so a picker over the catalogue would
+ * be a feature pretending to work. `productId` is the optional upgrade — when
+ * the thing does happen to be in Paula, the row can carry a link to it, and
+ * that is where "where do I buy this" comes from later. A row is allowed to
+ * have one, the other, or both.
+ */
+export interface FitItem {
+  label: string;
+  productId?: string | null;
+}
+
+/**
+ * A fit: photos of her wearing something, plus what she says she has on.
+ *
+ * The photos are the content, not decoration — a fit without them is a list.
+ * They are held by id, never inline: the bytes live behind
+ * `backend.photos`, because a data URI of a phone photo does not fit in
+ * localStorage and would take the rest of her data down with it.
+ *
+ * Order in `photoIds` is the order she is turning in — front, three-quarter,
+ * side — which is what makes the viewer read as a turn rather than a gallery.
+ */
 export interface Outfit {
   id: string;
   name: string;
-  productIds: string[];
+  photoIds: string[];
+  items: FitItem[];
   createdAt: string;
+}
+
+/** Everything a fit is made of, without the parts the store assigns. */
+export interface OutfitDraft {
+  name: string;
+  items: FitItem[];
+  photoIds: string[];
 }
 
 /** Shared empty lists; see the note in `saved.ts`. */
@@ -42,7 +76,18 @@ export function useWardrobe() {
   const wear = useMutation({ mutationFn: (id: string) => backend.wardrobe.incrementWear(id) });
   const pend = useMutation({ mutationFn: (id: string) => backend.wardrobe.markPending(id) });
   const dismiss = useMutation({ mutationFn: (id: string) => backend.wardrobe.dismissPending(id) });
-  const create = useMutation({ mutationFn: (v: { name: string; productIds: string[] }) => backend.wardrobe.createOutfit(v.name, v.productIds) });
+  /**
+   * The old two-argument shape is kept here on purpose: the wardrobe's own
+   * builder combines things she owns and has nothing to say about photos or
+   * labels. A fit with both is built on its own screen, through `useFits`.
+   */
+  const create = useMutation({
+    mutationFn: (v: { name: string; productIds: string[] }) => backend.wardrobe.createOutfit({
+      name: v.name,
+      items: v.productIds.map(productId => ({ label: '', productId })),
+      photoIds: [],
+    }),
+  });
   const del = useMutation({ mutationFn: (id: string) => backend.wardrobe.deleteOutfit(id) });
 
   const items = itemsQuery.data ?? NO_ITEMS;

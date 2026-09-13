@@ -1,5 +1,5 @@
 import type { BodyProfile } from '@/lib/profile';
-import type { WardrobeItem, PendingPurchase, Outfit } from '@/lib/wardrobe';
+import type { WardrobeItem, PendingPurchase, Outfit, OutfitDraft } from '@/lib/wardrobe';
 import type { FitFeedback } from '@/lib/fitFeedback';
 import type { Product, RawProduct } from '@/lib/catalog/types';
 
@@ -76,8 +76,40 @@ export interface WardrobeRepository {
   markPending(productId: string): Promise<void>;
   dismissPending(productId: string): Promise<void>;
   listOutfits(): Promise<Outfit[]>;
-  createOutfit(name: string, productIds: string[]): Promise<Outfit>;
+  createOutfit(draft: OutfitDraft): Promise<Outfit>;
+  /** Replaces name, items and photos wholesale. Photos dropped here are deleted. */
+  updateOutfit(id: string, draft: OutfitDraft): Promise<void>;
+  /** Deletes the fit and every photo that belonged to it. No orphaned bytes. */
   deleteOutfit(id: string): Promise<void>;
+}
+
+/**
+ * Photos she takes of herself in a fit.
+ *
+ * The first place in Paula where an image is kept rather than passed through —
+ * the measurement path deliberately never touches storage
+ * (`docs/photo-measurement.md`), because there the photo is an input. Here the
+ * photo *is* the thing, so the rule "a photo is stored deliberately or not at
+ * all" is satisfied the other way: a named store, a stated lifetime, and one
+ * button that deletes it. Where the bytes actually live:
+ * `docs/own-fits-photos.md`.
+ *
+ * Photos are addressed by id and never inlined into an `Outfit`: a phone photo
+ * as a data URI would blow the localStorage budget shared with her profile,
+ * her wardrobe and the imported catalogue — and it would fail on write, which
+ * is the worst possible moment to find out.
+ */
+export interface PhotoRepository {
+  /** Stores an image and returns the id to keep in an `Outfit`. */
+  put(blob: Blob): Promise<string>;
+  get(id: string): Promise<Blob | null>;
+  remove(id: string): Promise<void>;
+  /**
+   * Whether this browser can store photos at all. Sync on purpose: the screen
+   * has to decide whether to offer the picker before it renders it, and a
+   * browser with site data blocked throws on access rather than saying no.
+   */
+  available(): boolean;
 }
 
 export interface FitFeedbackRepository {
@@ -163,6 +195,7 @@ export interface Backend {
   profile: ProfileRepository;
   prefs: PrefsRepository;
   wardrobe: WardrobeRepository;
+  photos: PhotoRepository;
   feedback: FitFeedbackRepository;
   saved: SavedRepository;
   collections: CollectionsRepository;

@@ -1,11 +1,12 @@
 import type {
   AuthProvider, Backend, CatalogRepository, Collection, CollectionsRepository,
-  FitFeedbackRepository, PrefsRepository, ProfileRepository, SavedRepository,
-  Session, UserPrefs, WardrobeRepository,
+  FitFeedbackRepository, PhotoRepository, PrefsRepository, ProfileRepository,
+  SavedRepository, Session, UserPrefs, WardrobeRepository,
 } from './types';
 import { readStored, removeStored, writeStored } from './storage';
+import { createPhotoStore } from './photoStore';
 import type { BodyProfile } from '@/lib/profile';
-import type { Outfit, PendingPurchase, WardrobeItem } from '@/lib/wardrobe';
+import type { FitItem, Outfit, PendingPurchase, WardrobeItem } from '@/lib/wardrobe';
 import type { FitFeedback } from '@/lib/fitFeedback';
 import type { EnrichedProduct, Product, RawProduct } from '@/lib/catalog/types';
 import { enrichedToProduct } from '@/lib/catalog/convert';
@@ -114,10 +115,48 @@ function localPrefs(): PrefsRepository {
   };
 }
 
-function localWardrobe(): WardrobeRepository {
+/**
+ * A fit as earlier builds wrote it: a name and a list of product ids, no
+ * photos and no labels. Read, never written.
+ */
+type StoredOutfit = Omit<Outfit, 'photoIds' | 'items'> & {
+  photoIds?: string[];
+  items?: FitItem[];
+  productIds?: string[];
+};
+
+/**
+ * Fits saved before photos existed keep working, and turn into the new shape as
+ * they are read — the same legacy trick `localPrefs` uses for the name that
+ * used to live under its own key. Each old product id becomes a row with no
+ * label of its own; opening such a fit and typing one is the upgrade, and
+ * nothing has to be migrated in place for it to happen.
+ */
+function toOutfit(stored: StoredOutfit): Outfit {
+  return {
+    id: stored.id,
+    name: stored.name,
+    createdAt: stored.createdAt,
+    photoIds: stored.photoIds ?? [],
+    items: stored.items ?? (stored.productIds ?? []).map(productId => ({ label: '', productId })),
+  };
+}
+
+function localWardrobe(photos: PhotoRepository): WardrobeRepository {
   const items = () => readStored<WardrobeItem[]>(KEYS.wardrobe, []);
   const pending = () => readStored<PendingPurchase[]>(KEYS.pending, []);
-  const outfits = () => readStored<Outfit[]>(KEYS.outfits, []);
+  const outfits = () => readStored<StoredOutfit[]>(KEYS.outfits, []).map(toOutfit);
+
+  /**
+   * Deleting photos is best-effort on purpose. If the blob is already gone, or
+   * the browser refuses the store, the fit still has to disappear — leaving it
+   * on screen because its cleanup failed would be the worse outcome, and an
+   * orphaned blob is invisible and finite.
+   */
+  const forgetPhotos = async (ids: string[]) => {
+    await Promise.allSettled(ids.map(id => photos.remove(id)));
+  };
+
   return {
     async listItems() { return items(); },
     async addItem(productId) {
@@ -126,9 +165,24 @@ function localWardrobe(): WardrobeRepository {
       }
       writeStored(KEYS.pending, pending().filter(p => p.productId !== productId));
     },
+    /**
+     * Giving a garment away does not unhappen the day she wore it, so the fit
+     * keeps the row and only loses the link to a product she no longer owns.
+     * Rows that never had a label of their own — everything from before fits
+     * had labels — have nothing left to show, so those do go.
+     *
+     * The old behaviour dropped the product from every fit unconditionally,
+     * which could quietly leave a fit with one item or none while creating one
+     * still demanded two.
+     */
     async removeItem(productId) {
       writeStored(KEYS.wardrobe, items().filter(i => i.productId !== productId));
-      writeStored(KEYS.outfits, outfits().map(o => ({ ...o, productIds: o.productIds.filter(id => id !== productId) })));
+      writeStored(KEYS.outfits, outfits().map(o => ({
+        ...o,
+        items: o.items
+          .map(item => (item.productId === productId ? { ...item, productId: null } : item))
+          .filter(item => item.label.trim() !== '' || item.productId),
+      })));
     },
     async incrementWear(productId) {
       writeStored(KEYS.wardrobe, items().map(i => i.productId === productId ? { ...i, timesWorn: i.timesWorn + 1 } : i));
@@ -143,13 +197,33 @@ function localWardrobe(): WardrobeRepository {
       writeStored(KEYS.pending, pending().filter(p => p.productId !== productId));
     },
     async listOutfits() { return outfits(); },
-    async createOutfit(name, productIds) {
-      const outfit: Outfit = { id: `o-${Date.now()}`, name, productIds, createdAt: now() };
+    async createOutfit(draft) {
+      // Random suffix like collections have: `o-${Date.now()}` alone collides
+      // for two fits created in the same millisecond, and an id that repeats
+      // makes "delete this one" delete the other one.
+      const outfit: Outfit = {
+        id: `o-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        name: draft.name,
+        items: draft.items,
+        photoIds: draft.photoIds,
+        createdAt: now(),
+      };
       writeStored(KEYS.outfits, [outfit, ...outfits()]);
       return outfit;
     },
+    async updateOutfit(id, draft) {
+      const before = outfits().find(o => o.id === id);
+      if (!before) return;
+      writeStored(KEYS.outfits, outfits().map(o => (
+        o.id === id ? { ...o, name: draft.name, items: draft.items, photoIds: draft.photoIds } : o
+      )));
+      // A photo she took out of the fit has nothing left pointing at it.
+      await forgetPhotos(before.photoIds.filter(p => !draft.photoIds.includes(p)));
+    },
     async deleteOutfit(id) {
+      const gone = outfits().find(o => o.id === id);
       writeStored(KEYS.outfits, outfits().filter(o => o.id !== id));
+      if (gone) await forgetPhotos(gone.photoIds);
     },
   };
 }
@@ -298,12 +372,17 @@ function localCatalog(): CatalogRepository {
 }
 
 export function createLocalBackend(): Backend {
+  // The wardrobe is handed the photo store rather than importing it: deleting a
+  // fit has to delete its photos, and that has to be true of every adapter, not
+  // of whichever screen happens to call it.
+  const photos = createPhotoStore();
   return {
     name: 'local',
     auth: localAuth(),
     profile: localProfile(),
     prefs: localPrefs(),
-    wardrobe: localWardrobe(),
+    wardrobe: localWardrobe(photos),
+    photos,
     feedback: localFeedback(),
     saved: localSaved(),
     collections: localCollections(),

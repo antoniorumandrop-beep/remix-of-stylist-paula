@@ -93,7 +93,8 @@ describe('useWardrobe', () => {
     await act(async () => { await result.current.createOutfit('Na wesele', ['produkt-1', 'produkt-2']); });
     await waitFor(() => expect(result.current.outfits).toHaveLength(1));
     expect(result.current.outfits[0].name).toBe('Na wesele');
-    expect(result.current.outfits[0].productIds).toEqual(['produkt-1', 'produkt-2']);
+    expect(result.current.outfits[0].items.map(i => i.productId)).toEqual(['produkt-1', 'produkt-2']);
+    expect(result.current.outfits[0].photoIds).toEqual([]);
 
     const id = result.current.outfits[0].id;
     await act(async () => { await result.current.deleteOutfit(id); });

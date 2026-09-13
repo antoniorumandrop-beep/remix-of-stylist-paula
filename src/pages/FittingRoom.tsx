@@ -290,18 +290,31 @@ export default function FittingRoom() {
                     </button>
                   </div>
                   <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-                    {o.productIds.map(pid => {
-                      const p = byId.get(pid);
-                      if (!p) return null;
+                    {o.items.map((item, index) => {
+                      const p = item.productId ? byId.get(item.productId) : undefined;
+                      // A row she typed herself has no picture and that is the
+                      // normal case, not a failure: most of what she wears is
+                      // not in the catalogue.
+                      if (!p) {
+                        if (!item.label.trim()) return null;
+                        return (
+                          <div
+                            key={`${item.label}-${index}`}
+                            className="aspect-[3/4] rounded-xl bg-muted flex items-end p-2"
+                          >
+                            <p className="text-[10px] leading-snug">{item.label}</p>
+                          </div>
+                        );
+                      }
                       return (
                         <button
-                          key={pid}
-                          onClick={() => navigate(`/app/product/${pid}`)}
+                          key={item.productId}
+                          onClick={() => navigate(`/app/product/${item.productId}`)}
                           className="aspect-[3/4] rounded-xl bg-muted relative overflow-hidden"
                         >
                           <ProductImage product={p} fallback="icon" className="absolute inset-0 w-full h-full" />
                           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent p-1.5">
-                            <p className="text-[10px] truncate text-left">{p.name}</p>
+                            <p className="text-[10px] truncate text-left">{item.label.trim() || p.name}</p>
                           </div>
                         </button>
                       );
