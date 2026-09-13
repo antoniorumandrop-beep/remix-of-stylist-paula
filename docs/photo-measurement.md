@@ -125,3 +125,31 @@ model ciąży ku średniej — więc część tej celności może być zbiegiem
 okoliczności, tym samym, który zaniżył wzrost o 9 cm. **Drugi pomiar musi być na
 ciele daleko od środka rozkładu**, inaczej nie odróżnimy działającego narzędzia
 od modelu, który trafnie zgaduje przeciętną.
+
+### Bramka na kadrowanie: sprawdzona i odrzucona
+
+Pomysł był taki: skoro znamy prawdziwy wzrost, to duża rozbieżność z wzrostem
+odczytanym przez model powinna zdradzać zepsute zdjęcie — ucięte stopy, zły
+kadr. Sprawdzone eksperymentem zamiast założone (2026-09-13):
+
+| zdjęcie | wzrost z modelu | klatka | talia | biodra |
+|---|---|---|---|---|
+| całe | 169,8 | 106,7 | 92,4 | 108,5 |
+| obcięte 20% od dołu (bez stóp) | 169,5 | 109,0 | 94,6 | 108,2 |
+| obcięte 45% od dołu (pół ciała) | 168,0 | 108,7 | 92,6 | 105,1 |
+
+**Kadrowanie jest niewykrywalne tą drogą.** Model dorysowuje brakującą część
+ciała i podaje praktycznie ten sam wzrost — po obcięciu **połowy sylwetki**
+różnica wyniosła 1,8 cm, mniej niż rozrzut między dwoma poprawnymi zdjęciami.
+Bramka na wzroście nie łapałaby niczego, a dawałaby złudzenie kontroli.
+
+**Ale ten sam wynik odsłania coś poważniejszego.** Obcięcie 45% ciała ruszyło
+talię o 0,2 cm. Jeśli usunięcie połowy danych wejściowych nie zmienia
+odpowiedzi, to znaczy, że odpowiedź w dużej mierze **nie pochodzi z tego
+zdjęcia** — model opiera się na tym, czego nauczył się o przeciętnym ciele.
+
+To zmienia rangę drugiego pomiaru. Nie jest już „kolejnym punktem danych", tylko
+**testem rozstrzygającym, czy ta funkcja istnieje**: jeśli ciało o wyraźnie
+innych proporcjach dostanie liczby podobne do pierwszego, mierzymy średnią
+populacyjną, a nie człowieka — i całą ścieżkę zdjęciową trzeba wtedy wyrzucić
+albo przebudować. Jeśli liczby pójdą za taśmą, mamy narzędzie.
