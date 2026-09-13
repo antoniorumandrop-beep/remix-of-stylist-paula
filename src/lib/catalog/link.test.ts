@@ -199,10 +199,16 @@ describe('parseProductPage', () => {
 
 describe('draftToRawProduct', () => {
   it('refuses to guess what the page did not say', () => {
+    // Price stays un-guessable: a number nobody published is a number we would
+    // be inventing. The category is different — it is read from the product
+    // name ("Bluzka z lnu"), recorded as a guess, and shown for a human to
+    // confirm. See `categoryFromName`.
     const draft = parseProductPage(OG_ONLY, 'https://sklep-malej-marki.pl/bluzka');
     const result = draftToRawProduct(draft);
     expect(result.status).toBe('incomplete');
-    if (result.status === 'incomplete') expect(result.missing).toEqual(['price', 'category']);
+    if (result.status === 'incomplete') expect(result.missing).toEqual(['price']);
+    expect(draft.category).toBe('tops');
+    expect(draft.provenance.category).toBe('guess');
   });
 
   it('accepts a category supplied by a human', () => {

@@ -45,6 +45,74 @@ export function normalizeCategory(value: string): string | null {
   return CATEGORY_SYNONYMS[key] ?? null;
 }
 
+/**
+ * Stems, not dictionary forms, for the same reason the stylist's keyword
+ * tables are stems: Polish inflects, and nobody names a product "sukienka" —
+ * they name it "Żakardowa sukienka maxi w kwiaty".
+ *
+ * Written without accents and matched against an unaccented name, because
+ * shops are inconsistent about them and a missing ogonek should not change
+ * what a garment is.
+ */
+const CATEGORY_STEMS: Record<string, string> = {
+  sukienk: 'dresses', sukni: 'dresses', dress: 'dresses',
+  spodnic: 'skirts', spodniczk: 'skirts', skirt: 'skirts',
+  top: 'tops', bluzk: 'tops', bluza: 'tops', koszul: 'tops', swet: 'tops',
+  kamizelk: 'tops', tshirt: 'tops', 't-shirt': 'tops', tunik: 'tops', golf: 'tops',
+  spodni: 'bottoms', jeans: 'bottoms', dzins: 'bottoms', szort: 'bottoms',
+  legins: 'bottoms', jogger: 'bottoms', bermud: 'bottoms', trousers: 'bottoms',
+  marynark: 'outerwear', zakiet: 'outerwear', kurtk: 'outerwear',
+  plaszcz: 'outerwear', trencz: 'outerwear', parka: 'outerwear', blazer: 'outerwear',
+  buty: 'shoes', obuwi: 'shoes', sneaker: 'shoes', kozak: 'shoes', sandal: 'shoes',
+  mokasyn: 'shoes', botk: 'shoes', szpilk: 'shoes', trampk: 'shoes', klapk: 'shoes',
+  torb: 'accessories', torebk: 'accessories', plecak: 'accessories',
+  czapk: 'accessories', szalik: 'accessories', pasek: 'accessories',
+  bizuteri: 'accessories', kolczyk: 'accessories', naszyjnik: 'accessories',
+  bransolet: 'accessories', portfel: 'accessories',
+};
+
+const ACCENTS: Record<string, string> = {
+  ą: 'a', ć: 'c', ę: 'e', ł: 'l', ń: 'n', ó: 'o', ś: 's', ź: 'z', ż: 'z',
+};
+
+function deaccent(text: string): string {
+  return text.toLowerCase().replace(/[ąćęłńóśźż]/g, ch => ACCENTS[ch] ?? ch);
+}
+
+/**
+ * What the product name says the garment is, or null when it does not say.
+ *
+ * Two rules, and both earned their place:
+ *
+ * **A stem counts only at the start of a word.** "Krem do stóp" contains
+ * "top" and "butelkowy" contains "but"; matching anywhere would file a foot
+ * cream under tops.
+ *
+ * **The longest matching stem wins.** A name carries one noun for the garment
+ * and several adjectives describing it, and the adjectives are often other
+ * categories: "SUKIENKA MINI JEANSOWA" is a dress, not jeans, and "Swetrowa
+ * sukienka" is a dress, not a sweater. Taking the first stem that fits would
+ * depend on the order of this table, which is not a decision anyone made.
+ * It also settles "spodnica" written without its accent, which contains
+ * "spodni" whole: "spodnic" is longer, so a skirt stays a skirt.
+ *
+ * This is a guess from prose and it is recorded as one — `parseProductPage`
+ * marks the field `guess`, and the screen asks a human to confirm it before
+ * the product is imported.
+ */
+export function categoryFromName(name: string | undefined): string | null {
+  if (!name) return null;
+  const words = deaccent(name).split(/[^a-z0-9-]+/).filter(Boolean);
+  let best: { category: string; length: number } | null = null;
+  for (const word of words) {
+    for (const [stem, category] of Object.entries(CATEGORY_STEMS)) {
+      if (!word.startsWith(stem)) continue;
+      if (!best || stem.length > best.length) best = { category, length: stem.length };
+    }
+  }
+  return best?.category ?? null;
+}
+
 /** "129,99 zł" → 129.99; "1 299 PLN" → 1299; "abc" → null */
 export function parsePrice(value: string | number): number | null {
   if (typeof value === 'number') return Number.isFinite(value) && value >= 0 ? value : null;

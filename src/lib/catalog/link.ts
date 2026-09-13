@@ -1,5 +1,5 @@
 import type { RawProduct } from './types';
-import { normalizeCategory, parsePrice, slugify } from './feed';
+import { categoryFromName, normalizeCategory, parsePrice, slugify } from './feed';
 import { readShopJson } from './shopJson';
 
 /**
@@ -458,6 +458,13 @@ export function parseProductPage(html: string, url: string): LinkDraft {
   }
 
   set('brand', brandFromHost(url), 'url');
+  // Last, because it reads the name, and the name can come from Open Graph.
+  // None of the five LPP shops publishes a category we can map, so without
+  // this a human picks one by hand for every product — twenty times per batch
+  // of twenty links. Recorded as `guess` and confirmed on screen, never
+  // silently: filing a product in the wrong category hides it from every
+  // search that should find it.
+  set('category', categoryFromName(draft.name) ?? undefined, 'guess');
   if (!draft.currency) set('currency', 'PLN', 'guess');
 
   if (rejectedImages.length > 0 && !draft.imageUrl) {
@@ -474,6 +481,8 @@ export function parseProductPage(html: string, url: string): LinkDraft {
   }
   if (!draft.category) {
     draft.warnings.push('category not published — pick one before importing');
+  } else if (draft.provenance.category === 'guess') {
+    draft.warnings.push('category read from the product name — check it before importing');
   }
 
   return draft;

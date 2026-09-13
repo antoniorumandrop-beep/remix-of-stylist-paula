@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseBrandFeed, parseCsv, parsePrice, normalizeCategory, slugify, FEED_TEMPLATE_CSV } from './feed';
+import { parseBrandFeed, parseCsv, parsePrice, normalizeCategory, categoryFromName, slugify, FEED_TEMPLATE_CSV } from './feed';
 
 const OPTS = { source: 'brand', fetchedAt: '2026-09-08T00:00:00.000Z' };
 
@@ -121,5 +121,61 @@ describe('znaki niewidzialne w parserze', () => {
 
   it('handles a name that is only diacritics', () => {
     expect(slugify('ąćęłńóśźż')).toBe('acelnoszz');
+  });
+});
+
+describe('categoryFromName — kategoria wyczytana z nazwy produktu', () => {
+  /**
+   * None of the five LPP shops publishes a category the parser can map, so
+   * every product imported from a link arrived with an empty one and a human
+   * had to pick it by hand — twenty times per batch of twenty links. Their
+   * names, on the other hand, say what the garment is, and say it in the same
+   * words the feed dictionary already knows.
+   *
+   * All the names below are real, taken from the import of 2026-09-13.
+   */
+  it('czyta prawdziwe nazwy z pięciu sklepów LPP', () => {
+    expect(categoryFromName('Żakardowa sukienka maxi w kwiaty')).toBe('dresses');
+    expect(categoryFromName('Spodnie jogger slim fit')).toBe('bottoms');
+    expect(categoryFromName('Dzianinowa sukienka mini z długim rękawem beżowa')).toBe('dresses');
+    expect(categoryFromName('Beżowy top na ramiączkach basic')).toBe('tops');
+    expect(categoryFromName('Czarny top halter')).toBe('tops');
+    expect(categoryFromName('Spódnica midi z imitacji skóry')).toBe('skirts');
+    expect(categoryFromName('Swetrowa sukienka mini')).toBe('dresses');
+    expect(categoryFromName('Lniana sukienka midi')).toBe('dresses');
+  });
+
+  it('czyta nazwy pisane wersalikami, jak w Zarze', () => {
+    expect(categoryFromName('SPÓDNICA MIDI Z TKANINY SATYNOWEJ')).toBe('skirts');
+    expect(categoryFromName('LAKIEROWANE MOKASYNY')).toBe('shoes');
+    expect(categoryFromName('DŁUGA SUKIENKA W ZWIERZĘCY WZÓR Z ROZCIĘCIEM')).toBe('dresses');
+  });
+
+  it('wybiera rdzeń dłuższy, gdy w nazwie jest więcej niż jeden', () => {
+    // The garment is the noun; the rest of the name describes it. A dress cut
+    // from denim is a dress, a dress in a sweater knit is a dress, and a
+    // skirt-short is filed the way the shop files it.
+    expect(categoryFromName('SUKIENKA MINI JEANSOWA TRF Z PODUSZKAMI NA RAMIONACH')).toBe('dresses');
+    expect(categoryFromName('Swetrowa sukienka mini')).toBe('dresses');
+    expect(categoryFromName('Krótkie spódnico-szorty')).toBe('skirts');
+  });
+
+  it('nie myli spódnicy ze spodniami, nawet bez ogonków', () => {
+    // "spodnica" written without the accent contains "spodni" whole. Matching
+    // the first stem that fits would file every accentless skirt as trousers.
+    expect(categoryFromName('Spodnica midi')).toBe('skirts');
+    expect(categoryFromName('Spodnie szerokie')).toBe('bottoms');
+  });
+
+  it('wymaga początku słowa, więc nie łapie rdzenia w środku', () => {
+    // "stopy" contains "top"; "butelkowy" contains "but".
+    expect(categoryFromName('Krem do stóp')).toBeNull();
+    expect(categoryFromName('Butelkowa zieleń — sukienka')).toBe('dresses');
+  });
+
+  it('milczy, gdy nazwa nie mówi, co to za rzecz', () => {
+    expect(categoryFromName('Nowość w kolekcji')).toBeNull();
+    expect(categoryFromName('')).toBeNull();
+    expect(categoryFromName(undefined)).toBeNull();
   });
 });

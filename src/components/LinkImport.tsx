@@ -161,6 +161,15 @@ export function LinkImport({ onAdd }: { onAdd: (product: RawProduct) => void }) 
                 <option key={c} value={c}>{categoryLabel(c, t)}</option>
               ))}
             </select>
+            {/* The one pre-filled field nobody published: it comes from the
+                product name, so it says so. Every other field wears its source
+                as a badge and this one has to as well, or the guess reads as a
+                fact the shop stated. */}
+            {draft.provenance.category === 'guess' && category === draft.category && (
+              <span className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded ${SOURCE_STYLE.guess}`}>
+                {t('linkCategoryGuessed')}
+              </span>
+            )}
             <button
               type="button"
               onClick={add}

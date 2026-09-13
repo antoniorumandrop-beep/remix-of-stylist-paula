@@ -637,6 +637,8 @@ export const translations = {
     bulkRead: 'Read them all',
     bulkReading: (done: number, total: number) => `Reading ${done} of ${total}\u2026`,
     bulkAddAll: (n: number) => `Add all (${n})`,
+    bulkCategoriesGuessed: (n: number) =>
+      `${n} categor${n === 1 ? 'y was' : 'ies were'} read from the product name — check them before importing.`,
     bulkFailed: 'could not be read',
     bulkNothingRead: 'Nothing could be read from these links.',
     bulkNeedsCategory: 'needs a category',
@@ -653,6 +655,7 @@ export const translations = {
     linkFieldImage: 'Photo',
     linkFieldCategory: 'Category',
     linkPickCategory: 'choose\u2026',
+    linkCategoryGuessed: 'from the name',
     linkMissing: (fields: string) => `The page did not publish: ${fields}. Fill it in or use the CSV feed.`,
     adminImportTitle: 'Import brand products',
     adminImportDesc: 'Paste the brand feed (CSV from Excel or JSON) or pick a file. Rows with a name, brand, price and category are imported; the rest are listed below so the brand can fix them.',
@@ -1317,6 +1320,8 @@ export const translations = {
     bulkRead: 'Odczytaj wszystkie',
     bulkReading: (done: number, total: number) => `Czytam ${done} z ${total}\u2026`,
     bulkAddAll: (n: number) => `Dodaj wszystkie (${n})`,
+    bulkCategoriesGuessed: (n: number) =>
+      `${n} ${plPlural(n, 'kategoria wyczytana', 'kategorie wyczytane', 'kategorii wyczytanych')} z nazwy produktu — sprawdź przed importem.`,
     bulkFailed: 'nie dało się odczytać',
     bulkNothingRead: 'Z tych linków nic nie dało się odczytać.',
     bulkNeedsCategory: 'brakuje kategorii',
@@ -1333,6 +1338,7 @@ export const translations = {
     linkFieldImage: 'Zdj\u0119cie',
     linkFieldCategory: 'Kategoria',
     linkPickCategory: 'wybierz\u2026',
+    linkCategoryGuessed: 'z nazwy',
     linkMissing: (fields: string) => `Strona nie poda\u0142a: ${fields}. Uzupe\u0142nij albo u\u017cyj pliku CSV.`,
     adminImportTitle: 'Import produktów marki',
     adminImportDesc: 'Wklej feed marki (CSV z Excela albo JSON) lub wybierz plik. Wiersze z nazwą, marką, ceną i kategorią zostaną zaimportowane; reszta jest wypisana niżej, żeby marka mogła je poprawić.',

@@ -43,6 +43,9 @@ export function BulkLinkImport({ onAdd }: { onAdd: (products: RawProduct[]) => v
   };
 
   const ready = (rows ?? []).filter(r => r.status === 'ok' && categories[r.url]);
+  const guessedCategories = (rows ?? []).filter(
+    r => r.draft?.provenance.category === 'guess' && categories[r.url] === r.draft?.category,
+  ).length;
 
   const addAll = () => {
     const products: RawProduct[] = [];
@@ -91,6 +94,16 @@ export function BulkLinkImport({ onAdd }: { onAdd: (products: RawProduct[]) => v
 
       {rows && rows.length > 0 && (
         <div className="mt-5 space-y-2">
+          {/* Said once above the list rather than on twenty rows. Every one of
+              these categories was read from the product name, because no LPP
+              shop publishes one we can map — and a pre-filled select looks
+              exactly like a fact the shop stated unless we say otherwise. */}
+          {guessedCategories > 0 && (
+            <p className="text-xs text-muted-foreground flex gap-2 pb-1">
+              <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <span>{t('bulkCategoriesGuessed', guessedCategories)}</span>
+            </p>
+          )}
           {rows.map(row => (
             <div key={row.url} className="flex items-center gap-3 bg-background rounded-xl p-3">
               <div className="w-10 aspect-[3/4] rounded-lg bg-muted overflow-hidden shrink-0 relative">
