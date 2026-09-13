@@ -26,3 +26,8 @@ dist-ssr
 # Playwright
 test-results
 playwright-report
+
+# Environment — nic poza kluczem publicznym ma tu nie trafić (CLAUDE.md)
+.env
+.env.*
+!.env.example
