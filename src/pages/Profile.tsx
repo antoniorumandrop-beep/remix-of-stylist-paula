@@ -6,6 +6,7 @@ import { useUserPrefs } from '@/lib/prefs';
 import { useAuth, useSession } from '@/lib/auth';
 import { shapeKey } from '@/lib/fit/copy';
 import { FitLearningPanel } from '@/components/FitLearningPanel';
+import { BodyAvatar } from '@/components/BodyAvatar';
 import type { TranslationKey } from '@/i18n/translations';
 
 export default function Profile() {
@@ -72,6 +73,25 @@ export default function Profile() {
   return (
     <div className="max-w-2xl mx-auto px-4 lg:px-8 py-6 lg:py-10">
       <h1 className="font-display text-2xl lg:text-3xl mb-8">{t('yourProfile')}</h1>
+
+      {/* Sylwetka pojawia się dopiero, gdy są trzy obwody i wzrost — z samej
+          wybranej ręcznie etykiety nie ma z czego zbudować ciała, a rysowanie
+          czyjejś przeciętnej i nazywanie jej „Twoją sylwetką" byłoby kłamstwem
+          o człowieku, nie uproszczeniem. */}
+      {measured && measured.heightCm ? (
+        <section className="mb-6">
+          <h2 className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
+            {t('yourSilhouette')}
+          </h2>
+          <p className="text-xs text-muted-foreground mb-3">{t('silhouetteFromMeasurements')}</p>
+          <BodyAvatar
+            bust={measured.bust}
+            waist={measured.waist}
+            hips={measured.hips}
+            heightCm={measured.heightCm}
+          />
+        </section>
+      ) : null}
 
       {shape ? (
         <div className="bg-card rounded-2xl p-5 sm:p-6 mb-6">
