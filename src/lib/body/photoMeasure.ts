@@ -25,6 +25,18 @@ const DEV_ENDPOINT = '/__paula/measure-photo';
  */
 export const MAX_PHOTO_BYTES = 12_000_000;
 
+/**
+ * Formaty, które model przyjmuje.
+ *
+ * **iPhone zapisuje domyślnie HEIC**, a `accept="image/*"` go przepuszcza — plik
+ * dochodzi do modelu i dostaje odmowę, której użytkowniczka nie ma jak
+ * zrozumieć. Przeglądarka też go nie przekonwertuje: Safari umie HEIC w canvas,
+ * Chrome nie, więc konwersja po naszej stronie działałaby u jednych, a u
+ * drugich nie. Uczciwa odmowa z nazwą formatu jest lepsza niż połowiczna
+ * konwersja. Wpadłem w to przy pierwszym prawdziwym zdjęciu z telefonu.
+ */
+const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
 export type PhotoMeasureError =
   /** Klucz do modelu nie jest ustawiony — funkcja nie ma czym liczyć. */
   | 'not-configured'
@@ -36,6 +48,8 @@ export type PhotoMeasureError =
   | 'incomplete'
   /** Plik za duży albo nie jest obrazem. */
   | 'bad-file'
+  /** Obraz, ale w formacie, którego model nie przyjmie — zwykle HEIC z iPhone'a. */
+  | 'bad-format'
   /** Sieć, limit, awaria po tamtej stronie. */
   | 'failed';
 
@@ -58,6 +72,7 @@ export function fileToDataUri(file: File): Promise<string> {
 export function checkPhotoFile(file: File): PhotoMeasureError | null {
   if (!file.type.startsWith('image/')) return 'bad-file';
   if (file.size > MAX_PHOTO_BYTES) return 'bad-file';
+  if (!ACCEPTED_TYPES.includes(file.type)) return 'bad-format';
   return null;
 }
 

@@ -25,6 +25,7 @@ const ERROR_KEY: Record<PhotoMeasureError, string> = {
   'no-person': 'photoErrNoPerson',
   incomplete: 'photoErrIncomplete',
   'bad-file': 'photoErrBadFile',
+  'bad-format': 'photoErrBadFormat',
   failed: 'photoErrFailed',
 };
 

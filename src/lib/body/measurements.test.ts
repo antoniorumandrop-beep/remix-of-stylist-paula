@@ -4,6 +4,7 @@ import {
   hasCoreMeasurements,
   pickClothingMeasurements,
 } from './measurements';
+import { checkPhotoFile } from './photoMeasure';
 
 /** Odpowiedź w kształcie, w jakim `clad_body.measure.mhr` ją zwraca. */
 const CLAD_RESPONSE = {
@@ -92,5 +93,30 @@ describe('hasCoreMeasurements', () => {
     expect(hasCoreMeasurements({ bust: 90, waist: 70 })).toBe(false);
     expect(hasCoreMeasurements({ heightCm: 168, thigh: 55 })).toBe(false);
     expect(hasCoreMeasurements({})).toBe(false);
+  });
+});
+
+describe('checkPhotoFile', () => {
+  const file = (type: string, bytes = 1000) =>
+    new File([new Uint8Array(bytes)], 'ja', { type });
+
+  it('przepuszcza formaty, które model czyta', () => {
+    expect(checkPhotoFile(file('image/jpeg'))).toBeNull();
+    expect(checkPhotoFile(file('image/png'))).toBeNull();
+    expect(checkPhotoFile(file('image/webp'))).toBeNull();
+  });
+
+  it('odmawia HEIC osobnym komunikatem, nie ogólnym błędem', () => {
+    // iPhone zapisuje domyślnie HEIC, a `accept="image/*"` go przepuszcza.
+    // Bez tego plik dochodzi do modelu i wraca odmowa, z której nie da się
+    // wywnioskować, że wystarczy zmienić format. Wpadliśmy w to przy pierwszym
+    // prawdziwym zdjęciu z telefonu (2026-09-13).
+    expect(checkPhotoFile(file('image/heic'))).toBe('bad-format');
+    expect(checkPhotoFile(file('image/heif'))).toBe('bad-format');
+  });
+
+  it('dalej odmawia rzeczy, które obrazem nie są', () => {
+    expect(checkPhotoFile(file('application/pdf'))).toBe('bad-file');
+    expect(checkPhotoFile(file('image/jpeg', 13_000_000))).toBe('bad-file');
   });
 });
