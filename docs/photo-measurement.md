@@ -153,3 +153,33 @@ To zmienia rangę drugiego pomiaru. Nie jest już „kolejnym punktem danych", t
 innych proporcjach dostanie liczby podobne do pierwszego, mierzymy średnią
 populacyjną, a nie człowieka — i całą ścieżkę zdjęciową trzeba wtedy wyrzucić
 albo przebudować. Jeśli liczby pójdą za taśmą, mamy narzędzie.
+
+### Sprostowanie do dwóch akapitów wyżej (2026-09-13, tego samego wieczoru)
+
+**Na żadnym z ośmiu zdjęć nie było stóp.** Wyszło to po eksperymencie, z rozmowy
+z osobą, która je robiła — sześć z kamerki laptopa (kadr poziomy 720×480) i dwa
+z telefonu, wszystkie ucięte gdzieś poniżej kolan.
+
+To unieważnia wniosek z testu obcinania. Porównywałem zdjęcie ucięte z **innym
+zdjęciem uciętym**, więc wszystkie trzy warianty zgadywały tę samą brakującą
+część ciała i musiały dać ten sam wynik. Nie wiemy, czy model ignoruje obraz —
+wiemy tylko, że nie odróżnia dwóch stopni tego samego braku.
+
+I daje to prostsze wytłumaczenie błędu wzrostu niż „ciąży ku średniej
+populacyjnej": **model nie widział, gdzie kończą się nogi.** −8,9 cm to mniej
+więcej tyle, ile brakowało w kadrze. Jeśli tak jest, to na zdjęciu całej
+sylwetki wzrost powinien się poprawić — a to jest test za dwa centy, nie
+przebudowa.
+
+Co z tego zostaje w mocy:
+
+- **obwody są dobre nawet ze zdjęcia bez stóp** — talia −0,1 cm, biodra −1,1 cm.
+  To był pomiar na uciętym kadrze i mimo to trafił;
+- **sylwetka klasyfikuje się poprawnie** — osiem na osiem;
+- **przód i bok mylą się w różnych miejscach** — to wynika z geometrii, nie z
+  kadru, więc kadrowanie tego nie tłumaczy.
+
+Czego **nie** wiemy i co trzeba zmierzyć, zanim cokolwiek z tego wejdzie do
+planu: ile wynosi błąd wzrostu na zdjęciu z widocznymi stopami, i czy model
+odpowiada na kształt ciała, czy na wyuczoną przeciętną. Pierwsze rozstrzyga
+jedno zdjęcie. Drugie — drugie ciało.
