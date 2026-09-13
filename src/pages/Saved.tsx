@@ -84,7 +84,9 @@ export default function Saved() {
 
       <button
         onClick={() => navigate('/app/add')}
-        className="w-full bg-card rounded-xl p-4 mb-6 flex items-center gap-3 text-left hover:bg-card/80 transition-colors"
+        disabled={!import.meta.env.DEV}
+        title={import.meta.env.DEV ? undefined : t('featureNotReady')}
+        className="w-full bg-card rounded-xl p-4 mb-6 flex items-center gap-3 text-left hover:bg-card/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-card"
       >
         <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0">
           <Link2 className="w-5 h-5 text-muted-foreground" />

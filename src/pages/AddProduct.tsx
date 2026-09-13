@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Wrench } from 'lucide-react';
 import { LinkImport } from '@/components/LinkImport';
 import { BulkLinkImport } from '@/components/BulkLinkImport';
 import { ProductCard } from '@/components/ProductCard';
@@ -49,9 +49,22 @@ export default function AddProduct() {
       <h1 className="font-display text-2xl lg:text-3xl mb-1">{t('addYourOwn')}</h1>
       <p className="text-sm text-muted-foreground mb-8">{t('addYourOwnDesc')}</p>
 
-      <LinkImport onAdd={handleAdd} />
-
-      <BulkLinkImport onAdd={products => void handleAddMany(products)} />
+      {import.meta.env.DEV ? (
+        <>
+          <LinkImport onAdd={handleAdd} />
+          <BulkLinkImport onAdd={products => void handleAddMany(products)} />
+        </>
+      ) : (
+        // Reading a shop link goes through a dev-server middleware
+        // (docs/integration-points.md, PLUG(supabase) in linkFetch.ts) that
+        // does not exist in a built app — pasting a link here would fail
+        // with a message that blames the shop for a page we never asked for.
+        // Saying so honestly beats pretending the field works.
+        <div className="bg-card rounded-2xl p-5 sm:p-6 mb-8 flex items-start gap-3">
+          <Wrench className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
+          <p className="text-sm text-muted-foreground leading-relaxed">{t('addYourOwnUnavailable')}</p>
+        </div>
+      )}
 
       <h2 className="text-sm font-medium mb-4">{t('addYourOwnTitle')}</h2>
       {products.length === 0 ? (
