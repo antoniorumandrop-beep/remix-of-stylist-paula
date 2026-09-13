@@ -10,6 +10,7 @@ import type { FitFeedback } from '@/lib/fitFeedback';
 import type { EnrichedProduct, Product, RawProduct } from '@/lib/catalog/types';
 import { enrichedToProduct } from '@/lib/catalog/convert';
 import { allProducts } from '@/data/mockData';
+import { seedProductsFromDefaultFeed } from './seedCatalog';
 
 /**
  * The local backend: localStorage for user data, the mock catalog plus
@@ -31,6 +32,7 @@ const KEYS = {
   saved: 'paula.saved',
   collections: 'paula.collections',
   imported: 'paula.catalog.imported',
+  seeded: 'paula.catalog.seeded',
   userProducts: 'paula.catalog.user',
 } as const;
 
@@ -224,8 +226,38 @@ function localCatalog(): CatalogRepository {
   const importedProducts = () => imported().map(enrichedToProduct);
   const userAdded = () => readStored<EnrichedProduct[]>(KEYS.userProducts, []);
   const userProducts = () => userAdded().map(enrichedToProduct);
+
+  /**
+   * A browser that has never imported anything gets the eighteen real H&M
+   * and Zara products loaded once, the same way `/admin/import`'s "Wczytaj
+   * katalog" button does — so a link sent to someone shows real products
+   * alongside the mock ones, not only mock ones. It does not hide the mock
+   * catalog: doing that is [P3] in pytania-do-antonia.md, not decided yet.
+   *
+   * Gated out under Vitest so the other test files that exercise
+   * `catalog.list()` — there are dozens — never attempt a real fetch to a
+   * path no test server serves. `seedCatalog.test.ts` calls
+   * `seedProductsFromDefaultFeed` directly, with `fetch` stubbed, to test
+   * this for real without the gate.
+   */
+  const ensureSeeded = async () => {
+    if (import.meta.env.VITEST) return;
+    if (readStored(KEYS.seeded, false)) return;
+    writeStored(KEYS.seeded, true); // one attempt per browser, success or not
+    try {
+      const seeded = await seedProductsFromDefaultFeed();
+      if (seeded.length === 0) return;
+      const existing = imported();
+      const fresh = seeded.filter(e => !existing.some(x => x.raw.id === e.raw.id));
+      if (fresh.length > 0) writeStored(KEYS.imported, [...existing, ...fresh]);
+    } catch {
+      // Offline or blocked — a fresh browser just gets the mock catalog.
+    }
+  };
+
   return {
     async list() {
+      await ensureSeeded();
       return [...importedProducts(), ...allProducts];
     },
     async get(id) {
