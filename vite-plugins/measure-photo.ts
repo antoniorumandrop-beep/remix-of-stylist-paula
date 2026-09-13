@@ -27,7 +27,12 @@ import { resolve } from 'node:path';
  */
 
 const ENDPOINT = '/__paula/measure-photo';
-const FAL_URL = 'https://api.fal.ai/fal-ai/sam-3/3d-body';
+/**
+ * Host synchronicznych wywołań u fal to `fal.run`, nie `api.fal.ai` — ten drugi
+ * odpowiada `404 Route not found` na każdy model i wygląda przez to jak zła
+ * nazwa modelu, a nie zły adres. Sprawdzone 2026-09-13 na żywym kluczu.
+ */
+const FAL_URL = 'https://fal.run/fal-ai/sam-3/3d-body';
 
 /** Zdjęcie z telefonu ma 3–8 MB, a `data:` URI puchnie o jedną trzecią. */
 const MAX_BODY_BYTES = 20_000_000;

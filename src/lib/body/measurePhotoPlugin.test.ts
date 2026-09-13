@@ -132,7 +132,9 @@ describe('middleware pomiaru ze zdjęcia', () => {
       payload: { image: PHOTO },
       falResponse: { ok: true, json: { metadata: { people: [] } } },
     });
-    expect(url).toContain('sam-3/3d-body');
+    // Adres w całości, nie sam fragment: `api.fal.ai/fal-ai/sam-3/3d-body`
+    // też zawiera „sam-3/3d-body" i odpowiada 404 na każdy model.
+    expect(url).toBe('https://fal.run/fal-ai/sam-3/3d-body');
     const sent = JSON.parse(String(request?.body)) as { image_url: string };
     // Zdjęcie jest treścią żądania. Gdyby tu był `https://…`, znaczyłoby to, że
     // po drodze powstał plik pod adresem — a plik pod adresem żyje własnym życiem.
