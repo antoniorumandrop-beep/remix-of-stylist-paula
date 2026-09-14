@@ -28,6 +28,21 @@ const ROOM_KEY = {
   hips: 'sizeRoomHips',
 } as const;
 
+/**
+ * The other direction, which brand charts made real.
+ *
+ * The generic table runs to size 50, so something always fitted and a shortfall
+ * never came up. A shop's own chart stops where the shop stops grading —
+ * Reserved's largest dress size is a 90 cm waist — and recommending it in
+ * silence to someone who measures more is how a garment gets ordered, not
+ * closed, and returned.
+ */
+const SHORT_KEY = {
+  bust: 'sizeShortBust',
+  waist: 'sizeShortWaist',
+  hips: 'sizeShortHips',
+} as const;
+
 export function SizeAdvicePanel({
   product,
   profile,
@@ -42,7 +57,22 @@ export function SizeAdvicePanel({
   if (!advice) return null;
 
   const label = (point: string) => t(pointKey(point as 'bust' | 'waist' | 'hips'));
+
+  /**
+   * The chart actually used, because the link says "the chart Paula reads".
+   * Showing the generic table under advice taken from the brand's own would be
+   * the one thing this panel exists to avoid.
+   */
+  const chartRows = advice.fromBrandChart && product.sizeChart
+    ? product.sizeChart.map(row => ({ label: row.size, bust: row.bust, waist: row.waist, hips: row.hips }))
+    : SIZE_TABLE.map(row => ({
+        label: `${row.size} (${row.letter})`,
+        bust: row.bust,
+        waist: row.waist,
+        hips: row.hips,
+      }));
   const room = advice.points.filter(p => p.slackCm > 1);
+  const short = advice.points.filter(p => p.slackCm < -1);
 
   return (
     <div className="bg-card rounded-xl p-5 mt-4">
@@ -70,10 +100,15 @@ export function SizeAdvicePanel({
         </>
       )}
 
-      {room.length > 0 && (
+      {(room.length > 0 || short.length > 0) && (
         <ul className="mt-3 space-y-1">
-          {room.map(p => (
+          {short.map(p => (
             <li key={p.point} className="text-sm">
+              {t(SHORT_KEY[p.point], Math.abs(p.slackCm))}
+            </li>
+          ))}
+          {room.map(p => (
+            <li key={p.point} className="text-sm text-muted-foreground">
               {t(ROOM_KEY[p.point], p.slackCm)}
             </li>
           ))}
@@ -104,7 +139,7 @@ export function SizeAdvicePanel({
           <DialogHeader>
             <DialogTitle className="font-display text-lg">{t('sizeChartTitle')}</DialogTitle>
             <DialogDescription className="text-xs leading-relaxed">
-              {t('sizeChartIntro')}
+              {advice.fromBrandChart ? t('sizeChartIntroBrand', product.brand) : t('sizeChartIntro')}
             </DialogDescription>
           </DialogHeader>
           <div className="overflow-x-auto -mx-1 px-1">
@@ -118,15 +153,15 @@ export function SizeAdvicePanel({
                 </tr>
               </thead>
               <tbody>
-                {SIZE_TABLE.map(row => (
+                {chartRows.map(row => (
                   <tr
-                    key={row.size}
-                    className={row.size === advice.size ? 'font-medium' : 'text-muted-foreground'}
+                    key={row.label}
+                    className={row.label === advice.label ? 'font-medium' : 'text-muted-foreground'}
                   >
-                    <td className="py-1.5 pr-3">{row.size} ({row.letter})</td>
-                    <td className="py-1.5 pr-3">{row.bust}</td>
-                    <td className="py-1.5 pr-3">{row.waist}</td>
-                    <td className="py-1.5">{row.hips}</td>
+                    <td className="py-1.5 pr-3">{row.label}</td>
+                    <td className="py-1.5 pr-3">{row.bust ?? '—'}</td>
+                    <td className="py-1.5 pr-3">{row.waist ?? '—'}</td>
+                    <td className="py-1.5">{row.hips ?? '—'}</td>
                   </tr>
                 ))}
                 {/* Her own three numbers on the same axis as the chart, so the
