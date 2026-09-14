@@ -274,6 +274,37 @@ test('nieudany zapis mówi o sobie, zamiast udawać, że fit powstał', async ({
   await expect(page.getByPlaceholder('sweter oversize, Zara')).toHaveValue('sweter oversize, Zara');
 });
 
+test('zgubione zdjęcie nie zostawia po sobie kropki bez kadru', async ({ page }) => {
+  await startFit(page);
+  await page.locator('input[type="file"]').setInputFiles([photo('1.png'), photo('2.png')]);
+  await page.locator('#fit-name').fill('Czyszczone dane');
+  await page.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(page).toHaveURL(/\/app\/fits\/o-/);
+
+  // Tak wygląda przeglądarka, która wyczyściła dane witryny spod fitu: rekord
+  // w localStorage został, bajty nie.
+  await page.evaluate(() => new Promise<void>((resolve, reject) => {
+    const request = indexedDB.open('paula.photos');
+    request.onsuccess = () => {
+      const store = request.result.transaction('photos', 'readwrite').objectStore('photos');
+      const keys = store.getAllKeys();
+      keys.onsuccess = () => {
+        store.delete(keys.result[0]);
+        resolve();
+      };
+      keys.onerror = () => reject(keys.error);
+    };
+    request.onerror = () => reject(request.error);
+  }));
+  await page.reload();
+
+  // Jedna klatka, zero kropek — a nie dwie kropki, z których jedna prowadzi
+  // donikąd.
+  const sweep = page.getByRole('group', { name: /przeciągnij w bok/i });
+  await expect(sweep.locator('img')).toHaveCount(1);
+  await expect(sweep.locator('img')).toHaveClass(/opacity-100/);
+});
+
 test('porzucony edytor nie zostawia zdjęć w magazynie', async ({ page }) => {
   await startFit(page);
 

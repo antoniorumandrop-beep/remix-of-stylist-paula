@@ -43,12 +43,18 @@ export function FitPhotoSweep({
   const shown = photoIds.filter(id => urls[id]);
   const count = shown.length;
   const clamp = (value: number) => Math.max(0, Math.min(count - 1, value));
+  /**
+   * Liczone przy rysowaniu, nie trzymane w stanie: liczba klatek spada także
+   * wtedy, gdy któreś zdjęcie się nie wczyta, a wtedy zapamiętany numer
+   * wskazuje poza to, co widać, i kadr jest pusty do pierwszego ruchu.
+   */
+  const active = clamp(index);
 
   /**
    * A full drag across the frame covers every angle, so the gesture feels the
    * same whether there are two photos or four.
    */
-  const step = () => Math.max(24, (frame.current?.clientWidth ?? 300) / count);
+  const step = () => Math.max(24, (frame.current?.clientWidth ?? 300) / Math.max(count, 1));
 
   return (
     <div
@@ -60,7 +66,7 @@ export function FitPhotoSweep({
       style={{ touchAction: 'pan-y' }}
       className={`relative w-full ${className} rounded-2xl overflow-hidden bg-muted select-none cursor-ew-resize focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20`}
       onPointerDown={event => {
-        drag.current = { x: event.clientX, from: index, moved: false };
+        drag.current = { x: event.clientX, from: active, moved: false };
         event.currentTarget.setPointerCapture(event.pointerId);
       }}
       onPointerMove={event => {
@@ -76,12 +82,12 @@ export function FitPhotoSweep({
         // A tap is not a failed drag: on a mouse, halves of the frame are the
         // obvious way to turn, and nobody drags a photo with a trackpad.
         const box = event.currentTarget.getBoundingClientRect();
-        setIndex(clamp(index + (event.clientX - box.left < box.width / 2 ? -1 : 1)));
+        setIndex(clamp(active + (event.clientX - box.left < box.width / 2 ? -1 : 1)));
       }}
       onPointerCancel={() => { drag.current = null; }}
       onKeyDown={event => {
-        if (event.key === 'ArrowLeft') { event.preventDefault(); setIndex(clamp(index - 1)); }
-        if (event.key === 'ArrowRight') { event.preventDefault(); setIndex(clamp(index + 1)); }
+        if (event.key === 'ArrowLeft') { event.preventDefault(); setIndex(clamp(active - 1)); }
+        if (event.key === 'ArrowRight') { event.preventDefault(); setIndex(clamp(active + 1)); }
       }}
     >
       {shown.map((id, i) => (
@@ -92,7 +98,7 @@ export function FitPhotoSweep({
             draggable={false}
             // Every frame stays mounted and decoded, so turning does not flash
             // white while the browser reads the next file.
-            className={`absolute inset-0 w-full h-full object-cover ${i === index ? 'opacity-100' : 'opacity-0'}`}
+            className={`absolute inset-0 w-full h-full object-cover ${i === active ? 'opacity-100' : 'opacity-0'}`}
           />
       ))}
 
@@ -102,7 +108,7 @@ export function FitPhotoSweep({
             <span
               key={id}
               className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                i === index ? 'bg-background' : 'bg-background/40'
+                i === active ? 'bg-background' : 'bg-background/40'
               }`}
             />
           ))}
