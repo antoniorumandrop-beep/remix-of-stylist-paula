@@ -5,7 +5,7 @@ import {
 } from '@/components/ui/dialog';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { pointKey } from '@/lib/fit/copy';
-import { SIZE_TABLE, recommendSize } from '@/lib/fit/size';
+import { SIZE_TABLE, recommendSize, shortAt } from '@/lib/fit/size';
 import type { MeasuredProfile } from '@/lib/profile';
 import type { Product } from '@/lib/catalog/types';
 
@@ -72,7 +72,7 @@ export function SizeAdvicePanel({
         hips: row.hips,
       }));
   const room = advice.points.filter(p => p.slackCm > 1);
-  const short = advice.points.filter(p => p.slackCm < -1);
+  const short = advice.points.filter(shortAt);
 
   return (
     <div className="bg-card rounded-xl p-5 mt-4">

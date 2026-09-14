@@ -6,6 +6,7 @@ import type { BodyProfile } from '@/lib/profile';
 import { toBodyInput, useBodyProfile } from '@/lib/profile';
 import type { FitAttributes } from './attributes';
 import { computeFit } from './score';
+import { recommendSize, withSizeLimits } from './size';
 import type { FitResult } from './types';
 import { enrichFromText, mergeAttributes } from '@/lib/catalog/enrich';
 
@@ -36,7 +37,14 @@ export function scoreProduct(product: Product, profile: BodyProfile | null): Fit
   if (!profile) return null;
   const attrs = getProductFitAttributes(product);
   if (!attrs) return null;
-  return computeFit(attrs, toBodyInput(profile));
+  const fit = computeFit(attrs, toBodyInput(profile));
+  // Applied here rather than inside `computeFit`, which is pure arithmetic over
+  // the garment and knows nothing about what the shop actually grades.
+  //
+  // The guard is the narrowing, not an optimisation: a picked shape carries no
+  // centimetres, and `recommendSize` would refuse to compile against it.
+  if (profile.source !== 'measured') return fit;
+  return withSizeLimits(fit, recommendSize(profile, product.category, product.sizes, product.sizeChart));
 }
 
 /**

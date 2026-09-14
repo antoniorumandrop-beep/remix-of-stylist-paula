@@ -75,6 +75,9 @@ export function reasonText(code: string, t: T): string | null {
     if (c === 'none') return t('reasonStretchNone');
     return null;
   }
+  // `size.short.<cm>` — the number rides in the code because it is measured,
+  // not chosen, and the engine still hands the UI codes rather than prose.
+  if (group === 'size' && a === 'short') return t('reasonSizeShort', Number(b));
   if (group === 'data') return t('reasonMissingData');
   return null;
 }

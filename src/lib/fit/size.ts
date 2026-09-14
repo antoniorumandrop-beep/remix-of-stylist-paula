@@ -1,4 +1,4 @@
-import type { BodyMeasurements, BodyPoint } from './types';
+import type { BodyMeasurements, BodyPoint, FitResult } from './types';
 import type { SizeChartRow } from '@/lib/catalog/shopJson';
 
 /**
@@ -227,6 +227,49 @@ export function recommendSize(
     split: new Set(picks.map(p => p.row.label)).size > 1,
     offered,
     available,
+  };
+}
+
+/**
+ * Whether the ordered size falls short at this body point.
+ *
+ * Below a centimetre it is rounding, not something worth telling her. Exported
+ * because the size panel and the fit breakdown have to agree: the bug this
+ * fixes was one of them printing "should sit as it should" at the waist while
+ * the other, on the same screen, counted 2 cm missing at the same waist.
+ */
+export const shortAt = (point: PointSize) => point.slackCm < -1;
+
+/**
+ * Let the tape measure overrule the cut.
+ *
+ * `computeFit` reads the garment — silhouette, stretch, rise — and guesses
+ * where it will pull. That guess has nothing to say about grading, so when a
+ * brand simply stops cutting before a woman's measurement, the breakdown went
+ * on calling the point "should sit as it should". A shop's own chart makes
+ * that case real for the first time: the generic table runs to size 50, so
+ * something always fitted.
+ *
+ * A shortfall in centimetres beats a guess from a product description, so the
+ * point becomes `tight` and carries a reason saying by how much. The score is
+ * deliberately left alone — it answers a different question ("does this cut
+ * suit your proportions") and changing it here would move every badge in the
+ * app without anyone deciding to.
+ */
+export function withSizeLimits(fit: FitResult, advice: SizeAdvice | null): FitResult {
+  const short = new Map((advice?.points ?? []).filter(shortAt).map(p => [p.point as string, p]));
+  if (short.size === 0) return fit;
+  return {
+    ...fit,
+    points: fit.points.map(point => {
+      const missing = short.get(point.point);
+      if (!missing) return point;
+      return {
+        ...point,
+        verdict: 'tight',
+        reasons: [...point.reasons, `size.short.${Math.abs(missing.slackCm)}`],
+      };
+    }),
   };
 }
 

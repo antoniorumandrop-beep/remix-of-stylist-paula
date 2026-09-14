@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { parseOfferedSizes, recommendSize, SIZE_TABLE } from './size';
+import { parseOfferedSizes, recommendSize, shortAt, withSizeLimits, SIZE_TABLE } from './size';
+import type { FitResult } from './types';
 
 describe('tabela rozmiarów', () => {
   it('rośnie co 4 cm i nigdzie się nie cofa', () => {
@@ -178,5 +179,81 @@ describe('rozmiar z tabeli marki', () => {
     const hipsOnly = [{ size: '34', hips: 91 }, { size: '36', hips: 95 }];
     const advice = recommendSize({ bust: 104, waist: 86, hips: 112 }, 'tops', undefined, hipsOnly);
     expect(advice?.fromBrandChart).toBe(false);
+  });
+});
+
+/**
+ * The two panels on the product page disagreed out loud.
+ *
+ * "Talia — powinno leżeć jak trzeba" sat four centimetres above "W talii
+ * zabraknie około 2 cm", on a real Reserved blazer, both computed from the
+ * same body. The cut-based guess has nothing to say about grading, so where
+ * the brand's chart runs out the measurement wins.
+ */
+describe('rozmiarówka marki poprawia werdykt', () => {
+  const RESERVED = [
+    { size: 'XS', bust: 82, waist: 64, hips: 90 },
+    { size: 'S', bust: 86, waist: 68, hips: 94 },
+    { size: 'M', bust: 90, waist: 72, hips: 98 },
+    { size: 'L', bust: 96, waist: 78, hips: 104 },
+    { size: 'XL', bust: 102, waist: 84, hips: 110 },
+    { size: 'XXL', bust: 108, waist: 90, hips: 116 },
+  ];
+
+  const fit = (): FitResult => ({
+    score: 100,
+    confidence: 0.9,
+    shape: 'rectangle',
+    points: [
+      { point: 'bust', verdict: 'neutral', risk: 0, reasons: [] },
+      { point: 'waist', verdict: 'neutral', risk: 0, reasons: [] },
+      { point: 'hips', verdict: 'neutral', risk: 0, reasons: [] },
+      { point: 'stomach', verdict: 'neutral', risk: 0, reasons: ['shape.x.tight.stomach'] },
+    ],
+  });
+
+  // Waist 92 against Reserved's largest waist of 90: two centimetres missing.
+  const advice = () => recommendSize({ bust: 106, waist: 92, hips: 110 }, 'outerwear', undefined, RESERVED);
+
+  const verdictAt = (result: FitResult, point: string) =>
+    result.points.find(p => p.point === point)!;
+
+  it('mówi „ciasno" tam, gdzie marka przestała kroić', () => {
+    const out = withSizeLimits(fit(), advice());
+    expect(verdictAt(out, 'waist').verdict).toBe('tight');
+    expect(verdictAt(out, 'waist').reasons).toContain('size.short.2');
+  });
+
+  it('nie rusza obwodów, które się mieszczą', () => {
+    const out = withSizeLimits(fit(), advice());
+    expect(verdictAt(out, 'bust').verdict).toBe('neutral');
+    expect(verdictAt(out, 'hips').verdict).toBe('neutral');
+  });
+
+  it('nie rusza punktów, o których tabela nic nie mówi', () => {
+    const out = withSizeLimits(fit(), advice());
+    expect(verdictAt(out, 'stomach').verdict).toBe('neutral');
+    expect(verdictAt(out, 'stomach').reasons).toEqual(['shape.x.tight.stomach']);
+  });
+
+  it('zostawia ocenę w spokoju', () => {
+    // Fit Score answers a different question — czy ten krój pasuje do
+    // proporcji — i zmiana go tutaj ruszyłaby każdą plakietkę w aplikacji.
+    expect(withSizeLimits(fit(), advice()).score).toBe(100);
+  });
+
+  it('nie zmienia niczego, gdy nie ma rozmiarówki', () => {
+    // Identity, not deep equality: the function's job is to override where it
+    // has something to say, so having nothing to say has to leave the result
+    // it was handed exactly as it was.
+    const given = fit();
+    expect(withSizeLimits(given, null)).toBe(given);
+    const roomy = recommendSize({ bust: 86, waist: 68, hips: 94 }, 'outerwear', undefined, RESERVED);
+    expect(withSizeLimits(given, roomy)).toBe(given);
+  });
+
+  it('milczy przy zaokrągleniu poniżej centymetra', () => {
+    expect(shortAt({ point: 'waist', size: 46, letter: 'XXL', slackCm: -0.6 })).toBe(false);
+    expect(shortAt({ point: 'waist', size: 46, letter: 'XXL', slackCm: -2 })).toBe(true);
   });
 });
