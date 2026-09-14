@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronDown, ChevronLeft, ChevronRight, ImagePlus, Search, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ImagePlus, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useFit, useFits, useFitPhotoUrls } from '@/lib/fits';
@@ -93,6 +93,8 @@ export default function FitEditor() {
   /** Rows pointing at something she owns — the only ones a wear count can mean. */
   const wornCandidates = filled.filter(item => item.productId && owned.some(o => o.productId === item.productId));
   const countWorn = markWorn ?? photoIds.length > 0;
+  /** What the panel ticks: rows that already carry a product. */
+  const attached = new Set(filled.map(item => item.productId).filter(Boolean) as string[]);
 
   const pickPhotos = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -145,17 +147,26 @@ export default function FitEditor() {
     setRows(current => withTrailingBlank(current.filter((_, i) => i !== index)));
   };
 
-  const attach = (productId: string) => {
+  /**
+   * Stays open and toggles, rather than closing after each pick.
+   *
+   * The wardrobe's own builder lets her tap five things she owns in five taps;
+   * a panel that shut itself after every one would have made composing a look
+   * out of her own clothes slower than it already was, which is a thing Antonio
+   * wants more of, not less.
+   */
+  const toggleAttach = (productId: string) => {
     const product = byId.get(productId);
     if (!product) return;
     setRows(current => {
       const kept = current.filter(isReal);
+      if (kept.some(item => item.productId === productId)) {
+        return withTrailingBlank(kept.filter(item => item.productId !== productId));
+      }
       // Pre-filled as a sentence she would have written herself, and editable:
       // the label is hers, the link is a bonus.
       return withTrailingBlank([...kept, { label: `${product.name}, ${product.brand}`, productId }]);
     });
-    setAttaching(false);
-    setSearch('');
   };
 
   const leave = async () => {
@@ -375,24 +386,45 @@ export default function FitEditor() {
             <div className="max-h-64 overflow-y-auto">
               {attachable.length === 0 ? (
                 <p className="text-xs text-muted-foreground px-2 py-3">{t('nothingToAttach')}</p>
-              ) : attachable.map(product => (
-                <button
-                  key={product!.id}
-                  onClick={() => attach(product!.id)}
-                  className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-background/60 transition-colors text-left"
-                >
-                  <div className="w-9 aspect-[3/4] rounded-md bg-muted overflow-hidden shrink-0 relative">
-                    <ProductImage product={product!} fallback="icon" className="absolute inset-0 w-full h-full" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] uppercase tracking-widest text-muted-foreground">{product!.brand}</p>
-                    <p className="text-sm truncate">{product!.name}</p>
-                  </div>
-                  <span className="text-[11px] text-muted-foreground shrink-0">
-                    {owned.some(o => o.productId === product!.id) ? t('fromWardrobe') : t('fromSaved')}
-                  </span>
-                </button>
-              ))}
+              ) : attachable.map(product => {
+                const picked = attached.has(product!.id);
+                return (
+                  <button
+                    key={product!.id}
+                    onClick={() => toggleAttach(product!.id)}
+                    // A toggle, so it says out loud whether it is on: the tick
+                    // replaces the source label, and that is the only visual
+                    // difference between a picked row and an unpicked one.
+                    aria-pressed={picked}
+                    className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-background/60 transition-colors text-left"
+                  >
+                    <div className={`w-9 aspect-[3/4] rounded-md bg-muted overflow-hidden shrink-0 relative ${picked ? 'ring-2 ring-foreground' : ''}`}>
+                      <ProductImage product={product!} fallback="icon" className="absolute inset-0 w-full h-full" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] uppercase tracking-widest text-muted-foreground">{product!.brand}</p>
+                      <p className="text-sm truncate">{product!.name}</p>
+                    </div>
+                    {picked ? (
+                      <Check className="w-4 h-4 shrink-0" />
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground shrink-0">
+                        {owned.some(o => o.productId === product!.id) ? t('fromWardrobe') : t('fromSaved')}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center justify-between pt-2 px-2">
+              <span className="text-xs text-muted-foreground">{t('fitItemsCount', attached.size)}</span>
+              <button
+                onClick={() => { setAttaching(false); setSearch(''); }}
+                className="px-4 py-1.5 rounded-full bg-foreground text-background text-xs font-medium"
+              >
+                {t('doneAction')}
+              </button>
             </div>
           </div>
         )}

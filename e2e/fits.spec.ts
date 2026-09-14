@@ -149,6 +149,45 @@ test('zdjęcia obracają się przeciągnięciem i strzałkami, nie przewijają s
   await expect(frames.nth(1)).toHaveClass(/opacity-100/);
 });
 
+test('panel dopinania zostaje otwarty i pozwala zaznaczyć kilka rzeczy naraz', async ({ page }) => {
+  await seedSignedIn(page);
+  // Dwie rzeczy w szafie, żeby było co dopinać.
+  await page.addInitScript(() => {
+    localStorage.setItem('paula.wardrobe', JSON.stringify([
+      { productId: '1', addedAt: new Date().toISOString(), timesWorn: 0 },
+      { productId: '2', addedAt: new Date().toISOString(), timesWorn: 0 },
+    ]));
+  });
+
+  await page.goto('/app/fits/new');
+  await page.getByRole('button', { name: /Dopnij rzecz z Pauli/ }).click();
+
+  const panel = page.getByPlaceholder('Szukaj w szafie i zapisanych');
+  await expect(panel).toBeVisible();
+
+  // Wiersze panelu to przełączniki i mówią to wprost, więc da się je wskazać
+  // stanem, a nie wyglądem.
+  const offered = page.locator('button[aria-pressed]');
+  await expect(offered.first()).toHaveAttribute('aria-pressed', 'false');
+
+  await offered.nth(0).click();
+  // Nie zamknął się po pierwszym wyborze — o to chodziło.
+  await expect(panel).toBeVisible();
+  await offered.nth(1).click();
+
+  const rows = page.getByRole('button', { name: 'Usuń tę rzecz' });
+  await expect(rows).toHaveCount(2);
+  await expect(page.locator('button[aria-pressed="true"]')).toHaveCount(2);
+
+  // I odznaczenie zabiera linijkę z powrotem.
+  await offered.nth(0).click();
+  await expect(rows).toHaveCount(1);
+
+  await page.getByRole('button', { name: 'Gotowe' }).click();
+  await expect(panel).toBeHidden();
+  await expect(rows).toHaveCount(1);
+});
+
 test('porzucony edytor nie zostawia zdjęć w magazynie', async ({ page }) => {
   await startFit(page);
 
