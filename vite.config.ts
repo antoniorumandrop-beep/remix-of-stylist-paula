@@ -4,6 +4,7 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { fetchProductPlugin } from "./vite-plugins/fetch-product";
 import { measurePhotoPlugin } from "./vite-plugins/measure-photo";
+import { cutoutPhotoPlugin } from "./vite-plugins/cutout-photo";
 import { buildAvatarPlugin } from "./vite-plugins/build-avatar";
 import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
 
@@ -18,7 +19,7 @@ export default defineConfig(({ mode }) => ({
   },
   // `fetchProductPlugin` is dev-only (`apply: "serve"`): it stands in for the
   // edge function that will fetch shop pages in production. See the plugin.
-  plugins: [react(), fetchProductPlugin(), measurePhotoPlugin(), buildAvatarPlugin(), mcpPlugin(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [react(), fetchProductPlugin(), measurePhotoPlugin(), cutoutPhotoPlugin(), buildAvatarPlugin(), mcpPlugin(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
