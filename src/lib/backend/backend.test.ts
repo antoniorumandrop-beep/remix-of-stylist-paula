@@ -138,6 +138,37 @@ describe('backend contract (local)', () => {
     expect(legacy.name).toBe('Na wesele');
     expect(legacy.photoIds).toEqual([]);
     expect(legacy.items).toEqual([{ label: '', productId: '1' }, { label: '', productId: '2' }]);
+    // Zapisane, zanim skany istniały: pusta mapa, nie `undefined` — ekrany nie
+    // mają sprawdzać, czy pole w ogóle jest.
+    expect(legacy.cutouts).toEqual({});
+  });
+
+  it('fits: wycinek żyje obok oryginału i ginie razem z nim', async () => {
+    const fit = await b.wardrobe.createOutfit({ name: 'Skan', items: [], photoIds: ['p-1', 'p-2'] });
+    expect(fit.cutouts).toEqual({});
+
+    await b.wardrobe.setCutouts(fit.id, { 'p-1': 'c-1', 'p-2': 'c-2' });
+    expect((await b.wardrobe.listOutfits())[0].cutouts).toEqual({ 'p-1': 'c-1', 'p-2': 'c-2' });
+
+    /**
+     * Zapis samej nazwy NIE rusza skanu. To jest cały powód, dla którego
+     * wycinki nie są polem `OutfitDraft`: gdyby jechały razem ze szkicem,
+     * edytor zapisujący zmianę nazwy kasowałby je bez niczyjego zauważenia.
+     */
+    await b.wardrobe.updateOutfit(fit.id, { name: 'Skan, inaczej', items: [], photoIds: ['p-1', 'p-2'] });
+    expect((await b.wardrobe.listOutfits())[0].cutouts).toEqual({ 'p-1': 'c-1', 'p-2': 'c-2' });
+
+    // Zdjęcie wyjęte z fitu zabiera swój wycinek — wycinek bez oryginału jest
+    // sierotą, bo pokazuje się go zawsze na miejscu zdjęcia, z którego powstał.
+    await b.wardrobe.updateOutfit(fit.id, { name: 'Skan', items: [], photoIds: ['p-2'] });
+    expect((await b.wardrobe.listOutfits())[0].cutouts).toEqual({ 'p-2': 'c-2' });
+
+    // Skan nieznanego fitu nic nie psuje i nie rzuca.
+    await b.wardrobe.setCutouts('nie-ma-takiego', { 'p-9': 'c-9' });
+    expect(await b.wardrobe.listOutfits()).toHaveLength(1);
+
+    await b.wardrobe.deleteOutfit(fit.id);
+    expect(await b.wardrobe.listOutfits()).toHaveLength(0);
   });
 
   it('feedback: one entry per product, replaced on save', async () => {

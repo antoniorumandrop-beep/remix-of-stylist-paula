@@ -119,9 +119,10 @@ function localPrefs(): PrefsRepository {
  * A fit as earlier builds wrote it: a name and a list of product ids, no
  * photos and no labels. Read, never written.
  */
-type StoredOutfit = Omit<Outfit, 'photoIds' | 'items'> & {
+type StoredOutfit = Omit<Outfit, 'photoIds' | 'items' | 'cutouts'> & {
   photoIds?: string[];
   items?: FitItem[];
+  cutouts?: Record<string, string>;
   productIds?: string[];
 };
 
@@ -138,6 +139,7 @@ function toOutfit(stored: StoredOutfit): Outfit {
     name: stored.name,
     createdAt: stored.createdAt,
     photoIds: stored.photoIds ?? [],
+    cutouts: stored.cutouts ?? {},
     items: stored.items ?? (stored.productIds ?? []).map(productId => ({ label: '', productId })),
   };
 }
@@ -206,6 +208,7 @@ function localWardrobe(photos: PhotoRepository): WardrobeRepository {
         name: draft.name,
         items: draft.items,
         photoIds: draft.photoIds,
+        cutouts: {},
         createdAt: now(),
       };
       writeStored(KEYS.outfits, [outfit, ...outfits()]);
@@ -214,16 +217,33 @@ function localWardrobe(photos: PhotoRepository): WardrobeRepository {
     async updateOutfit(id, draft) {
       const before = outfits().find(o => o.id === id);
       if (!before) return;
+      // Wycinek bez swojego oryginału jest sierotą: nic go już nie pokaże, bo
+      // pokazuje się go zawsze na miejscu zdjęcia, z którego powstał.
+      const kept = new Set(draft.photoIds);
+      const cutouts = Object.fromEntries(
+        Object.entries(before.cutouts).filter(([photoId]) => kept.has(photoId)),
+      );
       writeStored(KEYS.outfits, outfits().map(o => (
-        o.id === id ? { ...o, name: draft.name, items: draft.items, photoIds: draft.photoIds } : o
+        o.id === id ? { ...o, name: draft.name, items: draft.items, photoIds: draft.photoIds, cutouts } : o
       )));
-      // A photo she took out of the fit has nothing left pointing at it.
-      await forgetPhotos(before.photoIds.filter(p => !draft.photoIds.includes(p)));
+      await forgetPhotos([
+        // A photo she took out of the fit has nothing left pointing at it.
+        ...before.photoIds.filter(p => !kept.has(p)),
+        ...Object.entries(before.cutouts).filter(([photoId]) => !kept.has(photoId)).map(([, id]) => id),
+      ]);
+    },
+    async setCutouts(id, cutouts) {
+      const before = outfits().find(o => o.id === id);
+      if (!before) return;
+      writeStored(KEYS.outfits, outfits().map(o => (o.id === id ? { ...o, cutouts } : o)));
+      // Skan zrobiony po raz drugi zostawiłby pierwszy w magazynie na zawsze.
+      const stillUsed = new Set(Object.values(cutouts));
+      await forgetPhotos(Object.values(before.cutouts).filter(cutoutId => !stillUsed.has(cutoutId)));
     },
     async deleteOutfit(id) {
       const gone = outfits().find(o => o.id === id);
       writeStored(KEYS.outfits, outfits().filter(o => o.id !== id));
-      if (gone) await forgetPhotos(gone.photoIds);
+      if (gone) await forgetPhotos([...gone.photoIds, ...Object.values(gone.cutouts)]);
     },
   };
 }

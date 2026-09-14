@@ -49,7 +49,8 @@ export function createSupabaseBackend(): Backend {
       listPending: notConnected('pending_purchases'), markPending: notConnected('pending_purchases'),
       dismissPending: notConnected('pending_purchases'),
       listOutfits: notConnected('outfits'), createOutfit: notConnected('outfits'),
-      updateOutfit: notConnected('outfits'), deleteOutfit: notConnected('outfits'),
+      updateOutfit: notConnected('outfits'), setCutouts: notConnected('outfits'),
+      deleteOutfit: notConnected('outfits'),
     },
     photos: {
       put: notConnected('storage.fit-photos'),

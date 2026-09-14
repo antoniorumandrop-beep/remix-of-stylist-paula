@@ -44,6 +44,16 @@ export interface Outfit {
   id: string;
   name: string;
   photoIds: string[];
+  /**
+   * Sylwetka wycięta z danego zdjęcia — klucz to id oryginału, wartość to id
+   * wycinka w tym samym magazynie. Oryginał zostaje nietknięty i to jest cała
+   * różnica: zły wycinek da się cofnąć i powtórzyć, a gdy kiedyś zmienimy
+   * model na lepszy, stare fity przeliczymy z tego, co już mamy.
+   *
+   * Puste, dopóki nie poprosi o skan. Fity zapisane wcześniej czytają się
+   * dalej — `toOutfit` daje im pustą mapę.
+   */
+  cutouts: Record<string, string>;
   items: FitItem[];
   createdAt: string;
 }

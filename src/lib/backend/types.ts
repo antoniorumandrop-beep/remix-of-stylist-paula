@@ -79,6 +79,15 @@ export interface WardrobeRepository {
   createOutfit(draft: OutfitDraft): Promise<Outfit>;
   /** Replaces name, items and photos wholesale. Photos dropped here are deleted. */
   updateOutfit(id: string, draft: OutfitDraft): Promise<void>;
+  /**
+   * Replaces the cut-out silhouettes wholesale; the ones no longer named are
+   * deleted.
+   *
+   * Deliberately not a field on `OutfitDraft`: a draft is what she typed, and
+   * if cut-outs travelled with it, the editor saving a name change would wipe
+   * a scan without anyone noticing. This is the only place they are written.
+   */
+  setCutouts(id: string, cutouts: Record<string, string>): Promise<void>;
   /** Deletes the fit and every photo that belonged to it. No orphaned bytes. */
   deleteOutfit(id: string): Promise<void>;
 }
