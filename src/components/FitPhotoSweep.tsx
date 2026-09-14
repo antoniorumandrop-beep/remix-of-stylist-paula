@@ -68,6 +68,21 @@ export function FitPhotoSweep({
    * wskazuje poza to, co widać, i kadr jest pusty do pierwszego ruchu.
    */
   const active = clamp(index);
+  /**
+   * Ile jedna klatka stoi podczas samoczynnego obrotu. Więcej klatek to mniejszy
+   * kąt między nimi, więc krótsze przytrzymanie — czas całego obrotu zostaje
+   * mniej więcej ten sam.
+   */
+  const hold = count > 4 ? 170 : 300;
+  /**
+   * Klatka, która schodzi. Trzymana nieprzezroczysta POD wchodzącą, a nie
+   * wygaszana razem z nią: gdyby obie przenikały naraz, w połowie przejścia
+   * prześwitywałoby tło i obrót gasłby na moment.
+   */
+  const previous = useRef(0);
+  const behind = playing ? previous.current : -1;
+
+  useEffect(() => { previous.current = active; });
 
   // Editing a fit can take a photo away from under the finger.
   useEffect(() => {
@@ -93,20 +108,19 @@ export function FitPhotoSweep({
     }
     let at = 0;
     let direction = 1;
-    // Więcej klatek to mniejszy kąt między nimi, więc krótsze przytrzymanie —
-    // czas całego obrotu zostaje mniej więcej ten sam.
-    const hold = count > 4 ? 170 : 300;
     // Chwila zwłoki: klatki zdążą się zdekodować, a ekran nie rusza się już
     // w momencie, w którym ona na niego patrzy.
     let timer = window.setTimeout(function step() {
       if (at === count - 1) direction = -1;
       at += direction;
       setIndex(at);
-      if (at === 0) { setPlaying(false); return; }
-      timer = window.setTimeout(step, hold);
+      // Obrót kończy się dopiero po ostatnim przenikaniu, a nie w chwili
+      // powrotu na pierwszą klatkę — inaczej ostatni krok jako jedyny
+      // przeskakiwał twardo.
+      timer = window.setTimeout(at === 0 ? () => setPlaying(false) : step, hold);
     }, 420);
     return () => window.clearTimeout(timer);
-  }, [playing, count]);
+  }, [playing, count, hold]);
 
   if (photoIds.length === 0) return null;
 
@@ -171,11 +185,20 @@ export function FitPhotoSweep({
               // przy każdym kroku obie — ta wchodząca i ta schodząca — jadą
               // w tę samą stronę. To dopiero czyta się jako obrót.
               transform: `translateX(${i === active ? 0 : i < active ? -PARALLAX : PARALLAX}%) scale(${OVERSCAN})`,
-              transition: scrubbing ? 'none' : 'transform 260ms cubic-bezier(0.22, 0.61, 0.36, 1)',
+              // Przenikanie TYLKO w samoczynnym obrocie. Przy stuknięciu i przy
+              // przeciąganiu zostaje twarde cięcie: tam ona sama steruje
+              // tempem, a rozmycie między kadrami czyta się wtedy jako
+              // opóźnienie, nie jako ruch.
+              transition: scrubbing
+                ? 'none'
+                : playing && i === active
+                  ? `transform ${hold}ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity ${hold}ms linear`
+                  : 'transform 260ms cubic-bezier(0.22, 0.61, 0.36, 1)',
+              zIndex: i === active ? 2 : i === behind ? 1 : 0,
             }}
             // Every frame stays mounted and decoded, so turning does not flash
             // white while the browser reads the next file.
-            className={`absolute inset-0 w-full h-full object-cover ${i === active ? 'opacity-100' : 'opacity-0'}`}
+            className={`absolute inset-0 w-full h-full object-cover ${i === active || i === behind ? 'opacity-100' : 'opacity-0'}`}
           />
       ))}
 

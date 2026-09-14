@@ -269,6 +269,39 @@ test('fit obraca się sam po otwarciu i wraca na pierwszą klatkę', async ({ pa
   await expect(frames.nth(0)).toHaveClass(/opacity-100/);
 });
 
+test('podczas samoczynnego obrotu klatki przenikają, a pod palcem tną się twardo', async ({ page }) => {
+  await startFit(page);
+  await page.locator('input[type="file"]').setInputFiles([photo('1.png'), photo('2.png'), photo('3.png')]);
+  await page.locator('#fit-name').fill('Przenikanie');
+  await page.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(page).toHaveURL(/\/app\/fits\/o-/);
+
+  /**
+   * Ile klatek bywa widocznych naraz. Przenikanie znaczy dwie: schodząca leży
+   * nieprzezroczysta pod wchodzącą, żeby w połowie przejścia nie prześwitywało
+   * tło. Jedna klatka w szczycie znaczy, że obrót nadal przeskakuje.
+   */
+  const najwiecejNaraz = await page.evaluate(
+    () =>
+      new Promise<number>(resolve => {
+        let peak = 0;
+        const probe = setInterval(() => {
+          const widoczne = document.querySelectorAll('[role="group"] img.opacity-100').length;
+          if (widoczne > peak) peak = widoczne;
+        }, 30);
+        setTimeout(() => { clearInterval(probe); resolve(peak); }, 1800);
+      }),
+  );
+  expect(najwiecejNaraz).toBe(2);
+
+  // Gdy steruje ona, widać dokładnie jedną klatkę — bo tam rozmycie między
+  // kadrami czyta się jako opóźnienie, a nie jako ruch.
+  const sweep = page.getByRole('group', { name: /przeciągnij w bok/i });
+  await sweep.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(sweep.locator('img.opacity-100')).toHaveCount(1);
+});
+
 test('przy wyłączonym ruchu fit stoi, dopóki się go nie dotknie', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await startFit(page);
