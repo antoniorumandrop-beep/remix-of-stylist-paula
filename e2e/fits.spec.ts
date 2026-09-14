@@ -391,6 +391,325 @@ test('zgubione zdjęcie nie zostawia po sobie kropki bez kadru', async ({ page }
   await expect(sweep.locator('img')).toHaveClass(/opacity-100/);
 });
 
+/**
+ * Zdjęcie i maska w rozmiarze, na którym da się cokolwiek zmierzyć — sylwetka
+ * zajmuje prostokąt 30..90 × 20..140 na kadrze 120 × 160. Jednopikselowy PNG
+ * wyżej wystarcza do sprawdzenia magazynu, ale wyrównanie kadrów liczy się z
+ * ramki sylwetki, a ramka jednego piksela nic nie znaczy.
+ */
+const SCAN_PHOTO = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAHgAAACgCAIAAABIaz/HAAABQUlEQVR42u3QOxHCAABAscrpjH8BLCzQP+ClDt7AxjV3UZDh+biHV5rSnJa0pi3t6Ujv9EnfNIgWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWfbnocbz9HdGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVr0b9FzWtKatrSnI4kWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWfbnoEx/f7aLbhPVrAAAAAElFTkSuQmCC',
+  'base64',
+);
+const SCAN_MASK = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAHgAAACgCAYAAADHCaiQAAABKElEQVR42u3RAQ0AAAgDoPcvrTXuhAokAAAAAAAAAAAAnDfPCBYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwYIFCxYsWLBgwQAAAAAAAAAAAFRbNAoWEZElDlgAAAAASUVORK5CYII=',
+  'base64',
+);
+/** Maska, na której nie ma ani jednego nieprzezroczystego piksela. */
+const EMPTY_MASK = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAHgAAACgCAYAAADHCaiQAAAAYUlEQVR42u3BMQEAAADCoPVPbQlPoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4GcsrwAB9kUWWgAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+/**
+ * Wymiary i typ wszystkiego, co leży w magazynie. Sam licznik nie odróżnia
+ * wycinka wstawionego we wspólny kadr od zdjęcia przepisanego jeden do jednego,
+ * a to jest cała różnica między skanem a przezroczystym tłem.
+ */
+async function storedSizes(page: Page): Promise<Array<{ w: number; h: number; type: string }>> {
+  return page.evaluate(
+    () =>
+      new Promise<Array<{ w: number; h: number; type: string }>>((resolve, reject) => {
+        const request = indexedDB.open('paula.photos');
+        request.onsuccess = async () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains('photos')) return resolve([]);
+          const all = await new Promise<Blob[]>(done => {
+            const query = db.transaction('photos', 'readonly').objectStore('photos').getAll();
+            query.onsuccess = () => done(query.result as Blob[]);
+          });
+          resolve(
+            await Promise.all(
+              all.map(
+                blob =>
+                  new Promise<{ w: number; h: number; type: string }>(done => {
+                    const url = URL.createObjectURL(blob);
+                    const image = new Image();
+                    image.onload = () => {
+                      URL.revokeObjectURL(url);
+                      done({ w: image.naturalWidth, h: image.naturalHeight, type: blob.type });
+                    };
+                    image.onerror = () => {
+                      URL.revokeObjectURL(url);
+                      done({ w: 0, h: 0, type: blob.type });
+                    };
+                    image.src = url;
+                  }),
+              ),
+            ),
+          );
+        };
+        request.onerror = () => reject(request.error);
+      }),
+  );
+}
+
+const duzeZdjecie = (name: string) => ({ name, mimeType: 'image/png', buffer: SCAN_PHOTO });
+
+/**
+ * Podstawiony model. Żaden test nie dzwoni do fal — ani razu, ani przypadkiem:
+ * gdyby podstawienia zabrakło, `page.route` nie przechwyci żądania i test
+ * zawiesi się na prawdziwym wywołaniu zamiast przejść po cichu.
+ */
+async function podstawModel(
+  page: Page,
+  reply: { mask?: Buffer; status?: number; code?: string } = {},
+) {
+  await page.route('**/__paula/cutout-photo', route => {
+    if (reply.status) {
+      return route.fulfill({
+        status: reply.status,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: reply.code ?? 'failed' }),
+      });
+    }
+    return route.fulfill({ status: 200, contentType: 'image/png', body: reply.mask ?? SCAN_MASK });
+  });
+}
+
+/** Zapisany fit z dwoma zdjęciami, na których da się zrobić skan. */
+async function fitDoSkanu(page: Page, name = 'Do skanu') {
+  await startFit(page);
+  await page.locator('input[type="file"]').setInputFiles([duzeZdjecie('a.png'), duzeZdjecie('b.png')]);
+  await page.locator('#fit-name').fill(name);
+  await page.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(page).toHaveURL(/\/app\/fits\/o-/);
+  await expect.poll(() => storedPhotos(page)).toBe(2);
+}
+
+/** Druga klatka: ta sama osoba stoi bardziej z lewej i wychodzi niższa. */
+const SCAN_PHOTO_B = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAHgAAACgCAIAAABIaz/HAAABFElEQVR42u3QMQ0AIAwAsBni4Z52bhxgBxcsI02qoLH24YFQIFo0okWLtiBaNKJFi7YgWjSiRYtGtGhEixaNaNGIFi0a0aIRLVo0okUjWrRoRItGdLvonKOEaNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq0aNGiRYsWLVq06IpoRItGtGjRiBaNaNHfu0EVET6HA+juAAAAAElFTkSuQmCC',
+  'base64',
+);
+const SCAN_MASK_B = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAHgAAACgCAYAAADHCaiQAAABAUlEQVR42u3RAQ0AAAgDoPcvrTXuhAokAAAAAAAAAAAAAAAAAAAAAAAAcNiUMyQYwYIFCxYsWLBgwYIFC0YwggULFixYsGDBggUjGMGCBQsWLFiwYMGCBQtGsGDBggULFixYsGDBghGMYMGCBQsWLFiwYMEIRrBgwYIFCxYsWLBgwYIRjGDBggULFixYsGDBCEawYMGCBQsWLFiwYAQjWLBgwYIFCxYsWLBgwQhGsGDBggULFixYsGAEI1iwYMGCBQsWLFiwYMEIFixYsGDBggULFixYMIIRLFiwYMGCBQsWLBjBCBYsWLBgwYIFCxYsWDCCESxYsGDBggUDAAAAwEMLYbl/PVd0ZxIAAAAASUVORK5CYII=',
+  'base64',
+);
+
+/**
+ * Ramka sylwetki w każdym zapisanym wycinku, liczona z kanału alfa — czyli
+ * dokładnie to, co widać na ekranie, a nie to, co policzyła funkcja.
+ */
+async function ramkiWycinkow(page: Page): Promise<Array<{ srodekX: number; gora: number; wysokosc: number }>> {
+  return page.evaluate(
+    () =>
+      new Promise<Array<{ srodekX: number; gora: number; wysokosc: number }>>((resolve, reject) => {
+        const request = indexedDB.open('paula.photos');
+        request.onsuccess = async () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains('photos')) return resolve([]);
+          const all = await new Promise<Blob[]>(done => {
+            const query = db.transaction('photos', 'readonly').objectStore('photos').getAll();
+            query.onsuccess = () => done(query.result as Blob[]);
+          });
+          const out: Array<{ srodekX: number; gora: number; wysokosc: number }> = [];
+          for (const blob of all) {
+            const image = await new Promise<HTMLImageElement | null>(done => {
+              const url = URL.createObjectURL(blob);
+              const img = new Image();
+              img.onload = () => { URL.revokeObjectURL(url); done(img); };
+              img.onerror = () => { URL.revokeObjectURL(url); done(null); };
+              img.src = url;
+            });
+            // Interesują nas tylko wycinki, czyli to, co siedzi we wspólnym kadrze.
+            if (!image || image.naturalWidth !== 1200 || image.naturalHeight !== 1600) continue;
+            const canvas = document.createElement('canvas');
+            canvas.width = 1200;
+            canvas.height = 1600;
+            const ctx = canvas.getContext('2d')!;
+            ctx.drawImage(image, 0, 0);
+            const { data } = ctx.getImageData(0, 0, 1200, 1600);
+            let x0 = 1200, y0 = 1600, x1 = -1, y1 = -1;
+            for (let y = 0; y < 1600; y += 4) {
+              for (let x = 0; x < 1200; x += 4) {
+                if (data[(y * 1200 + x) * 4 + 3] <= 24) continue;
+                if (x < x0) x0 = x;
+                if (x > x1) x1 = x;
+                if (y < y0) y0 = y;
+                if (y > y1) y1 = y;
+              }
+            }
+            if (x1 >= 0) out.push({ srodekX: (x0 + x1) / 2, gora: y0, wysokosc: y1 - y0 });
+          }
+          resolve(out);
+        };
+        request.onerror = () => reject(request.error);
+      }),
+  );
+}
+
+test('wyrównanie stawia sylwetkę w tym samym miejscu, choć na zdjęciach stoi inaczej', async ({ page }) => {
+  // Dwie różne klatki i dwie różne maski: na drugiej stoi bardziej z lewej i
+  // wychodzi niższa. Bez wyrównania sylwetka przeskakiwałaby w połowie obrotu.
+  const maski = [SCAN_MASK, SCAN_MASK_B];
+  let podane = 0;
+  await page.route('**/__paula/cutout-photo', route =>
+    route.fulfill({ status: 200, contentType: 'image/png', body: maski[podane++] ?? SCAN_MASK }));
+
+  await startFit(page);
+  await page.locator('input[type="file"]').setInputFiles([
+    duzeZdjecie('przod.png'),
+    { name: 'bok.png', mimeType: 'image/png', buffer: SCAN_PHOTO_B },
+  ]);
+  await page.locator('#fit-name').fill('Wyrównanie');
+  await page.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(page).toHaveURL(/\/app\/fits\/o-/);
+
+  await page.getByRole('button', { name: /Zrób z tego skan/ }).click();
+  await expect.poll(() => storedPhotos(page), { timeout: 15000 }).toBe(4);
+
+  const ramki = await ramkiWycinkow(page);
+  expect(ramki).toHaveLength(2);
+  const [a, b] = ramki;
+
+  // Obie sylwetki środkiem na środku kadru, mimo że na zdjęciach stały w
+  // różnych miejscach — 1200 / 2 = 600.
+  expect(a.srodekX).toBeGreaterThan(560);
+  expect(a.srodekX).toBeLessThan(640);
+  expect(b.srodekX).toBeGreaterThan(560);
+  expect(b.srodekX).toBeLessThan(640);
+
+  // Obie z czubkiem głowy na tej samej wysokości — 10% z 1600 to 160 px.
+  expect(Math.abs(a.gora - b.gora)).toBeLessThan(24);
+  expect(a.gora).toBeLessThan(220);
+
+  // I obie tej samej wysokości, choć na zdjęciach różniły się o ~8%.
+  expect(Math.abs(a.wysokosc - b.wysokosc)).toBeLessThan(40);
+  expect(a.wysokosc).toBeGreaterThan(1150);
+});
+
+test('skan wycina tło, zostaje po odświeżeniu i da się z niego wrócić', async ({ page }) => {
+  await podstawModel(page);
+  await fitDoSkanu(page);
+
+  const sweep = page.getByRole('group', { name: /przeciągnij w bok/i });
+  // Przed skanem kadr stoi na zwykłej szarości.
+  await expect(sweep).not.toHaveClass(/from-background/);
+
+  await page.getByRole('button', { name: /Zrób z tego skan/ }).click();
+
+  // Wycinki lądują obok oryginałów, a nie zamiast nich: dwa zdjęcia + dwa wycinki.
+  await expect.poll(() => storedPhotos(page), { timeout: 15000 }).toBe(4);
+  await expect(page.getByRole('button', { name: 'Pokaż zdjęcia' })).toBeVisible();
+  // Sylwetka nie przynosi własnego tła, więc dostaje studyjne.
+  await expect(sweep).toHaveClass(/from-background/);
+
+  // Przełącznik wraca do zdjęć i z powrotem.
+  await page.getByRole('button', { name: 'Pokaż zdjęcia' }).click();
+  await expect(sweep).not.toHaveClass(/from-background/);
+  await page.getByRole('button', { name: 'Pokaż skan' }).click();
+  await expect(sweep).toHaveClass(/from-background/);
+
+  // Skan jest zapisany, nie tylko pokazany.
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Pokaż zdjęcia' })).toBeVisible();
+  expect(await storedPhotos(page)).toBe(4);
+
+  /**
+   * Dowód, że wyrównanie naprawdę się odbyło, a nie tylko wycięcie tła:
+   * oryginały zostają w swoim rozmiarze 120 × 160, a oba wycinki siedzą we
+   * wspólnym kadrze 1200 × 1600. Gdyby wycinek był samym zdjęciem z
+   * przezroczystym tłem, miałby rozmiar oryginału i sylwetka skakałaby między
+   * klatkami dokładnie tak, jak przed skanem.
+   */
+  const rozmiary = await storedSizes(page);
+  expect(rozmiary.filter(r => r.w === 120 && r.h === 160)).toHaveLength(2);
+  const wycinki = rozmiary.filter(r => r.w === 1200 && r.h === 1600);
+  expect(wycinki).toHaveLength(2);
+  // Wycinek musi umieć przezroczystość — JPEG by ją zgubił.
+  expect(wycinki.every(w => w.type === 'image/webp' || w.type === 'image/png')).toBe(true);
+});
+
+test('usunięty skan zabiera wycinki z magazynu, a zdjęcia zostawia', async ({ page }) => {
+  await podstawModel(page);
+  await fitDoSkanu(page);
+  await page.getByRole('button', { name: /Zrób z tego skan/ }).click();
+  await expect.poll(() => storedPhotos(page), { timeout: 15000 }).toBe(4);
+
+  await page.getByRole('button', { name: 'Usuń skan' }).click();
+  await expect.poll(() => storedPhotos(page)).toBe(2);
+  await expect(page.getByRole('button', { name: /Zrób z tego skan/ })).toBeVisible();
+});
+
+test('zdjęcie wyjęte z zeskanowanego fitu zabiera swój wycinek', async ({ page }) => {
+  await podstawModel(page);
+  await fitDoSkanu(page);
+  await page.getByRole('button', { name: /Zrób z tego skan/ }).click();
+  await expect.poll(() => storedPhotos(page), { timeout: 15000 }).toBe(4);
+
+  await page.getByRole('button', { name: 'Zmień fit' }).click();
+  await page.getByRole('button', { name: 'Usuń zdjęcie' }).first().click();
+  await page.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(page).toHaveURL(/\/app\/fits\/o-[^/]+$/);
+
+  // Jedno zdjęcie i jeden wycinek — wycinek bez oryginału byłby sierotą,
+  // której nic już nie pokaże.
+  await expect.poll(() => storedPhotos(page)).toBe(2);
+
+  // I znika też WPIS, nie tylko bajty: mapa wskazująca na skasowany blob jest
+  // niewidoczna, więc nikt by jej nie zauważył, dopóki czegoś nie zepsuje.
+  const kluczeWycinkow = await page.evaluate(() => {
+    const zapisane = JSON.parse(localStorage.getItem('paula.outfits') ?? '[]') as Array<{
+      cutouts?: Record<string, string>;
+    }>;
+    return Object.keys(zapisane[0]?.cutouts ?? {}).length;
+  });
+  expect(kluczeWycinkow).toBe(1);
+});
+
+test('skasowany zeskanowany fit nie zostawia ani zdjęć, ani wycinków', async ({ page }) => {
+  await podstawModel(page);
+  await fitDoSkanu(page);
+  await page.getByRole('button', { name: /Zrób z tego skan/ }).click();
+  await expect.poll(() => storedPhotos(page), { timeout: 15000 }).toBe(4);
+
+  page.on('dialog', dialog => void dialog.accept());
+  await page.getByRole('button', { name: 'Usuń', exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/fits$/);
+  await expect.poll(() => storedPhotos(page)).toBe(0);
+});
+
+test('gdy model nie znajdzie osoby, mówi to i nic nie zapisuje', async ({ page }) => {
+  await podstawModel(page, { status: 422, code: 'no-person' });
+  await fitDoSkanu(page);
+
+  await page.getByRole('button', { name: /Zrób z tego skan/ }).click();
+  await expect(page.getByText(/nie widać osoby/)).toBeVisible();
+  // Dwa zdjęcia, zero wycinków — i przycisk dalej proponuje skan.
+  expect(await storedPhotos(page)).toBe(2);
+  await expect(page.getByRole('button', { name: /Zrób z tego skan/ })).toBeVisible();
+});
+
+test('pusta maska to to samo, co brak osoby, a nie pusty kadr', async ({ page }) => {
+  // Model odpowiedział 200, ale na masce nie ma ani jednego widocznego piksela.
+  await podstawModel(page, { mask: EMPTY_MASK });
+  await fitDoSkanu(page);
+
+  await page.getByRole('button', { name: /Zrób z tego skan/ }).click();
+  await expect(page.getByText(/nie widać osoby/)).toBeVisible();
+  expect(await storedPhotos(page)).toBe(2);
+});
+
+test('nieudany skan mówi o sobie i nie zostawia bajtów w magazynie', async ({ page }) => {
+  await podstawModel(page, { status: 502, code: 'failed' });
+  await fitDoSkanu(page);
+
+  await page.getByRole('button', { name: /Zrób z tego skan/ }).click();
+  await expect(page.getByText(/Skan nie przeszedł/)).toBeVisible();
+  expect(await storedPhotos(page)).toBe(2);
+});
+
 test('porzucony edytor nie zostawia zdjęć w magazynie', async ({ page }) => {
   await startFit(page);
 

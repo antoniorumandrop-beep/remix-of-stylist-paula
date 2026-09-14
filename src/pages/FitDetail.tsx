@@ -1,7 +1,10 @@
-import { ArrowLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, ChevronRight, Pencil, ScanLine, Trash2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useFit, useFits } from '@/lib/fits';
+import { ScanFailed } from '@/lib/fitCutout';
 import { useCatalog } from '@/lib/catalog/useCatalog';
 import { ProductImage } from '@/components/ProductImage';
 import { FitPhotoSweep } from '@/components/FitPhotoSweep';
@@ -19,8 +22,12 @@ export default function FitDetail() {
   const navigate = useNavigate();
   const { t, lang } = useLanguage();
   const { fit, loading } = useFit(id);
-  const { remove } = useFits();
+  const { remove, scan, clearScan } = useFits();
   const { byId } = useCatalog();
+  const [scanning, setScanning] = useState<{ done: number; total: number } | null>(null);
+  // Skan jest tym, po co tu weszła, więc jest domyślny — zdjęcia są o jedno
+  // kliknięcie dalej, a nie odwrotnie.
+  const [showOriginals, setShowOriginals] = useState(false);
 
   if (!fit) {
     // Nothing to find while the query is pending, and "no such fit" would flash
@@ -50,6 +57,32 @@ export default function FitDetail() {
 
   const rows = fit.items.filter(item => item.label.trim() !== '' || item.productId);
 
+  /**
+   * Skan pokazujemy dopiero wtedy, gdy KAŻDE zdjęcie ma swój wycinek. Połowa
+   * fitu bez tła i połowa z pokojem w tle wyglądałaby jak awaria, a nie jak
+   * obrót — a zdjęcie dołożone po skanie trzeba i tak przeskanować z resztą,
+   * bo wyrównanie liczy się ze wszystkich klatek naraz.
+   */
+  const scanned = fit.photoIds.length > 0 && fit.photoIds.every(photoId => fit.cutouts[photoId]);
+  const showingScan = scanned && !showOriginals;
+  const frames = showingScan ? fit.photoIds.map(photoId => fit.cutouts[photoId]) : fit.photoIds;
+
+  const handleScan = async () => {
+    if (scanning) return;
+    setScanning({ done: 0, total: fit.photoIds.length });
+    try {
+      await scan(fit, (done, total) => setScanning({ done, total }));
+      setShowOriginals(false);
+    } catch (error) {
+      const kind = error instanceof ScanFailed ? error.kind : 'failed';
+      toast(kind === 'no-person' ? t('scanNoPerson')
+        : kind === 'not-configured' ? t('scanNotConfigured')
+        : t('scanFailed'));
+    } finally {
+      setScanning(null);
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto px-4 lg:px-8 py-6 lg:py-10">
       <button
@@ -60,7 +93,43 @@ export default function FitDetail() {
         {t('fits')}
       </button>
 
-      <FitPhotoSweep photoIds={fit.photoIds} autoplay />
+      <FitPhotoSweep photoIds={frames} autoplay backdrop={showingScan ? 'studio' : 'plain'} />
+
+      {fit.photoIds.length > 0 && (
+        <div className="mt-3">
+          {scanned ? (
+            <div className="flex items-center justify-between gap-3">
+              <button
+                onClick={() => setShowOriginals(current => !current)}
+                className="text-sm underline underline-offset-4"
+              >
+                {showingScan ? t('showOriginals') : t('showScan')}
+              </button>
+              <button
+                onClick={() => void clearScan(fit)}
+                className="text-xs text-muted-foreground underline underline-offset-4"
+              >
+                {t('removeScan')}
+              </button>
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={() => void handleScan()}
+                disabled={Boolean(scanning)}
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium disabled:opacity-60"
+              >
+                <ScanLine className="w-4 h-4" />
+                {scanning ? t('scanning', scanning.done, scanning.total) : t('makeScan')}
+              </button>
+              {/* Nad przyciskiem byłoby ładniej, pod nim jest uczciwiej: to jest
+                  zdanie o tym, że jej zdjęcie wyjeżdża z telefonu, i ma być
+                  widoczne bez przewijania, obok tego, co je wysyła. */}
+              <p className="text-xs text-muted-foreground mt-2 max-w-prose">{t('scanNotice')}</p>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="flex items-start justify-between gap-4 mt-5">
         <div className="min-w-0">

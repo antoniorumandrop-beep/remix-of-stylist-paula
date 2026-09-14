@@ -41,10 +41,17 @@ export function FitPhotoSweep({
   photoIds,
   className = 'aspect-[3/4]',
   autoplay = false,
+  backdrop = 'plain',
 }: {
   photoIds: string[];
   className?: string;
   autoplay?: boolean;
+  /**
+   * Zdjęcie przynosi własne tło, więc pod nim wystarczy szarość na czas
+   * wczytywania. Wycięta sylwetka nie przynosi żadnego i musi na czymś stanąć —
+   * `studio` to jasne pole, na którym widać ubranie, a nie pokój.
+   */
+  backdrop?: 'plain' | 'studio';
 }) {
   const { t } = useLanguage();
   const urls = useFitPhotoUrls(photoIds);
@@ -88,6 +95,16 @@ export function FitPhotoSweep({
   useEffect(() => {
     setIndex(current => Math.min(current, Math.max(photoIds.length - 1, 0)));
   }, [photoIds.length]);
+
+  /**
+   * Podmiana zestawu klatek — czyli przełączenie między zdjęciami a skanem —
+   * zaczyna obrót od nowa. Bez tego przejście na skan pokazywałoby nieruchomą
+   * sylwetkę i wyglądało jak zwykła podmiana obrazka.
+   */
+  const key = photoIds.join(',');
+  useEffect(() => {
+    if (autoplay) setPlaying(true);
+  }, [autoplay, key]);
 
   /**
    * One turn there and back, then it rests. A loop that never stops turns the
@@ -138,7 +155,9 @@ export function FitPhotoSweep({
       tabIndex={0}
       // Vertical scrolling still belongs to the page; only sideways is ours.
       style={{ touchAction: 'pan-y' }}
-      className={`relative w-full ${className} rounded-2xl overflow-hidden bg-muted select-none cursor-ew-resize focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20`}
+      className={`relative w-full ${className} rounded-2xl overflow-hidden select-none cursor-ew-resize focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20 ${
+        backdrop === 'studio' ? 'bg-gradient-to-b from-background to-muted' : 'bg-muted'
+      }`}
       onPointerDown={event => {
         setPlaying(false);
         drag.current = { x: event.clientX, from: active, moved: false };

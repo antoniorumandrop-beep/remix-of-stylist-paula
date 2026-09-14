@@ -70,11 +70,51 @@ plik da się przeciągnąć albo wybrać w przeglądarce, która ten atrybut zig
 Odbija się wtedy **osobnym komunikatem**, nie ogólną awarią — tym samym wzorcem,
 co przy pomiarze.
 
+## Skan: druga sylwetka obok oryginału
+
+„Zrób z tego skan" wycina pokój i zostawia samą sylwetkę. Powód jest jeden i nie
+jest estetyczny: **przy cięciu między klatkami skacze tło**, bo telefon stał
+odrobinę gdzie indziej — i to ono psuje złudzenie obrotu. Bez tła zmienia się
+już tylko ciało i ubranie.
+
+- **Świadomy krok, nie efekt uboczny wgrania.** Zdjęcie wyjeżdża z telefonu
+  dopiero wtedy, gdy ona naciśnie przycisk, a zdanie o tym stoi pod przyciskiem
+  i widać je bez przewijania. Płacimy też tylko za te fity, które mają być
+  pokazane.
+- **Oryginał zostaje.** `Outfit.cutouts` to mapa `id zdjęcia → id wycinka`, więc
+  zły wycinek da się cofnąć („Usuń skan"), a gdy zmienimy model na lepszy, stare
+  fity przeliczą się z tego, co już mamy. Wycinki **nie są polem `OutfitDraft`**
+  — gdyby jechały ze szkicem, edytor zapisujący zmianę nazwy kasowałby skan bez
+  niczyjego zauważenia.
+- **Model oddaje maskę, nie gotowy wycinek.** Sklejenie robi przeglądarka, więc
+  wycinek zachowuje rozdzielczość i nie przechodzi drugi raz przez kompresję.
+  Zapisujemy WebP, bo wycinek musi mieć przezroczystość, a PNG tej samej
+  sylwetki waży kilka razy więcej.
+- **Wycięcie tła to dopiero połowa. Druga to wyrównanie.** Wycinek nie jest
+  zdjęciem z przezroczystym tłem — jest sylwetką wstawioną w kadr 1200 × 1600
+  wspólny dla całego fitu: środkiem w poziomie, czubkiem głowy na 10% wysokości,
+  wysokość ujednolicona względem **mediany** pozostałych klatek i ograniczona do
+  ±15% od niej. Mediana i ograniczenie są po to, żeby klatka z uciętymi stopami
+  nie spuchła i nie pociągnęła za sobą reszty. Bez wyrównania sylwetka skacze
+  między klatkami dokładnie tak, jak przed skanem.
+- **Skan pokazujemy dopiero, gdy KAŻDE zdjęcie ma wycinek.** Pół fitu bez tła i
+  pół z pokojem wygląda jak awaria; zdjęcie dołożone później trzeba przeskanować
+  razem z resztą, bo wyrównanie liczy się ze wszystkich klatek naraz.
+
+Model: `fal-ai/sam-3/image`, ta sama rodzina i licencja co pomiar. **BiRefNet
+odpadł na trzecim sprawdzianie licencji** — wagi oznaczone MIT, ale wytrenowane
+na DIS5K, który zakazuje komercji także po przetworzeniu. Wywód w `CLAUDE.md`.
+Reguły prywatności: `vite-plugins/cutout-photo.ts`, pilnuje ich
+`src/lib/cutoutPlugin.test.ts`.
+
 ## Czas życia i kasowanie
 
 - **Zdjęcie wyjęte z fitu** ginie natychmiast, razem z zapisem fitu.
 - **Skasowany fit** zabiera swoje zdjęcia ze sobą (`deleteOutfit` woła
   `photos.remove` dla każdego). Żadnych osieroconych bajtów.
+- **Zdjęcie wyjęte z fitu zabiera swój wycinek**, a „Usuń skan" kasuje wszystkie
+  — wycinek bez oryginału jest niewidzialny, bo pokazuje się go zawsze na
+  miejscu zdjęcia, z którego powstał.
 - **Kasowanie jest best-effort i to jest świadome**: jeśli blob już nie istnieje
   albo przeglądarka odmawia dostępu do magazynu, fit i tak musi zniknąć z
   ekranu. Zostawienie go, bo nie udało się sprzątnąć, byłoby gorsze — a
