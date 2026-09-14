@@ -188,6 +188,92 @@ test('panel dopinania zostaje otwarty i pozwala zaznaczyć kilka rzeczy naraz', 
   await expect(rows).toHaveCount(1);
 });
 
+test('anulowana edycja nie zabiera zdjęcia zapisanemu fitowi', async ({ page }) => {
+  await startFit(page);
+  await page.locator('input[type="file"]').setInputFiles([photo('1.png'), photo('2.png')]);
+  await page.locator('#fit-name').fill('Nie ruszaj');
+  await page.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(page).toHaveURL(/\/app\/fits\/o-/);
+  const address = page.url();
+  expect(await storedPhotos(page)).toBe(2);
+
+  // Wejście w edycję, wyrzucenie zdjęcia i rozmyślenie się.
+  await page.getByRole('button', { name: 'Zmień fit' }).click();
+  await expect(page).toHaveURL(/\/edit$/);
+  await page.getByRole('button', { name: 'Usuń zdjęcie' }).first().click();
+  await expect(page.getByRole('button', { name: 'Usuń zdjęcie' })).toHaveCount(1);
+  await page.getByRole('button', { name: 'Anuluj' }).click();
+
+  // Anuluj znaczy anuluj: fit ma z powrotem dwa zdjęcia, oba dają się pokazać.
+  await page.goto(address);
+  const frames = page.getByRole('group', { name: /przeciągnij w bok/i }).locator('img');
+  await expect(frames).toHaveCount(2);
+  expect(await storedPhotos(page)).toBe(2);
+});
+
+test('zapisana edycja kasuje zdjęcie wyrzucone z fitu', async ({ page }) => {
+  await startFit(page);
+  await page.locator('input[type="file"]').setInputFiles([photo('1.png'), photo('2.png')]);
+  await page.locator('#fit-name').fill('Jedno mniej');
+  await page.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(page).toHaveURL(/\/app\/fits\/o-/);
+
+  await page.getByRole('button', { name: 'Zmień fit' }).click();
+  await page.getByRole('button', { name: 'Usuń zdjęcie' }).first().click();
+  await page.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(page).toHaveURL(/\/app\/fits\/o-[^/]+$/);
+
+  // Dopiero zapis przesądza, więc dopiero teraz blob znika.
+  await expect.poll(() => storedPhotos(page)).toBe(1);
+  await expect(page.getByRole('group', { name: /przeciągnij w bok/i }).locator('img')).toHaveCount(1);
+});
+
+test('wyjście wstecz, nie przyciskiem, też nie zostawia zdjęć', async ({ page }) => {
+  await startFit(page);
+  await page.locator('input[type="file"]').setInputFiles([photo('a.png'), photo('b.png')]);
+  await expect(page.getByRole('button', { name: 'Usuń zdjęcie' })).toHaveCount(2);
+  expect(await storedPhotos(page)).toBe(2);
+
+  // Strzałka wstecz w przeglądarce omija przycisk „Anuluj" w całości.
+  await page.goBack();
+  await expect(page).toHaveURL(/\/app\/fits$/);
+  await expect.poll(() => storedPhotos(page)).toBe(0);
+});
+
+test('piąte zdjęcie nie wchodzi i mówi o tym', async ({ page }) => {
+  await startFit(page);
+  await page.locator('input[type="file"]').setInputFiles([
+    photo('1.png'), photo('2.png'), photo('3.png'), photo('4.png'), photo('5.png'),
+  ]);
+
+  await expect(page.getByText(/Fit pomieści do 4 zdjęć/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Usuń zdjęcie' })).toHaveCount(4);
+  // Odrzucone zdjęcie nie zostaje też w magazynie.
+  await expect.poll(() => storedPhotos(page)).toBe(4);
+});
+
+test('nieudany zapis mówi o sobie, zamiast udawać, że fit powstał', async ({ page }) => {
+  await seedSignedIn(page);
+  // Przeglądarka z zablokowanymi danymi witryny rzuca na samym zapisie. Tu
+  // rzuca tylko na kluczu fitów, żeby reszta ekranu dojechała normalnie.
+  await page.addInitScript(() => {
+    const write = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key: string, value: string) {
+      if (key === 'paula.outfits') throw new DOMException('QuotaExceededError');
+      return write.call(this, key, value);
+    };
+  });
+
+  await page.goto('/app/fits/new');
+  await page.getByPlaceholder('sweter oversize, Zara').fill('sweter oversize, Zara');
+  await page.getByRole('button', { name: 'Zapisz' }).click();
+
+  await expect(page.getByText(/Nie udało się zapisać fitu/)).toBeVisible();
+  // Nadal w edytorze, z tym, co napisała — a nie na liście, gdzie nic nie ma.
+  await expect(page).toHaveURL(/\/app\/fits\/new$/);
+  await expect(page.getByPlaceholder('sweter oversize, Zara')).toHaveValue('sweter oversize, Zara');
+});
+
 test('porzucony edytor nie zostawia zdjęć w magazynie', async ({ page }) => {
   await startFit(page);
 

@@ -68,15 +68,33 @@ export default function FitEditor() {
    * paid for that mistake once, in the "did it fit?" form.
    */
   const seeded = useRef(false);
-  const untouched = useRef<string[]>([]);
+  /**
+   * Zdjęcia wgrane w tym posiedzeniu i to, czy fit, który miałby na nie
+   * wskazywać, w ogóle powstał. Refy, a nie stan: sprzątanie dzieje się przy
+   * rozbiórce ekranu, czyli dokładnie wtedy, gdy stanu już się nie czyta.
+   */
+  const addedHere = useRef(new Set<string>());
+  const committed = useRef(false);
   useEffect(() => {
     if (seeded.current || !fit) return;
     seeded.current = true;
-    untouched.current = fit.photoIds;
     setName(fit.name);
     setRows(withTrailingBlank(fit.items));
     setPhotoIds(fit.photoIds);
   }, [fit]);
+
+  /**
+   * Wyjście dowolną drogą — Anuluj, strzałka wstecz, zakładka w nawigacji —
+   * zabiera niezapisane zdjęcia ze sobą. Wcześniej robiła to jedna ścieżka, a
+   * dwie pozostałe zostawiały bajty.
+   */
+  useEffect(() => {
+    const stored = addedHere.current;
+    return () => {
+      if (committed.current) return;
+      stored.forEach(photoId => { void dropPhoto(photoId).catch(() => {}); });
+    };
+  }, [dropPhoto]);
 
   useEffect(() => {
     if (focusRow === null) return;
@@ -85,7 +103,19 @@ export default function FitEditor() {
   }, [focusRow]);
 
   const editing = Boolean(id);
-  if (editing && !fit && loading) return null;
+  if (editing && !fit) {
+    // Nic do znalezienia, dopóki zapytanie trwa. Potem: formularz, który przy
+    // zapisie nie zrobiłby nic, byłby gorszy niż powiedzenie tego wprost.
+    if (loading) return null;
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+        <p className="text-muted-foreground">{t('fitNotFound')}</p>
+        <button onClick={() => navigate('/app/fits')} className="mt-4 text-sm underline underline-offset-4">
+          {t('goBack')}
+        </button>
+      </div>
+    );
+  }
 
   const filled = rows.filter(isReal);
   const canSave = filled.length > 0 || photoIds.length > 0;
@@ -98,16 +128,18 @@ export default function FitEditor() {
 
   const pickPhotos = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
+    const chosen = Array.from(files);
     const room = MAX_PHOTOS_PER_FIT - photoIds.length;
-    if (room <= 0) {
-      toast(t('photoLimitReached', MAX_PHOTOS_PER_FIT));
-      return;
-    }
+    // Powiedziane także wtedy, gdy część plików odpadła — po cichu wzięte
+    // dwa z sześciu wygląda jak awaria wyboru plików.
+    if (chosen.length > room) toast(t('photoLimitReached', MAX_PHOTOS_PER_FIT));
+    if (room <= 0) return;
     setBusy(true);
     try {
-      for (const file of Array.from(files).slice(0, room)) {
+      for (const file of chosen.slice(0, room)) {
         try {
           const photoId = await addPhoto(file);
+          addedHere.current.add(photoId);
           setPhotoIds(current => [...current, photoId]);
         } catch (error) {
           // HEIC is the iPhone default, so it is the most common way for this
@@ -125,7 +157,14 @@ export default function FitEditor() {
 
   const removePhoto = async (photoId: string) => {
     setPhotoIds(current => current.filter(p => p !== photoId));
-    // Gone the moment she says so, not at save time: one button, one deletion.
+    /**
+     * Zdjęcie należące do zapisanego fitu NIE ginie tutaj, bo „Anuluj" musi
+     * znaczyć anuluj — inaczej rozmyślenie się kasowało jej zdjęcie na zawsze,
+     * a fit zostawał ze wskazaniem na nieistniejący plik. Te naprawdę
+     * wyrzucone kasuje `updateOutfit` przy zapisie.
+     */
+    if (!addedHere.current.has(photoId)) return;
+    addedHere.current.delete(photoId);
     await dropPhoto(photoId).catch(() => {});
   };
 
@@ -169,16 +208,12 @@ export default function FitEditor() {
     });
   };
 
-  const leave = async () => {
-    // Photos picked in this sitting and never saved have nothing pointing at
-    // them, so they go with the editor rather than linger in the store.
-    const orphans = photoIds.filter(p => !untouched.current.includes(p));
-    await Promise.allSettled(orphans.map(p => dropPhoto(p)));
-    navigate(editing && id ? `/app/fits/${id}` : '/app/fits');
-  };
+  const leave = () => navigate(editing && id ? `/app/fits/${id}` : '/app/fits');
 
   const save = async () => {
-    if (!canSave) return;
+    // Przycisk jest wyłączony w tych stanach, ale wyłącza się o jeden render za
+    // późno na bardzo szybkie dwuklik — a drugi przebieg zrobiłby drugi fit.
+    if (!canSave || saving || busy) return;
     const draft = {
       name: name.trim() || t('fitOnDay', new Date().toLocaleDateString(lang === 'pl' ? 'pl-PL' : 'en-GB', {
         day: 'numeric', month: 'long',
@@ -187,19 +222,29 @@ export default function FitEditor() {
       photoIds,
     };
 
-    if (editing && id) {
-      await update({ id, draft });
-      navigate(`/app/fits/${id}`);
+    let saved: string;
+    try {
+      if (editing && id) {
+        await update({ id, draft });
+        saved = id;
+      } else {
+        saved = (await create(draft)).id;
+      }
+    } catch {
+      // Przeglądarka z zablokowanymi danymi witryny rzuca na samym zapisie, a
+      // cicha porażka w tym miejscu wygląda dokładnie jak udany zapis.
+      toast(t('fitSaveFailed'));
       return;
     }
 
-    const created = await create(draft);
+    committed.current = true;
     // Never on its own initiative: she ticked the box, and only a thing she
-    // owns can be counted as worn.
-    if (countWorn) {
-      for (const item of wornCandidates) await incWear(item.productId!);
+    // owns can be counted as worn. A wear count that fails is not worth
+    // telling her the fit did not save, because it did.
+    if (!editing && countWorn) {
+      for (const item of wornCandidates) await incWear(item.productId!).catch(() => {});
     }
-    navigate(`/app/fits/${created.id}`);
+    navigate(`/app/fits/${saved}`);
   };
 
   const attachable = [...new Set([...owned.map(o => o.productId), ...savedIds])]
@@ -248,6 +293,9 @@ export default function FitEditor() {
               type="file"
               accept="image/*"
               multiple
+              // Zamknięty, dopóki poprzedni wybór się liczy: dwa wybory naraz
+              // czytały ten sam, nieaktualny limit i wpuszczały piąte zdjęcie.
+              disabled={busy}
               className="hidden"
               onChange={event => { void pickPhotos(event.target.files); event.target.value = ''; }}
             />
@@ -296,6 +344,7 @@ export default function FitEditor() {
                 type="file"
                 accept="image/*"
                 multiple
+                disabled={busy}
                 className="hidden"
                 onChange={event => { void pickPhotos(event.target.files); event.target.value = ''; }}
               />
