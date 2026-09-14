@@ -220,6 +220,7 @@ export const translations = {
       matched === 0
         ? `None of these pages describe their style, so I could not put ${style.toLowerCase()} first — I have not ruled anything out for it either.`
         : `I put the ${matched} that call themselves ${style.toLowerCase()} first.`,
+    paulaOccasionNotMatched: 'I am not matching on the occasion yet — the shops do not state one on their product pages.',
     paulaOccasionFound: "Got it! I'll search with your body profile in mind. Any preferences on style or length?",
     paulaCategoryFound: "Great choice! What's the occasion? That helps me pick the right style for you.",
     paulaGeneric: "I'll work on that! Any specific occasion or budget you have in mind?",
@@ -964,6 +965,7 @@ export const translations = {
       matched === 0
         ? `Żadna z tych stron nie opisuje stylu, więc nie umiem wysunąć na przód tych w stylu: ${style.toLowerCase()}. Niczego przez to nie odrzuciłam.`
         : `Na przód wysunęłam ${matched}, ${plPlural(matched, 'która sama się tak opisuje', 'które same się tak opisują', 'które same się tak opisują')} — styl: ${style.toLowerCase()}.`,
+    paulaOccasionNotMatched: 'Okazji jeszcze nie dopasowuję — sklepy jej przy produktach nie podają.',
     paulaOccasionFound: 'Rozumiem! Wyszukam z uwzględnieniem Twojej sylwetki. Jakieś preferencje co do stylu lub długości?',
     paulaCategoryFound: 'Świetny wybór! Na jaką okazję? To pomoże dobrać odpowiedni styl.',
     paulaGeneric: 'Zajmę się tym! Masz konkretną okazję lub budżet?',

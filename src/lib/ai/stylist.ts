@@ -335,6 +335,14 @@ export const localStylist: StylistProvider = {
       ];
       if (byLength) sentences.push(t('paulaFoundInLength', products.length, shown(byLength), lengthPill!.value));
       if (byStyle) sentences.push(t('paulaFoundInStyle', shown(byStyle), stylePill!.value));
+      // The one pill with nothing behind it. Measured 2026-09-14: of the twelve
+      // Polish occasion words Paula reads, none appears anywhere in the shipped
+      // eighteen-product feed, and Reserved's own descriptions are purely
+      // constructional ("klasyczne klapy kołnierza, dwie kieszenie z patkami").
+      // Which garments suit a wedding is a stylist's call, not a parser's, so
+      // until Gabriela writes that table down Paula says where she stands
+      // instead of implying the results were picked for the occasion.
+      if (nextPills.some(p => p.key === 'occasion')) sentences.push(t('paulaOccasionNotMatched'));
 
       return {
         reply: sentences.join(' '),

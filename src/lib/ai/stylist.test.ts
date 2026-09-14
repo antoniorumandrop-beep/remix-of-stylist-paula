@@ -345,3 +345,24 @@ describe('localStylist — styl', () => {
     expect(reply).not.toContain('styl');
   });
 });
+
+describe('localStylist — okazja', () => {
+  /**
+   * The pill Paula cannot keep a promise about. Measured on 2026-09-14: none
+   * of the twelve Polish occasion words she reads appears anywhere in the
+   * shipped catalogue, and Reserved's descriptions are constructional —
+   * "klasyczne klapy kołnierza, dwie kieszenie z patkami". Which garments suit
+   * a wedding is a stylist's decision, and until it is written down, saying so
+   * beats implying the results were chosen for it.
+   */
+  it('rozpoznaje okazję, ale nie udaje, że po niej filtruje', async () => {
+    const { pills, reply } = await localStylist.respond(ask('sukienka na wesele do 300 zł'));
+    expect(pill(pills, 'occasion')?.value).toBe('Wedding');
+    expect(reply).toContain('Okazji jeszcze nie dopasowuję');
+  });
+
+  it('milczy o okazji, gdy o żadnej nie mówiła', async () => {
+    const { reply } = await localStylist.respond(ask('sukienka do 300 zł'));
+    expect(reply).not.toContain('Okazji');
+  });
+});
