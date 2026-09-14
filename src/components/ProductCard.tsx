@@ -48,7 +48,7 @@ export function ProductCard({ product, onBrandClick }: ProductCardProps) {
         <ProductImage product={product} className="absolute inset-0 w-full h-full" />
         {fit && (
           <div className="absolute top-3 left-3 z-10">
-            <FitBadge score={fit.score} />
+            <FitBadge score={fit.score} confidence={fit.confidence} />
           </div>
         )}
 

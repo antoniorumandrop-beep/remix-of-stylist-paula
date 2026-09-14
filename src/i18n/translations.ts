@@ -558,6 +558,9 @@ export const translations = {
     addMeasurements: 'Add measurements',
     fitBreakdownTitle: 'Where it fits — and where it might not',
     fitConfidenceLow: 'Based on limited product data — treat as a first read.',
+    fitBadgeApproximateLabel: (score: number) =>
+      `Fit about ${score}% — the shop published little about this garment, so this is a first read, not a measurement.`,
+    fitConfidenceAsk: 'If you buy it, tell me how it fitted. That is the only thing that makes these numbers better.',
     verdictTight: 'may feel tight',
     verdictLoose: 'may feel loose',
     verdictNeutral: 'should sit as intended',
@@ -1286,6 +1289,9 @@ export const translations = {
     addMeasurements: 'Dodaj pomiary',
     fitBreakdownTitle: 'Gdzie leży dobrze — a gdzie może nie',
     fitConfidenceLow: 'Na podstawie niepełnych danych o produkcie — traktuj jako pierwszy odczyt.',
+    fitBadgeApproximateLabel: (score: number) =>
+      `Dopasowanie około ${score}% — sklep podał o tej rzeczy niewiele, więc to pierwszy odczyt, a nie pomiar.`,
+    fitConfidenceAsk: 'Jeśli ją kupisz, napisz mi, jak pasowała. To jedyna rzecz, która naprawdę poprawia te liczby.',
     verdictTight: 'może być ciasno',
     verdictLoose: 'może być luźno',
     verdictNeutral: 'powinno leżeć jak trzeba',

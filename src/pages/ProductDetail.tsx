@@ -5,6 +5,7 @@ import { getProductReviews, getProductAverageRating, productMaterials } from '@/
 import type { Review } from '@/data/mockData';
 import { useObjectUrls } from '@/lib/useObjectUrls';
 import { FitBadge } from '@/components/FitBadge';
+import { isLowConfidence } from '@/lib/fit/confidence';
 import { ProductCard } from '@/components/ProductCard';
 import { ProductImage } from '@/components/ProductImage';
 import { useCatalog } from '@/lib/catalog/useCatalog';
@@ -156,7 +157,7 @@ export default function ProductDetail() {
           <ProductImage product={product} className="absolute inset-0 w-full h-full" />
           {fit && (
             <div className="absolute top-4 left-4">
-              <FitBadge score={fit.score} size="md" />
+              <FitBadge score={fit.score} confidence={fit.confidence} size="md" />
             </div>
           )}
           {product.isSecondHand && (
@@ -194,8 +195,15 @@ export default function ProductDetail() {
               <p className="text-xs text-muted-foreground mt-3">
                 {t('basedOnProportions', t(shapeKey(fit.shape)).toLowerCase(), profile?.heightCm ?? '—')}
               </p>
-              {fit.confidence < 0.6 && (
-                <p className="text-xs text-muted-foreground mt-1">{t('fitConfidenceLow')}</p>
+              {isLowConfidence(fit.confidence) && (
+                <>
+                  <p className="text-xs text-muted-foreground mt-1">{t('fitConfidenceLow')}</p>
+                  {/* Saying "we are not sure" and stopping there leaves her with
+                      a worse number and nothing to do about it. The loop is the
+                      one thing that actually improves it, and this is the moment
+                      it is worth asking — see the product pillar in CLAUDE.md. */}
+                  <p className="text-xs text-muted-foreground mt-1">{t('fitConfidenceAsk')}</p>
+                </>
               )}
 
               <div className="mt-5 pt-4 border-t border-border">
