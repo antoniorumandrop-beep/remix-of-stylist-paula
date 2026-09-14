@@ -35,7 +35,13 @@ export function FitPhotoSweep({
 
   if (photoIds.length === 0) return null;
 
-  const count = photoIds.length;
+  /**
+   * Tylko te zdjęcia, które naprawdę się wczytały. Kropka bez klatki wyglądała
+   * jak zepsuty ekran, a obrót zatrzymywał się na pustym kadrze — zdarza się,
+   * gdy przeglądarka wyczyści dane witryny spod zapisanego fitu.
+   */
+  const shown = photoIds.filter(id => urls[id]);
+  const count = shown.length;
   const clamp = (value: number) => Math.max(0, Math.min(count - 1, value));
 
   /**
@@ -78,25 +84,21 @@ export function FitPhotoSweep({
         if (event.key === 'ArrowRight') { event.preventDefault(); setIndex(clamp(index + 1)); }
       }}
     >
-      {photoIds.map((id, i) => {
-        const url = urls[id];
-        if (!url) return null;
-        return (
+      {shown.map((id, i) => (
           <img
             key={id}
-            src={url}
+            src={urls[id]}
             alt=""
             draggable={false}
             // Every frame stays mounted and decoded, so turning does not flash
             // white while the browser reads the next file.
             className={`absolute inset-0 w-full h-full object-cover ${i === index ? 'opacity-100' : 'opacity-0'}`}
           />
-        );
-      })}
+      ))}
 
       {count > 1 && (
         <div className="absolute bottom-2.5 left-0 right-0 flex justify-center gap-1.5">
-          {photoIds.map((id, i) => (
+          {shown.map((id, i) => (
             <span
               key={id}
               className={`w-1.5 h-1.5 rounded-full transition-colors ${

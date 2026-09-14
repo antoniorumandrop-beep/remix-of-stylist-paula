@@ -86,6 +86,10 @@ export async function prepareFitPhoto(file: File): Promise<Blob> {
   canvas.height = height;
   const context = canvas.getContext('2d');
   if (!context) throw new UnsupportedImageError('unreadable');
+  // JPEG nie zna przezroczystości, a bez tła przezroczyste piksele wychodzą
+  // czarne. Biel jest tym, co widać za zdjęciem w tym interfejsie.
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, width, height);
   context.drawImage(image, 0, 0, width, height);
 
   const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', QUALITY));
