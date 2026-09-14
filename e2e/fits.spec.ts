@@ -118,6 +118,37 @@ test('skasowany fit zabiera swoje zdjęcia ze sobą', async ({ page }) => {
   await expect.poll(() => storedPhotos(page)).toBe(0);
 });
 
+test('zdjęcia obracają się przeciągnięciem i strzałkami, nie przewijają się jak karty', async ({ page }) => {
+  await startFit(page);
+
+  await page.locator('input[type="file"]').setInputFiles([photo('1.png'), photo('2.png'), photo('3.png')]);
+  await page.locator('#fit-name').fill('Obrót');
+  await page.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(page).toHaveURL(/\/app\/fits\/o-/);
+
+  const sweep = page.getByRole('group', { name: /przeciągnij w bok/i });
+  const frames = sweep.locator('img');
+  await expect(frames).toHaveCount(3);
+  await expect(frames.nth(0)).toHaveClass(/opacity-100/);
+
+  // Przeciągnięcie w lewo to obrót w prawo — jedno pełne przeciągnięcie przez
+  // kadr przechodzi przez wszystkie kąty, niezależnie od liczby zdjęć.
+  const box = (await sweep.boundingBox())!;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(box.x + box.width - 8, y);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 8, y, { steps: 12 });
+  await page.mouse.up();
+
+  await expect(frames.nth(2)).toHaveClass(/opacity-100/);
+  await expect(frames.nth(0)).toHaveClass(/opacity-0/);
+
+  // Klawiatura robi to samo, bo przeciąganie myszą nikomu nie przychodzi do głowy.
+  await sweep.focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(frames.nth(1)).toHaveClass(/opacity-100/);
+});
+
 test('porzucony edytor nie zostawia zdjęć w magazynie', async ({ page }) => {
   await startFit(page);
 
