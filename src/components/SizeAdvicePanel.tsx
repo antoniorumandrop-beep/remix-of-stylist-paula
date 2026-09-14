@@ -38,7 +38,7 @@ export function SizeAdvicePanel({
   const { t } = useLanguage();
   const [chartOpen, setChartOpen] = useState(false);
 
-  const advice = recommendSize(profile, product.category, product.sizes);
+  const advice = recommendSize(profile, product.category, product.sizes, product.sizeChart);
   if (!advice) return null;
 
   const label = (point: string) => t(pointKey(point as 'bust' | 'waist' | 'hips'));
@@ -51,7 +51,9 @@ export function SizeAdvicePanel({
         <span className="text-sm font-medium">{t('sizeTitle')}</span>
       </div>
 
-      <p className="font-display text-2xl">{t('sizeOne', advice.size, advice.letter)}</p>
+      <p className="font-display text-2xl">
+        {advice.fromBrandChart ? t('sizeOneBrand', advice.label) : t('sizeOne', advice.size, advice.letter)}
+      </p>
 
       {advice.split && (
         <>
@@ -60,7 +62,7 @@ export function SizeAdvicePanel({
             {advice.points.map(p => (
               <li key={p.point} className="text-sm flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">{label(p.point)}</span>
-                <span>{p.size} ({p.letter})</span>
+                <span>{advice.fromBrandChart ? p.letter : `${p.size} (${p.letter})`}</span>
               </li>
             ))}
           </ul>
@@ -85,7 +87,11 @@ export function SizeAdvicePanel({
         </p>
       )}
 
-      <p className="text-xs text-muted-foreground mt-4 leading-relaxed">{t('sizeCaveat')}</p>
+      {/* Which table this came from is the whole difference between "a brand
+          cuts differently, check theirs" and "this is theirs". */}
+      <p className="text-xs text-muted-foreground mt-4 leading-relaxed">
+        {advice.fromBrandChart ? t('sizeFromBrandChart', product.brand) : t('sizeCaveat')}
+      </p>
       <button
         onClick={() => setChartOpen(true)}
         className="mt-2 text-xs font-medium underline underline-offset-4"

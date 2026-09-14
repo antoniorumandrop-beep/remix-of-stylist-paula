@@ -110,3 +110,73 @@ describe('rozmiar do zamówienia', () => {
     expect(large.size).toBe(50);
   });
 });
+
+describe('rozmiar z tabeli marki', () => {
+  /**
+   * Every LPP shop publishes, per garment, the body each size is cut for.
+   * Until it was read, the advice came from one generic Polish table for
+   * everything in the catalogue — close at the middle sizes and several
+   * centimetres out at the ends. Reserved's XXL is bust 108 / waist 90 /
+   * hip 116; the generic table's XXL is 102 / 86 / 110.
+   */
+  const RESERVED = [
+    { size: 'XS', bust: 82, waist: 64, hips: 90 },
+    { size: 'S', bust: 86, waist: 68, hips: 94 },
+    { size: 'M', bust: 90, waist: 72, hips: 98 },
+    { size: 'L', bust: 96, waist: 78, hips: 104 },
+    { size: 'XL', bust: 102, waist: 84, hips: 110 },
+    { size: 'XXL', bust: 108, waist: 90, hips: 116 },
+  ];
+
+  it('czyta z tabeli marki, nie ze standardowej', () => {
+    // The same body lands on two different sizes: Reserved grades its XL at
+    // bust 102 / waist 84 / hip 110, while the generic table's nearest row is
+    // 44. Whichever is right, only one of them is this dress.
+    const body = { bust: 104, waist: 86, hips: 112 };
+    const brand = recommendSize(body, 'dresses', undefined, RESERVED);
+    const generic = recommendSize(body, 'dresses');
+    expect(brand?.label).toBe('XL');
+    expect(brand?.fromBrandChart).toBe(true);
+    expect(generic?.label).toBe('44');
+    expect(generic?.fromBrandChart).toBe(false);
+  });
+
+  it('wraca do standardowej, gdy sklep tabeli nie podał', () => {
+    const advice = recommendSize({ bust: 104, waist: 86, hips: 112 }, 'dresses');
+    expect(advice?.fromBrandChart).toBe(false);
+  });
+
+  it('bierze największy punkt także w tabeli marki', () => {
+    // Bust fits M, hips need XL — a seam can be taken in, not let out.
+    const advice = recommendSize({ bust: 90, waist: 72, hips: 109 }, 'dresses', undefined, RESERVED);
+    expect(advice?.label).toBe('XL');
+  });
+
+  it('liczy luz względem obwodów marki', () => {
+    const advice = recommendSize({ bust: 88, waist: 70, hips: 92 }, 'dresses', undefined, RESERVED);
+    // Bust and waist both land on M, which decides it; M's hip is 98, so the
+    // 92 cm hip gets 6 cm of room — measured against Reserved's grading, not
+    // against ours, where M is 98 too but XL and XXL are centimetres apart.
+    expect(advice?.label).toBe('M');
+    expect(advice?.points.find(p => p.point === 'hips')?.slackCm).toBe(6);
+  });
+
+  it('używa tylko tych obwodów, które marka podała', () => {
+    // A skirt chart carries hips alone; bust must not be invented from it.
+    const skirt = [
+      { size: '34', hips: 91 },
+      { size: '36', hips: 95 },
+      { size: '38', hips: 99 },
+    ];
+    const advice = recommendSize({ bust: 90, waist: 72, hips: 96 }, 'skirts', undefined, skirt);
+    expect(advice?.label).toBe('36');
+    expect(advice?.points.map(p => p.point)).toEqual(['hips']);
+  });
+
+  it('pomija tabelę marki, gdy nie ma w niej potrzebnego obwodu', () => {
+    // Hips-only chart against a dress, which is decided by bust and waist too.
+    const hipsOnly = [{ size: '34', hips: 91 }, { size: '36', hips: 95 }];
+    const advice = recommendSize({ bust: 104, waist: 86, hips: 112 }, 'tops', undefined, hipsOnly);
+    expect(advice?.fromBrandChart).toBe(false);
+  });
+});

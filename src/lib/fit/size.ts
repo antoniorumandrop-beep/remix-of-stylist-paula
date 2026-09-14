@@ -1,4 +1,5 @@
 import type { BodyMeasurements, BodyPoint } from './types';
+import type { SizeChartRow } from '@/lib/catalog/shopJson';
 
 /**
  * Which size to order.
@@ -70,6 +71,10 @@ export interface SizeAdvice {
   points: PointSize[];
   size: number;
   letter: string;
+  /** What the shop calls this size: "XXL", "38". Prefer it when printing. */
+  label: string;
+  /** Whether the advice came from this garment's own chart or our generic one. */
+  fromBrandChart: boolean;
   /**
    * True when the three points disagree — the case that makes a single size
    * label wrong for most women, and the reason this is worth saying out loud.
@@ -82,11 +87,22 @@ export interface SizeAdvice {
 }
 
 /** The row whose band contains the measurement, clamped to the ends of the table. */
-function rowFor(point: SizePoint, cm: number): SizeRow {
-  let best = SIZE_TABLE[0];
-  let bestGap = Math.abs(SIZE_TABLE[0][point] - cm);
-  for (const row of SIZE_TABLE) {
-    const gap = Math.abs(row[point] - cm);
+/** A chart row from either source: the brand's labels, or ours. */
+interface ChartRow {
+  label: string;
+  letter?: string;
+  size?: number;
+  bust?: number;
+  waist?: number;
+  hips?: number;
+}
+
+function rowFor(rows: ChartRow[], point: SizePoint, cm: number): ChartRow {
+  const usable = rows.filter(row => Number.isFinite(row[point]));
+  let best = usable[0];
+  let bestGap = Math.abs((usable[0][point] as number) - cm);
+  for (const row of usable) {
+    const gap = Math.abs((row[point] as number) - cm);
     // `<=`, so a measurement sitting exactly between two sizes takes the
     // larger. Same reasoning as picking the largest point: a garment with a
     // little room is worn, one that does not close is returned.
@@ -144,37 +160,71 @@ export function recommendSize(
   measurements: Pick<BodyMeasurements, 'bust' | 'waist' | 'hips'>,
   category: string | undefined,
   offeredText?: string,
+  brandChart?: SizeChartRow[],
 ): SizeAdvice | null {
   const wanted = POINTS_BY_CATEGORY[(category ?? '').toLowerCase()];
   if (!wanted) return null;
 
-  const points = wanted
-    .filter(point => Number.isFinite(measurements[point]) && measurements[point] > 0)
-    .map(point => {
-      const row = rowFor(point, measurements[point]);
-      return { point, size: row.size, letter: row.letter, slackCm: 0 };
-    });
+  const measured = wanted.filter(
+    point => Number.isFinite(measurements[point]) && measurements[point] > 0,
+  );
+  if (measured.length === 0) return null;
 
-  if (points.length === 0) return null;
+  /**
+   * The brand's own chart when it covers any of the points this category is
+   * decided by, ours otherwise.
+   *
+   * Partial coverage is normal and deliberate: a skirt chart carries hips
+   * alone, because that is what a skirt is sized by. We use what the shop
+   * published and do not invent the rest — a bust measurement derived from a
+   * hip table would be a number with no source.
+   */
+  const chartPoints = brandChart
+    ? measured.filter(point => brandChart.some(row => Number.isFinite(row[point])))
+    : [];
+  const useBrand = chartPoints.length > 0;
+  const rows: ChartRow[] = useBrand
+    ? brandChart!.map(row => ({ label: row.size, bust: row.bust, waist: row.waist, hips: row.hips }))
+    : SIZE_TABLE.map(row => ({
+        label: String(row.size),
+        letter: row.letter,
+        size: row.size,
+        bust: row.bust,
+        waist: row.waist,
+        hips: row.hips,
+      }));
+  const usedPoints = useBrand ? chartPoints : measured;
 
-  const chosen = points.reduce((max, p) => (p.size > max.size ? p : max), points[0]);
-  const row = SIZE_TABLE.find(r => r.size === chosen.size)!;
+  const picks = usedPoints.map(point => ({ point, row: rowFor(rows, point, measurements[point]) }));
+  if (picks.length === 0) return null;
 
-  for (const p of points) {
+  // The largest of the points, by position in the chart — the chart is printed
+  // small to large, and a label like "XXL" has no arithmetic of its own.
+  const chosen = picks.reduce(
+    (max, p) => (rows.indexOf(p.row) > rows.indexOf(max.row) ? p : max),
+    picks[0],
+  ).row;
+
+  const points: PointSize[] = picks.map(({ point, row }) => ({
+    point,
+    size: row.size ?? 0,
+    letter: row.letter ?? row.label,
     // Room is what the chosen size gives at that point beyond her measurement.
-    p.slackCm = Math.round((row[p.point] - measurements[p.point]) * 10) / 10;
-  }
+    slackCm: Math.round(((chosen[point] ?? measurements[point]) - measurements[point]) * 10) / 10,
+  }));
 
   const offered = parseOfferedSizes(offeredText);
   const available = offered
-    ? offered.includes(String(row.size)) || offered.includes(row.letter)
+    ? offered.includes(chosen.label) || (chosen.letter !== undefined && offered.includes(chosen.letter))
     : null;
 
   return {
     points,
-    size: row.size,
-    letter: row.letter,
-    split: new Set(points.map(p => p.size)).size > 1,
+    size: chosen.size ?? 0,
+    letter: chosen.letter ?? chosen.label,
+    label: chosen.label,
+    fromBrandChart: useBrand,
+    split: new Set(picks.map(p => p.row.label)).size > 1,
     offered,
     available,
   };
