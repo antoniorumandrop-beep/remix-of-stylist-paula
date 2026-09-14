@@ -302,7 +302,7 @@ export default function FitEditor() {
           )}
         </label>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className={`grid gap-3 ${photoIds.length > 4 ? 'grid-cols-3' : 'grid-cols-2'}`}>
           {photoIds.map((photoId, index) => (
             <div key={photoId} className="aspect-[3/4] rounded-2xl bg-muted relative overflow-hidden group">
               {urls[photoId] && (

@@ -119,6 +119,9 @@ test('skasowany fit zabiera swoje zdjęcia ze sobą', async ({ page }) => {
 });
 
 test('zdjęcia obracają się przeciągnięciem i strzałkami, nie przewijają się jak karty', async ({ page }) => {
+  // Ten test steruje obrotem ręcznie, więc autoodtwarzanie musi mu zejść z drogi —
+  // tym samym ustawieniem systemowym, którym schodzi z drogi użytkowniczce.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await startFit(page);
 
   await page.locator('input[type="file"]').setInputFiles([photo('1.png'), photo('2.png'), photo('3.png')]);
@@ -240,16 +243,66 @@ test('wyjście wstecz, nie przyciskiem, też nie zostawia zdjęć', async ({ pag
   await expect.poll(() => storedPhotos(page)).toBe(0);
 });
 
-test('piąte zdjęcie nie wchodzi i mówi o tym', async ({ page }) => {
+test('dziewiąte zdjęcie nie wchodzi i mówi o tym', async ({ page }) => {
   await startFit(page);
   await page.locator('input[type="file"]').setInputFiles([
     photo('1.png'), photo('2.png'), photo('3.png'), photo('4.png'), photo('5.png'),
+    photo('6.png'), photo('7.png'), photo('8.png'), photo('9.png'),
   ]);
 
-  await expect(page.getByText(/Fit pomieści do 4 zdjęć/)).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Usuń zdjęcie' })).toHaveCount(4);
+  await expect(page.getByText(/Fit pomieści do 8 zdjęć/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Usuń zdjęcie' })).toHaveCount(8);
   // Odrzucone zdjęcie nie zostaje też w magazynie.
-  await expect.poll(() => storedPhotos(page)).toBe(4);
+  await expect.poll(() => storedPhotos(page)).toBe(8);
+});
+
+test('fit obraca się sam po otwarciu i wraca na pierwszą klatkę', async ({ page }) => {
+  await startFit(page);
+  await page.locator('input[type="file"]').setInputFiles([photo('1.png'), photo('2.png'), photo('3.png')]);
+  await page.locator('#fit-name').fill('Sam się kręci');
+  await page.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(page).toHaveURL(/\/app\/fits\/o-/);
+
+  const frames = page.getByRole('group', { name: /przeciągnij w bok/i }).locator('img');
+  // Nikt niczego nie dotknął: obrót sam dojeżdża do ostatniego kąta i wraca.
+  await expect(frames.nth(2)).toHaveClass(/opacity-100/);
+  await expect(frames.nth(0)).toHaveClass(/opacity-100/);
+});
+
+test('przy wyłączonym ruchu fit stoi, dopóki się go nie dotknie', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await startFit(page);
+  await page.locator('input[type="file"]').setInputFiles([photo('1.png'), photo('2.png'), photo('3.png')]);
+  await page.locator('#fit-name').fill('Bez ruchu');
+  await page.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(page).toHaveURL(/\/app\/fits\/o-/);
+
+  const frames = page.getByRole('group', { name: /przeciągnij w bok/i }).locator('img');
+  await expect(frames).toHaveCount(3);
+
+  /**
+   * Liczone są wszystkie zmiany kadru, a nie sprawdzany kadr na końcu: obrót
+   * tam i z powrotem kończy się na pierwszym zdjęciu, więc sam pomiar po czasie
+   * przechodził tak samo przy wyłączonym ruchu, jak i przy włączonym.
+   */
+  const zmiany = await page.evaluate(
+    () =>
+      new Promise<number>(resolve => {
+        const sweep = document.querySelector('[role="group"]');
+        if (!sweep) {
+          resolve(-1);
+          return;
+        }
+        let changes = 0;
+        const observer = new MutationObserver(() => { changes += 1; });
+        observer.observe(sweep, { attributes: true, attributeFilter: ['class', 'style'], subtree: true });
+        // Dłużej, niż trwa cały obrót.
+        setTimeout(() => { observer.disconnect(); resolve(changes); }, 1800);
+      }),
+  );
+
+  expect(zmiany).toBe(0);
+  await expect(frames.nth(0)).toHaveClass(/opacity-100/);
 });
 
 test('nieudany zapis mówi o sobie, zamiast udawać, że fit powstał', async ({ page }) => {

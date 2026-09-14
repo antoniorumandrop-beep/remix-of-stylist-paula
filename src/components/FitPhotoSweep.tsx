@@ -14,26 +14,45 @@ import { useFitPhotoUrls } from '@/lib/fits';
  * So order in `photoIds` means angle, and dragging scrubs frames instead of
  * paging cards: a hard cut between two photos of the same pose reads as
  * rotation, a slide transition reads as a slideshow.
+ *
+ * Two things make it read as a turn rather than as photos swapping:
+ *
+ * - It plays itself once when the fit opens. A gif turns on its own; stepping
+ *   through frames by hand never feels like one, however good the transition.
+ * - A stepped frame arrives a few pixels off and settles. Both the leaving and
+ *   the arriving frame travel the same way, which is what the eye reads as
+ *   rotation — while a drag keeps the plain hard cut, because under a moving
+ *   finger any easing is lag.
  */
+
+/**
+ * How far a stepped frame starts from where it settles, and how much bigger
+ * than the frame every photo is drawn.
+ *
+ * Both in percent of the frame's own width, and the overscan is deliberately
+ * the larger of the two: a fixed pixel offset went past a fixed overscan on a
+ * narrow phone and uncovered a strip of background mid-step. As percentages the
+ * one can never outrun the other, whatever the screen.
+ */
+const PARALLAX = 3;
+const OVERSCAN = 1.07;
+
 export function FitPhotoSweep({
   photoIds,
   className = 'aspect-[3/4]',
+  autoplay = false,
 }: {
   photoIds: string[];
   className?: string;
+  autoplay?: boolean;
 }) {
   const { t } = useLanguage();
   const urls = useFitPhotoUrls(photoIds);
   const [index, setIndex] = useState(0);
+  const [scrubbing, setScrubbing] = useState(false);
+  const [playing, setPlaying] = useState(autoplay);
   const frame = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; from: number; moved: boolean } | null>(null);
-
-  // Editing a fit can take a photo away from under the finger.
-  useEffect(() => {
-    setIndex(current => Math.min(current, Math.max(photoIds.length - 1, 0)));
-  }, [photoIds.length]);
-
-  if (photoIds.length === 0) return null;
 
   /**
    * Tylko te zdjęcia, które naprawdę się wczytały. Kropka bez klatki wyglądała
@@ -49,6 +68,47 @@ export function FitPhotoSweep({
    * wskazuje poza to, co widać, i kadr jest pusty do pierwszego ruchu.
    */
   const active = clamp(index);
+
+  // Editing a fit can take a photo away from under the finger.
+  useEffect(() => {
+    setIndex(current => Math.min(current, Math.max(photoIds.length - 1, 0)));
+  }, [photoIds.length]);
+
+  /**
+   * One turn there and back, then it rests. A loop that never stops turns the
+   * page into a shop window and eats a phone battery; one pass says "these are
+   * angles of the same look, drag me" without being asked.
+   */
+  useEffect(() => {
+    if (!playing) return;
+    // Bez `setPlaying(false)`: przy pierwszym rysowaniu żadne zdjęcie nie jest
+    // jeszcze wczytane, więc klatek jest zero. Wyłączenie tutaj gasiło obrót
+    // na zawsze, zanim w ogóle miał co obracać.
+    if (count < 2) return;
+    // Ruch, którego nie da się zatrzymać, jest dla części osób nie do
+    // zniesienia — ustawienie systemowe wyłącza go, a nie tylko spowalnia.
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setPlaying(false);
+      return;
+    }
+    let at = 0;
+    let direction = 1;
+    // Więcej klatek to mniejszy kąt między nimi, więc krótsze przytrzymanie —
+    // czas całego obrotu zostaje mniej więcej ten sam.
+    const hold = count > 4 ? 170 : 300;
+    // Chwila zwłoki: klatki zdążą się zdekodować, a ekran nie rusza się już
+    // w momencie, w którym ona na niego patrzy.
+    let timer = window.setTimeout(function step() {
+      if (at === count - 1) direction = -1;
+      at += direction;
+      setIndex(at);
+      if (at === 0) { setPlaying(false); return; }
+      timer = window.setTimeout(step, hold);
+    }, 420);
+    return () => window.clearTimeout(timer);
+  }, [playing, count]);
+
+  if (photoIds.length === 0) return null;
 
   /**
    * A full drag across the frame covers every angle, so the gesture feels the
@@ -66,28 +126,38 @@ export function FitPhotoSweep({
       style={{ touchAction: 'pan-y' }}
       className={`relative w-full ${className} rounded-2xl overflow-hidden bg-muted select-none cursor-ew-resize focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20`}
       onPointerDown={event => {
+        setPlaying(false);
         drag.current = { x: event.clientX, from: active, moved: false };
         event.currentTarget.setPointerCapture(event.pointerId);
       }}
       onPointerMove={event => {
         if (!drag.current) return;
         const delta = event.clientX - drag.current.x;
-        if (Math.abs(delta) > 4) drag.current.moved = true;
+        // Wyłączane dopiero przy ruchu, nie przy dotknięciu: gdyby przejście
+        // znikało już na wciśnięciu, stuknięcie zmieniałoby klatkę i przejście
+        // w tym samym rysowaniu, a wtedy przeglądarka nic nie animuje.
+        if (Math.abs(delta) > 4 && !drag.current.moved) {
+          drag.current.moved = true;
+          setScrubbing(true);
+        }
         setIndex(clamp(drag.current.from - Math.round(delta / step())));
       }}
       onPointerUp={event => {
         const gesture = drag.current;
         drag.current = null;
+        setScrubbing(false);
         if (!gesture || gesture.moved || count < 2) return;
         // A tap is not a failed drag: on a mouse, halves of the frame are the
         // obvious way to turn, and nobody drags a photo with a trackpad.
         const box = event.currentTarget.getBoundingClientRect();
         setIndex(clamp(active + (event.clientX - box.left < box.width / 2 ? -1 : 1)));
       }}
-      onPointerCancel={() => { drag.current = null; }}
+      onPointerCancel={() => { drag.current = null; setScrubbing(false); }}
       onKeyDown={event => {
-        if (event.key === 'ArrowLeft') { event.preventDefault(); setIndex(clamp(active - 1)); }
-        if (event.key === 'ArrowRight') { event.preventDefault(); setIndex(clamp(active + 1)); }
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+        event.preventDefault();
+        setPlaying(false);
+        setIndex(clamp(active + (event.key === 'ArrowLeft' ? -1 : 1)));
       }}
     >
       {shown.map((id, i) => (
@@ -96,6 +166,13 @@ export function FitPhotoSweep({
             src={urls[id]}
             alt=""
             draggable={false}
+            style={{
+              // Klatki przed aktywną czekają z lewej, za nią z prawej, więc
+              // przy każdym kroku obie — ta wchodząca i ta schodząca — jadą
+              // w tę samą stronę. To dopiero czyta się jako obrót.
+              transform: `translateX(${i === active ? 0 : i < active ? -PARALLAX : PARALLAX}%) scale(${OVERSCAN})`,
+              transition: scrubbing ? 'none' : 'transform 260ms cubic-bezier(0.22, 0.61, 0.36, 1)',
+            }}
             // Every frame stays mounted and decoded, so turning does not flash
             // white while the browser reads the next file.
             className={`absolute inset-0 w-full h-full object-cover ${i === active ? 'opacity-100' : 'opacity-0'}`}

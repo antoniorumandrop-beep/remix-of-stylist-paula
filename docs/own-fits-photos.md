@@ -46,9 +46,17 @@ używana powierzchnia to `open`, `put`, `get`, `delete`.
 
 1600 px po dłuższym boku wystarcza na pełnoekranowy podgląd na telefonie z
 ekranem retina, a `blob:` URL z pliku 400 KB dekoduje się natychmiast, gdy ona
-przewija między kątami. Z 5 MB robi się 300–500 KB, czyli fit z czterema
-zdjęciami waży mniej niż dwa megabajty. To także przyspieszy pierwszy upload w
-dniu, w którym wejdzie Supabase Storage.
+przewija między kątami. Z 3 MB robi się ~200 KB, czyli fit z ośmioma zdjęciami
+waży mniej niż dwa megabajty. To także przyspieszy pierwszy upload w dniu, w
+którym wejdzie Supabase Storage.
+
+Sprawdzone 2026-09-14 na zdjęciu prosto z iPhone'a: zapisane 1200 × 1600, czyli
+**przeglądarka sama zastosowała znacznik obrotu z EXIF-u**, zanim obraz trafił
+na canvas. Gdyby go zignorowała, wyszłoby 1600 × 1200 i fit leżałby na boku.
+
+Górna granica to **osiem zdjęć**, nie cztery. Nie chodzi o miejsce, tylko o to,
+że cztery klatki na 120° to 40° na krok — oko czyta to jako podmianę zdjęcia,
+a nie jako obrót.
 
 ## HEIC nie dojeżdża do dekodera i nie powinien
 

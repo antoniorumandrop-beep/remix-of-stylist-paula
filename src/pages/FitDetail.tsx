@@ -60,7 +60,7 @@ export default function FitDetail() {
         {t('fits')}
       </button>
 
-      <FitPhotoSweep photoIds={fit.photoIds} />
+      <FitPhotoSweep photoIds={fit.photoIds} autoplay />
 
       <div className="flex items-start justify-between gap-4 mt-5">
         <div className="min-w-0">

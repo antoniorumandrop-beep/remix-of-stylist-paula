@@ -7,7 +7,7 @@
  * Full path and reasoning: `docs/own-fits-photos.md`.
  */
 
-export const MAX_PHOTOS_PER_FIT = 4;
+export const MAX_PHOTOS_PER_FIT = 8;
 const MAX_EDGE = 1600;
 const QUALITY = 0.85;
 
