@@ -3,7 +3,7 @@ import type { BodyProfile } from '@/lib/profile';
 import type { Language } from '@/i18n/translations';
 import { translate } from '@/i18n/translations';
 import type { TranslationKey, TranslationArgs } from '@/i18n/translations';
-import { sortByFit } from '@/lib/fit/product';
+import { sortByFit, getProductFitAttributes } from '@/lib/fit/product';
 import { colorFromText, colorLabelPl } from '@/lib/catalog/color';
 
 /**
@@ -132,36 +132,80 @@ function mergePills(current: ContextPill[], incoming: ContextPill[]): ContextPil
 }
 
 /**
- * Colour asked for, colour known, and the gap between them.
+ * Which products matched, by id rather than as a count.
  *
- * Of 57 products in the catalogue on 2026-09-14, eight named a colour
- * anywhere: no feed here carries a colour field, so it is read from prose.
- * Dropping everything unnamed would answer "nothing found" to nearly every
- * colour question — and would be asserting that a dress whose colour nobody
- * wrote down is not black.
- *
- * So the filter removes only what is known to be a **different** colour, and
- * the matches are moved to the front. The reply says how many actually match,
- * because a list that mostly consists of "we do not know" must not read as a
- * list of black dresses.
- *
- * Applied after `sortByFit` rather than inside `applyPills`: colour is what
- * she asked for out loud, and Fit Score is what we suggest, so colour decides
- * the order and fit decides it within each group.
+ * The count has to be taken inside the twelve she is shown, and a second
+ * filter re-orders the list, so "the matches are at the front" stops being
+ * true the moment two of them run. Ids survive both.
  */
-function applyColor(products: Product[], color: string): { products: Product[]; matched: number } {
-  const wanted = colorFromText(color);
-  if (!wanted) return { products, matched: 0 };
+interface Ranked {
+  products: Product[];
+  matched: Set<string>;
+}
+
+/**
+ * What she asked for, what we know, and the gap between them.
+ *
+ * The catalogue is thin on stated attributes: a shop that does not name a
+ * colour has not said the dress is not black. Dropping everything unnamed
+ * would answer "nothing found" to nearly every question and would be
+ * asserting things nobody published.
+ *
+ * So only what is known to be **different** is removed, the matches move to
+ * the front, and the reply says how many actually matched — a list that is
+ * mostly "we do not know" must not read as a list of black dresses. Use this
+ * for attributes a garment can only have one of; ranking without dropping is
+ * the right shape for anything a garment can be several of at once.
+ *
+ * Applied after `sortByFit` rather than inside `applyPills`: this is what she
+ * said out loud, and Fit Score is what we suggest, so her words decide the
+ * order and fit decides it within each group.
+ */
+function rankByKnown<T>(
+  products: Product[],
+  wanted: T,
+  known: (product: Product) => T | null,
+): Ranked {
   const matches: Product[] = [];
   const unknown: Product[] = [];
   for (const p of products) {
-    // The shop's own colour first: it is a stated fact, while the name and the
-    // description are prose we are reading between the lines of.
-    const known = colorFromText(p.color, p.name, p.description);
-    if (known === wanted) matches.push(p);
-    else if (known === null) unknown.push(p);
+    const value = known(p);
+    if (value === wanted) matches.push(p);
+    else if (value === null) unknown.push(p);
   }
-  return { products: [...matches, ...unknown], matched: matches.length };
+  return { products: [...matches, ...unknown], matched: new Set(matches.map(p => p.id)) };
+}
+
+/**
+ * Of 57 products in the catalogue on 2026-09-14, eight named a colour
+ * anywhere: no feed here carries a colour field, so it is read from prose.
+ */
+function applyColor(products: Product[], color: string): Ranked {
+  const wanted = colorFromText(color);
+  if (!wanted) return { products, matched: new Set<string>() };
+  // The shop's own colour first: it is a stated fact, while the name and the
+  // description are prose we are reading between the lines of.
+  return rankByKnown(products, wanted, p => colorFromText(p.color, p.name, p.description));
+}
+
+const LENGTH_TO_CLASS: Record<string, string> = { 'Mini': 'mini', 'Midi': 'midi', 'Maxi': 'maxi' };
+
+/**
+ * Length, which used to be shown and thrown away.
+ *
+ * Paula read "spódnica midi", printed a pill saying "Długość: Midi" and then
+ * handed back minis — the same shape of bug colour had, and the reason that
+ * one was worth fixing: a pill is a promise that the word was understood.
+ *
+ * Exclusive like colour, so a garment we know to be mini is dropped from a
+ * request for maxi. LPP names carry the word constantly ("Spódnica mini z
+ * wełną"), and `enrichFromText` has been reading it into `lengthClass` all
+ * along; nothing was using it here.
+ */
+function applyLength(products: Product[], length: string): Ranked {
+  const wanted = LENGTH_TO_CLASS[length];
+  if (!wanted) return { products, matched: new Set<string>() };
+  return rankByKnown(products, wanted, p => getProductFitAttributes(p)?.lengthClass?.value ?? null);
 }
 
 function applyPills(catalog: Product[], pills: ContextPill[]): Product[] {
@@ -213,13 +257,28 @@ export const localStylist: StylistProvider = {
 
     if (hasEnoughContext) {
       const ranked = sortByFit(applyPills(catalog, nextPills), profile);
+      // Length first so colour keeps deciding the order, as it always has.
+      const lengthPill = nextPills.find(p => p.key === 'length');
+      const byLength = lengthPill ? applyLength(ranked, lengthPill.value) : null;
+      const afterLength = byLength?.products ?? ranked;
       const colorPill = nextPills.find(p => p.key === 'color');
-      const byColor = colorPill ? applyColor(ranked, colorPill.value) : null;
-      const products = (byColor?.products ?? ranked).slice(0, 12);
-      return {
-        reply: byColor
-          ? t('paulaFoundInColor', products.length, byColor.matched, colorPill!.value)
+      const byColor = colorPill ? applyColor(afterLength, colorPill.value) : null;
+      const products = (byColor?.products ?? afterLength).slice(0, 12);
+
+      // Counted inside what she can actually see. Before this, twenty results
+      // with fifteen matches read as "I found 12 options, 15 of them black".
+      const shown = (result: Ranked | null) =>
+        result ? products.filter(p => result.matched.has(p.id)).length : 0;
+
+      const sentences = [
+        byColor
+          ? t('paulaFoundInColor', products.length, shown(byColor), colorPill!.value)
           : t('paulaFoundOptions', products.length),
+      ];
+      if (byLength) sentences.push(t('paulaFoundInLength', products.length, shown(byLength), lengthPill!.value));
+
+      return {
+        reply: sentences.join(' '),
         chips: [
           { id: 'second-hand', label: t('chipSecondHand') },
           { id: 'free-shipping', label: t('chipFreeShipping') },

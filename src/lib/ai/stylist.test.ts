@@ -237,3 +237,59 @@ describe('localStylist — kolor', () => {
     expect(reply.toLowerCase()).not.toContain('czarny');
   });
 });
+
+describe('localStylist — długość', () => {
+  /**
+   * The second pill that was shown and thrown away. "Spódnica midi" printed
+   * "Długość: Midi" and handed back minis, because `applyPills` never looked
+   * at it — the same bug colour had, still live after colour was fixed.
+   *
+   * `enrichFromText` has been reading mini/midi/maxi out of product names all
+   * along, and LPP names carry the word constantly ("Spódnica mini z wełną"),
+   * so unlike colour this one is known for most of the catalogue.
+   */
+  const len = (value: string) => ({ fit: { lengthClass: { value, confidence: 0.9 } } } as Partial<Product>);
+
+  const skirts: Product[] = [
+    product('midi', 100, 'skirts', { name: 'Spódnica midi z paskiem', ...len('midi') }),
+    product('mini', 100, 'skirts', { name: 'Spódnica mini z wełną', ...len('mini') }),
+    product('nieznana', 100, 'skirts', { name: 'Spódnica z cupro' }),
+  ];
+
+  it('odrzuca rzeczy o innej długości', async () => {
+    const { products } = await localStylist.respond(ask('spódnica midi do 200 zł', { catalog: skirts }));
+    expect(products!.map(p => p.name)).not.toContain('Spódnica mini z wełną');
+  });
+
+  it('zostawia rzeczy, o których długości nic nie wiadomo', async () => {
+    const { products } = await localStylist.respond(ask('spódnica midi do 200 zł', { catalog: skirts }));
+    expect(products!.map(p => p.name)).toContain('Spódnica z cupro');
+  });
+
+  it('pokazuje trafione przed tymi bez długości', async () => {
+    const { products } = await localStylist.respond(ask('spódnica midi do 200 zł', { catalog: skirts }));
+    expect(products![0].name).toBe('Spódnica midi z paskiem');
+  });
+
+  it('mówi, ile z pokazanych ma tę długość', async () => {
+    const { reply } = await localStylist.respond(ask('spódnica midi do 200 zł', { catalog: skirts }));
+    expect(reply).toContain('midi');
+    expect(reply).toContain('1');
+  });
+
+  it('nie dokłada noty o długości, gdy o nią nie pytała', async () => {
+    const { reply } = await localStylist.respond(ask('spódnica do 200 zł', { catalog: skirts }));
+    expect(reply).not.toContain('długoś');
+  });
+
+  it('liczy tylko to, co widać, a nie cały katalog', async () => {
+    // Twelve results is the cut. Fifteen matches used to be reported as
+    // "znalazłam 12 opcji, w tym 15 …", which is a number she cannot see.
+    const many = Array.from({ length: 15 }, (_, i) =>
+      product(`m${i}`, 100, 'skirts', { name: `Spódnica midi ${i}`, ...len('midi') }),
+    );
+    const { products, reply } = await localStylist.respond(ask('spódnica midi do 200 zł', { catalog: many }));
+    expect(products).toHaveLength(12);
+    expect(reply).not.toContain('15');
+  });
+});
