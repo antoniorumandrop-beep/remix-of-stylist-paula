@@ -291,7 +291,7 @@ export default function FitEditor() {
           {photosAvailable && (
             <input
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp"
               multiple
               // Zamknięty, dopóki poprzedni wybór się liczy: dwa wybory naraz
               // czytały ten sam, nieaktualny limit i wpuszczały piąte zdjęcie.
@@ -342,7 +342,7 @@ export default function FitEditor() {
               <span className="text-xs text-muted-foreground">{t('addPhotos')}</span>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 multiple
                 disabled={busy}
                 className="hidden"

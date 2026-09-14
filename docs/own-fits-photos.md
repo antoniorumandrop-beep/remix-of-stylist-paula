@@ -50,9 +50,17 @@ przewija między kątami. Z 5 MB robi się 300–500 KB, czyli fit z czterema
 zdjęciami waży mniej niż dwa megabajty. To także przyspieszy pierwszy upload w
 dniu, w którym wejdzie Supabase Storage.
 
-HEIC odbija się **osobnym komunikatem**, nie ogólną awarią — tym samym wzorcem,
-co przy pomiarze. To domyślny format iPhone'a, więc jest to najczęstszy
-sposób, w jaki to nie zadziała.
+## HEIC nie dojeżdża do dekodera i nie powinien
+
+Pola wyboru pliku proszą wprost o `image/jpeg,image/png,image/webp`, bez HEIC-a.
+To nie jest kosmetyka: iPhone, który widzi listę bez HEIC-a, **sam oddaje JPEG**,
+a na komputerze pliki, których i tak nie umiemy odczytać, wyszarzają się w oknie
+wyboru zamiast odbijać się komunikatem po fakcie.
+
+Komunikat o HEIC zostaje mimo to, bo `accept` jest podpowiedzią, nie zaporą:
+plik da się przeciągnąć albo wybrać w przeglądarce, która ten atrybut zignoruje.
+Odbija się wtedy **osobnym komunikatem**, nie ogólną awarią — tym samym wzorcem,
+co przy pomiarze.
 
 ## Czas życia i kasowanie
 
