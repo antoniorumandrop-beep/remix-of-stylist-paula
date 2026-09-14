@@ -532,6 +532,35 @@ export type DraftConversion =
   | { status: 'incomplete'; missing: string[] };
 
 /**
+ * The part of a shop URL that identifies the product.
+ *
+ * The id used to be the brand plus the product name, and a name is a label,
+ * not an identity: Reserved sells four "Płaszcz handmade z wełną" that differ
+ * only in colour, and importing all four produced one product with the other
+ * three silently on top of it. Measured 2026-09-14 — 39 links imported, 7 of
+ * them unreachable afterwards because something else answered to their id.
+ *
+ * A link import has a better identity available for free: the page the user
+ * pasted. The last path segment carries the shop's own product code
+ * ("plaszcz-handmade-z-welna-147ky-80m", "productpage.1287882010.html"), and
+ * the query string is appended for shops that put the code there instead.
+ *
+ * Slugified here rather than with the brand so the 60-character cut in
+ * `slugify` cannot eat the code at the end of a long name.
+ */
+function productKey(url: string | undefined): string {
+  if (!url) return '';
+  try {
+    const parsed = new URL(url);
+    const last = parsed.pathname.split('/').filter(Boolean).pop() ?? '';
+    return slugify(`${last}${parsed.search}`);
+  } catch {
+    // Not a URL we can take apart is not a URL we can take an id from.
+    return '';
+  }
+}
+
+/**
  * The same three hard requirements as the CSV feed — name, brand, price — plus
  * a category, which a link often does not carry. Anything missing is reported
  * rather than guessed, because a silently wrong product is worse than an
@@ -547,7 +576,7 @@ export function draftToRawProduct(draft: LinkDraft, opts: DraftToRawOptions = {}
   if (missing.length > 0) return { status: 'incomplete', missing };
 
   const source = opts.source ?? 'link';
-  const externalId = slugify(`${draft.brand}-${draft.name}`) || slugify(draft.url);
+  const externalId = slugify(`${draft.brand}-${productKey(draft.url) || draft.name}`);
   return {
     status: 'ok',
     product: {

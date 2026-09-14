@@ -7,6 +7,7 @@ import {
   readMeta,
   readJsonLd,
   decodeEntities,
+  type LinkDraft,
 } from './link';
 import { parseRobots, isAllowed } from './robots';
 
@@ -216,11 +217,61 @@ describe('draftToRawProduct', () => {
     const result = draftToRawProduct(draft, { category: 'dresses', fetchedAt: '2026-09-09T00:00:00.000Z' });
     expect(result.status).toBe('ok');
     if (result.status === 'ok') {
-      expect(result.product.id).toBe('link:vero-moda-sukienka-koktajlowa');
+      // Built from the page's own address, not its name — see below.
+      expect(result.product.id).toBe('link:vero-moda-x-html');
       expect(result.product.category).toBe('dresses');
       expect(result.product.currency).toBe('PLN');
       expect(result.product.url).toBe('https://www.zalando.pl/x.html');
     }
+  });
+
+  /**
+   * A name is a label, not an identity. Reserved sells four coats called
+   * "Płaszcz handmade z wełną" and they differ only in colour; when the id was
+   * the brand plus the name, importing all four left one product and three
+   * ghosts that nothing could open. Happened on 2026-09-14 with a real batch.
+   */
+  const coat = (url: string): LinkDraft => ({
+    url,
+    name: 'Płaszcz handmade z wełną',
+    brand: 'Reserved',
+    price: 499.99,
+    provenance: {},
+    warnings: [],
+  });
+
+  const idOf = (draft: LinkDraft) => {
+    const result = draftToRawProduct(draft, { category: 'outerwear' });
+    return result.status === 'ok' ? result.product.id : result.status;
+  };
+
+  it('daje dwóm kolorom tej samej rzeczy dwa różne id', () => {
+    const beige = idOf(coat('https://www.reserved.com/pl/pl/plaszcz-handmade-z-welna-147ky-80m'));
+    const grey = idOf(coat('https://www.reserved.com/pl/pl/plaszcz-handmade-z-welna-147ky-85m'));
+    expect(beige).toBe('link:reserved-plaszcz-handmade-z-welna-147ky-80m');
+    expect(grey).not.toBe(beige);
+  });
+
+  it('bierze kod z zapytania, gdy sklep nie ma go w ścieżce', () => {
+    const first = idOf(coat('https://sklep.pl/produkt?id=11'));
+    const second = idOf(coat('https://sklep.pl/produkt?id=12'));
+    expect(first).toBe('link:reserved-produkt-id-11');
+    expect(second).not.toBe(first);
+  });
+
+  it('czyta kod spod ukośnika na końcu adresu', () => {
+    // A shop that ends its addresses with "/" leaves an empty last segment,
+    // and an empty key falls back to the name — which is the collision again.
+    const first = idOf(coat('https://sklep.pl/plaszcz-80m/'));
+    const second = idOf(coat('https://sklep.pl/plaszcz-85m/'));
+    expect(first).toBe('link:reserved-plaszcz-80m');
+    expect(second).not.toBe(first);
+  });
+
+  it('wraca do nazwy, gdy adresu nie da się rozebrać', () => {
+    // Without a usable address the name is all there is; one product from one
+    // paste is still better than no id at all.
+    expect(idOf(coat('nie-adres'))).toBe('link:reserved-plaszcz-handmade-z-welna');
   });
 });
 
