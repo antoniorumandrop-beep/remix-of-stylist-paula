@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { parseProductPage } from './link';
+import { parseProductPage, draftToRawProduct } from './link';
 import { parseComposition, naturalShare } from './composition';
 import { colorFromText } from './color';
 
@@ -183,5 +183,23 @@ describe('kolor — każdy sklep trzyma go gdzie indziej', () => {
     expect(colorFromText(hm.color)).toBe('blue');
     expect(colorFromText(zara.color)).toBe('navy');
     expect(colorFromText(reserved.color)).toBe('brown');
+  });
+});
+
+describe('Reserved — tabela obwodów tego fasonu', () => {
+  const draft = parseProductPage(fixture('reserved-sukienka-838kb-88x.html'), RESERVED_URL);
+
+  it('wchodzi do draftu razem z resztą', () => {
+    expect(draft.sizeChart?.[0]).toEqual({ size: 'XS', bust: 82, waist: 64, hips: 90 });
+    expect(draft.provenance.sizeChart).toBe('shop-json');
+  });
+
+  it('przechodzi do produktu, który zapisujemy', () => {
+    const result = draftToRawProduct(draft, { category: 'dresses' });
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.product.sizeChart?.map(r => r.size)).toContain('M');
+      expect(result.product.color).toBe('brązowy');
+    }
   });
 });

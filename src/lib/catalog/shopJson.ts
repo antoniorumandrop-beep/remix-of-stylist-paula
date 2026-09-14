@@ -20,6 +20,17 @@
  * one fact.
  */
 
+/**
+ * The body a given size is cut for, in centimetres, as the shop publishes it
+ * for this particular garment.
+ */
+export interface SizeChartRow {
+  size: string;
+  bust?: number;
+  waist?: number;
+  hips?: number;
+}
+
 export interface ShopJsonFacts {
   /** Composition as the shop writes it, e.g. "100% LEN". */
   material?: string;
@@ -27,6 +38,8 @@ export interface ShopJsonFacts {
   sizes?: string;
   /** Whether the shop stated availability at all, and what it said. */
   stock: 'unknown' | 'in' | 'out';
+  /** This garment's own size table, when the shop publishes one. */
+  sizeChart?: SizeChartRow[];
 }
 
 interface SizeEntry {
@@ -136,6 +149,82 @@ function readSizeEntries(text: string, sku?: string): SizeEntry[] | undefined {
   return blocks.length === 1 ? blocks[0] : undefined;
 }
 
+const ACCENTS: Record<string, string> = {
+  ą: 'a', ć: 'c', ę: 'e', ł: 'l', ń: 'n', ó: 'o', ś: 's', ź: 'z', ż: 'z',
+};
+
+const deaccent = (text: string) =>
+  text.toLowerCase().replace(/[ąćęłńóśźż]/g, ch => ACCENTS[ch] ?? ch);
+
+/**
+ * Which body measurement a row of the size table is, if any.
+ *
+ * Only circumferences count, and the shop marks them: "Obwód talii" is a
+ * person's waist at 64 cm, while "Szerokość w talii" from the second table is
+ * the garment measured flat at 32. Taking the latter would halve every
+ * measurement and recommend a size two steps too small, silently — both are
+ * plausible numbers in centimetres.
+ */
+function measurementOf(name: string): keyof Omit<SizeChartRow, 'size'> | null {
+  const key = deaccent(name).trim();
+  if (!key.startsWith('obwod')) return null;
+  if (key.includes('piersiow') || key.includes('biust')) return 'bust';
+  if (key.includes('tali')) return 'waist';
+  if (key.includes('biod')) return 'hips';
+  return null;
+}
+
+/**
+ * The garment's size table, picked from every `"sizes"` block that carries
+ * `dimensions` — the one with the most recognised circumferences wins, so the
+ * flat-measurement table never does.
+ */
+function readSizeChart(text: string): SizeChartRow[] | undefined {
+  const marker = /"sizes"\s*:\s*\[/g;
+  let best: SizeChartRow[] | undefined;
+  let bestCount = 0;
+  for (let m = marker.exec(text); m !== null; m = marker.exec(text)) {
+    const open = text.indexOf('[', m.index);
+    const slice = sliceBalanced(text, open);
+    if (!slice) continue;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(slice);
+    } catch {
+      continue;
+    }
+    if (!Array.isArray(parsed)) continue;
+
+    const rows: SizeChartRow[] = [];
+    let count = 0;
+    for (const entry of parsed) {
+      if (typeof entry !== 'object' || entry === null) continue;
+      const { name, dimensions } = entry as { name?: unknown; dimensions?: unknown };
+      if (typeof name !== 'string' || !Array.isArray(dimensions)) continue;
+      const row: SizeChartRow = { size: name.trim() };
+      for (const dim of dimensions) {
+        if (typeof dim !== 'object' || dim === null) continue;
+        const { name: label, size } = dim as { name?: unknown; size?: unknown };
+        if (typeof label !== 'string') continue;
+        const key = measurementOf(label);
+        if (!key) continue;
+        const value = Number(String(size ?? '').replace(',', '.'));
+        // An empty string is what the live page sends for a measurement it
+        // does not have; `Number('')` is 0, which would read as a real value.
+        if (!Number.isFinite(value) || value <= 0) continue;
+        row[key] = value;
+        count++;
+      }
+      if (row.bust !== undefined || row.waist !== undefined || row.hips !== undefined) rows.push(row);
+    }
+    if (count > bestCount) {
+      best = rows;
+      bestCount = count;
+    }
+  }
+  return best && best.length > 0 ? best : undefined;
+}
+
 /**
  * @param sku The product's own id, from JSON-LD. Without it the size run is
  * only read when the page carries exactly one — see `readSizeEntries`.
@@ -143,8 +232,9 @@ function readSizeEntries(text: string, sku?: string): SizeEntry[] | undefined {
 export function readShopJson(html: string, sku?: string): ShopJsonFacts {
   const text = withoutJsonLd(html);
   const material = readString(text, 'material');
+  const sizeChart = readSizeChart(text);
   const entries = readSizeEntries(text, sku);
-  if (!entries) return { material, stock: 'unknown' };
+  if (!entries) return { material, sizeChart, stock: 'unknown' };
 
   // Same rule as `sizesFrom` in link.ts, and for the same reason: a shop that
   // publishes no availability is telling us nothing, not telling us the
@@ -167,6 +257,7 @@ export function readShopJson(html: string, sku?: string): ShopJsonFacts {
   const chosen = inStock.length > 0 ? inStock : all;
   return {
     material,
+    sizeChart,
     sizes: chosen.length > 0 ? chosen.join(', ') : undefined,
     stock: !stated ? 'unknown' : anyInStock ? 'in' : 'out',
   };

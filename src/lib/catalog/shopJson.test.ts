@@ -138,3 +138,80 @@ describe('readShopJson — strona niesie też rozmiary cudzych produktów', () =
     expect(readShopJson(html).material).toBe('100% LEN');
   });
 });
+
+describe('readShopJson — tabela obwodów ciała dla tego fasonu', () => {
+  /**
+   * The LPP shops publish, per product, the body each size is cut for:
+   * XS → bust 82 / waist 64 / hip 90, and so on. That is the input Paula is
+   * built on, and until now the size advice fell back to a generic Polish
+   * sizing table for every garment in the catalogue.
+   *
+   * The page also publishes a second table of the garment's own flat
+   * measurements — "Długość 126", "Szerokość w talii". Those are half-widths
+   * of the item, not circumferences of a person: reading 32 where the body
+   * table says 64 would halve every measurement and recommend a size two
+   * steps too small. The word "Obwód" is what separates them.
+   */
+  const fixture = (name: string) => readFileSync(resolve(__dirname, '__fixtures__', name), 'utf8');
+  const chart = readShopJson(fixture('reserved-sukienka-838kb-88x.html'), '838KB-88X').sizeChart;
+
+  it('czyta obwody ciała dla każdego rozmiaru', () => {
+    expect(chart?.slice(0, 3)).toEqual([
+      { size: 'XS', bust: 82, waist: 64, hips: 90 },
+      { size: 'S', bust: 86, waist: 68, hips: 94 },
+      { size: 'M', bust: 90, waist: 72, hips: 98 },
+    ]);
+  });
+
+  it('bierze tabelę obwodów, a nie wymiarów samego ubrania', () => {
+    // The garment table sits first in this fixture on purpose.
+    expect(chart?.[0].bust).toBe(82);
+    expect(chart?.[0].bust).not.toBe(48);
+  });
+
+  it('milczy, gdy sklep żadnej tabeli nie podaje', () => {
+    expect(readShopJson(fixture('hm-jeans-0941666089.html')).sizeChart).toBeUndefined();
+  });
+
+  it('pomija wiersze bez ani jednego obwodu', () => {
+    const html = `<script>return {"sizes":[
+      {"name":"XS","dimensions":[{"name":"Wzrost","size":"161","unit":"cm"}]},
+      {"name":"S","dimensions":[{"name":"Obwód talii","size":"68","unit":"cm"}]}]};</script>`;
+    expect(readShopJson(html).sizeChart).toEqual([{ size: 'S', waist: 68 }]);
+  });
+
+  it('pomija wymiar bez wartości zamiast zapisywać zero', () => {
+    // "Szerokość w talii" came through with an empty string on the live page.
+    const html = `<script>return {"sizes":[
+      {"name":"M","dimensions":[{"name":"Obwód talii","size":"","unit":"cm"},
+                                {"name":"Obwód bioder","size":"98","unit":"cm"}]}]};</script>`;
+    expect(readShopJson(html).sizeChart).toEqual([{ size: 'M', hips: 98 }]);
+  });
+});
+
+describe('readShopJson — obwód ciała a szerokość ubrania', () => {
+  /**
+   * The dangerous confusion, isolated. On the fixture the garment table
+   * happens to carry empty values for waist and hip, so dropping the "Obwód"
+   * check changed nothing and the guard looked untested. On a product where
+   * the shop fills them in, reading 32 where the body table says 64 halves
+   * every measurement and recommends a size two steps too small — with both
+   * numbers looking perfectly ordinary.
+   */
+  it('nie czyta szerokości ubrania jako obwodu ciała', () => {
+    const html = `<script>return {"sizes":[
+      {"name":"M","dimensions":[{"name":"Długość","size":"126","unit":"cm"},
+                                {"name":"Szerokość w talii","size":"32","unit":"cm"},
+                                {"name":"Szerokość w biodrach","size":"49","unit":"cm"}]}]};</script>`;
+    expect(readShopJson(html).sizeChart).toBeUndefined();
+  });
+
+  it('wybiera tabelę obwodów, gdy obie są wypełnione', () => {
+    const html = `<script>return {
+      "sizes":[{"name":"M","dimensions":[{"name":"Szerokość w talii","size":"32","unit":"cm"},
+                                         {"name":"Szerokość w biodrach","size":"49","unit":"cm"}]}],
+      "sizes":[{"name":"M","dimensions":[{"name":"Obwód talii","size":"64","unit":"cm"},
+                                         {"name":"Obwód bioder","size":"98","unit":"cm"}]}]};</script>`;
+    expect(readShopJson(html).sizeChart).toEqual([{ size: 'M', waist: 64, hips: 98 }]);
+  });
+});

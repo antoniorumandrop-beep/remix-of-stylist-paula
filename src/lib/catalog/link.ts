@@ -1,6 +1,6 @@
 import type { RawProduct } from './types';
 import { categoryFromName, normalizeCategory, parsePrice, slugify } from './feed';
-import { readShopJson } from './shopJson';
+import { readShopJson, type SizeChartRow } from './shopJson';
 
 /**
  * "Paste a link, get the product."
@@ -45,6 +45,7 @@ export interface LinkDraft {
   material?: string;
   sizes?: string;
   color?: string;
+  sizeChart?: SizeChartRow[];
   category?: string;
   availability?: string;
   provenance: Partial<Record<keyof Omit<LinkDraft, 'provenance' | 'warnings'>, FieldSource>>;
@@ -456,6 +457,7 @@ export function parseProductPage(html: string, url: string): LinkDraft {
   const shop = readShopJson(html, product ? asText(product.sku) : undefined);
   set('material', shop.material, 'shop-json');
   set('sizes', shop.sizes, 'shop-json');
+  set('sizeChart', shop.sizeChart, 'shop-json');
   if (shop.stock === 'out' && !draft.availability) {
     draft.warnings.push('every size the page lists reads as out of stock');
     set('availability', 'out-of-stock', 'shop-json');
@@ -563,6 +565,7 @@ export function draftToRawProduct(draft: LinkDraft, opts: DraftToRawOptions = {}
       description: draft.description,
       sizes: draft.sizes,
       color: draft.color,
+      sizeChart: draft.sizeChart,
       fetchedAt: opts.fetchedAt ?? new Date().toISOString(),
     },
   };

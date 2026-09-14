@@ -21,6 +21,7 @@ export function rawToProduct(raw: RawProduct): Product {
     material: raw.material,
     sizes: raw.sizes,
     color: raw.color,
+    sizeChart: raw.sizeChart,
     source: raw.source,
     fetchedAt: raw.fetchedAt,
   };

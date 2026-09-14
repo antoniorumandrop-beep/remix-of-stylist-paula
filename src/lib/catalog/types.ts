@@ -1,4 +1,7 @@
 import type { FitAttributes } from '@/lib/fit/attributes';
+import type { SizeChartRow } from './shopJson';
+
+export type { SizeChartRow };
 
 /**
  * Two-layer catalog model.
@@ -33,6 +36,11 @@ export interface RawProduct {
    * colour to a filter and two different facts from a shop.
    */
   color?: string;
+  /**
+   * The body each size is cut for, when the shop publishes it per garment.
+   * Circumferences in centimetres — never the item's flat measurements.
+   */
+  sizeChart?: SizeChartRow[];
   fetchedAt: string;
 }
 
@@ -69,6 +77,8 @@ export interface Product {
   sizes?: string;
   /** Colour as the shop names it; absent on the mock catalogue. */
   color?: string;
+  /** This garment's own size table, when the shop published one. */
+  sizeChart?: SizeChartRow[];
   source?: string;
   /** When the source handed us this record. Absent on the mock catalogue. */
   fetchedAt?: string;
