@@ -4,6 +4,7 @@ import type { Language } from '@/i18n/translations';
 import { translate } from '@/i18n/translations';
 import type { TranslationKey, TranslationArgs } from '@/i18n/translations';
 import { sortByFit } from '@/lib/fit/product';
+import { colorFromText, colorLabelPl } from '@/lib/catalog/color';
 
 /**
  * Paula's conversational brain.
@@ -87,13 +88,17 @@ const OCCASIONS: Record<string, string> = {
   'vacation': 'Vacation', 'travel': 'Travel', 'podróż': 'Travel', 'wakacj': 'Vacation',
 };
 
+/**
+ * Colours used to live in this table, and that was the bug: "czarna sukienka"
+ * produced a pill reading "Styl: Black" which `applyPills` then ignored, so
+ * she was shown an animal print and told her colour had been understood.
+ * Colour is now its own pill, read by `colorFromText`, and it filters.
+ */
 const STYLES: Record<string, string> = {
   'floral': 'Floral', 'kwiat': 'Floral', 'boho': 'Boho', 'minimalist': 'Minimalist',
   'elegan': 'Elegant', 'casual': 'Casual',
   'romantic': 'Romantic', 'romantyczn': 'Romantic',
-  'pastel': 'Pastels', 'black': 'Black', 'czarn': 'Black',
-  'white': 'White', 'biał': 'White', 'red': 'Red', 'czerwon': 'Red',
-  'navy': 'Navy', 'granatow': 'Navy', 'satin': 'Satin', 'satynow': 'Satin',
+  'pastel': 'Pastels', 'satin': 'Satin', 'satynow': 'Satin',
 };
 
 const CATEGORY_WORDS: Record<string, string> = {
@@ -124,6 +129,37 @@ function mergePills(current: ContextPill[], incoming: ContextPill[]): ContextPil
     else merged.push(pill);
   }
   return merged;
+}
+
+/**
+ * Colour asked for, colour known, and the gap between them.
+ *
+ * Of 57 products in the catalogue on 2026-09-14, eight named a colour
+ * anywhere: no feed here carries a colour field, so it is read from prose.
+ * Dropping everything unnamed would answer "nothing found" to nearly every
+ * colour question — and would be asserting that a dress whose colour nobody
+ * wrote down is not black.
+ *
+ * So the filter removes only what is known to be a **different** colour, and
+ * the matches are moved to the front. The reply says how many actually match,
+ * because a list that mostly consists of "we do not know" must not read as a
+ * list of black dresses.
+ *
+ * Applied after `sortByFit` rather than inside `applyPills`: colour is what
+ * she asked for out loud, and Fit Score is what we suggest, so colour decides
+ * the order and fit decides it within each group.
+ */
+function applyColor(products: Product[], color: string): { products: Product[]; matched: number } {
+  const wanted = colorFromText(color);
+  if (!wanted) return { products, matched: 0 };
+  const matches: Product[] = [];
+  const unknown: Product[] = [];
+  for (const p of products) {
+    const known = colorFromText(p.name, p.description);
+    if (known === wanted) matches.push(p);
+    else if (known === null) unknown.push(p);
+  }
+  return { products: [...matches, ...unknown], matched: matches.length };
 }
 
 function applyPills(catalog: Product[], pills: ContextPill[]): Product[] {
@@ -158,6 +194,10 @@ export const localStylist: StylistProvider = {
     if (occasion) found.push({ key: 'occasion', label: t('pillOccasion'), value: occasion });
     const style = firstMatch(lower, STYLES);
     if (style) found.push({ key: 'style', label: t('pillStyle'), value: style });
+    // Printed in Polish because the pill is visible and editable. Whatever she
+    // retypes goes back through `colorFromText`, so an edit keeps filtering.
+    const color = colorFromText(text);
+    if (color) found.push({ key: 'color', label: t('pillColor'), value: colorLabelPl(color) });
     const category = firstMatch(lower, CATEGORY_WORDS);
     if (category) found.push({ key: 'category', label: t('pillCategory'), value: category });
     const length = firstMatch(lower, LENGTHS);
@@ -170,9 +210,14 @@ export const localStylist: StylistProvider = {
     const hasEnoughContext = nextPills.length >= 2 || userTurns >= 3;
 
     if (hasEnoughContext) {
-      const products = sortByFit(applyPills(catalog, nextPills), profile).slice(0, 12);
+      const ranked = sortByFit(applyPills(catalog, nextPills), profile);
+      const colorPill = nextPills.find(p => p.key === 'color');
+      const byColor = colorPill ? applyColor(ranked, colorPill.value) : null;
+      const products = (byColor?.products ?? ranked).slice(0, 12);
       return {
-        reply: t('paulaFoundOptions', products.length),
+        reply: byColor
+          ? t('paulaFoundInColor', products.length, byColor.matched, colorPill!.value)
+          : t('paulaFoundOptions', products.length),
         chips: [
           { id: 'second-hand', label: t('chipSecondHand') },
           { id: 'free-shipping', label: t('chipFreeShipping') },

@@ -197,6 +197,7 @@ export const translations = {
     pillBudget: 'Budget',
     pillOccasion: 'Occasion',
     pillStyle: 'Style',
+    pillColor: 'Colour',
     pillCategory: 'Category',
     pillLength: 'Length',
     pillSource: 'Source',
@@ -204,6 +205,10 @@ export const translations = {
 
     // Paula responses
     paulaFoundOptions: (n: number) => `I found ${n} options that match your criteria. Take a look — I've sorted them by fit score. Want me to refine further?`,
+    paulaFoundInColor: (n: number, matched: number, color: string) =>
+      matched === n
+        ? `I found ${n} in ${color}, sorted by fit. Want me to refine further?`
+        : `I found ${n} options, ${matched} of them ${color}. The rest do not say what colour they are, so I left them in rather than ruling them out.`,
     paulaOccasionFound: "Got it! I'll search with your body profile in mind. Any preferences on style or length?",
     paulaCategoryFound: "Great choice! What's the occasion? That helps me pick the right style for you.",
     paulaGeneric: "I'll work on that! Any specific occasion or budget you have in mind?",
@@ -909,6 +914,7 @@ export const translations = {
     pillBudget: 'Budżet',
     pillOccasion: 'Okazja',
     pillStyle: 'Styl',
+    pillColor: 'Kolor',
     pillCategory: 'Kategoria',
     pillLength: 'Długość',
     pillSource: 'Źródło',
@@ -916,6 +922,13 @@ export const translations = {
 
     // Paula responses
     paulaFoundOptions: (n: number) => `Znalazłam ${n} opcji pasujących do Twoich kryteriów. Posortowałam je według dopasowania. Chcesz zawęzić wyniki?`,
+    // Kolor po dwukropku, w mianowniku: nazwa przychodzi z `colorLabelPl`, a
+    // wstawiona w zdanie wymagałaby odmiany przez przypadki dla osiemnastu
+    // przymiotników.
+    paulaFoundInColor: (n: number, matched: number, color: string) =>
+      matched === n
+        ? `Wszystkie ${n} są w kolorze: ${color}. Posortowałam je według dopasowania.`
+        : `Znalazłam ${n} ${plPlural(n, 'opcję', 'opcje', 'opcji')}, w tym ${matched} w kolorze: ${color}. Pozostałe nie podają koloru, więc ich nie odrzuciłam.`,
     paulaOccasionFound: 'Rozumiem! Wyszukam z uwzględnieniem Twojej sylwetki. Jakieś preferencje co do stylu lub długości?',
     paulaCategoryFound: 'Świetny wybór! Na jaką okazję? To pomoże dobrać odpowiedni styl.',
     paulaGeneric: 'Zajmę się tym! Masz konkretną okazję lub budżet?',

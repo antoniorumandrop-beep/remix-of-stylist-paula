@@ -77,12 +77,14 @@ describe('localStylist — co wyłapuje ze zdania', () => {
   });
 
   it('reads the style through Polish inflection too', async () => {
+    // Colours used to be listed here as styles ("czarna sukienka" → Style:
+    // Black) and were then ignored by the filter. They are their own pill now
+    // and they filter — see the "kolor" block below.
     const cases: [string, string][] = [
-      ['czarna sukienka', 'Black'],
-      ['w czarnym', 'Black'],
       ['coś eleganckiego', 'Elegant'],
       ['sukienka w kwiaty', 'Floral'],
       ['satynowa sukienka', 'Satin'],
+      ['w pastelach', 'Pastels'],
     ];
     for (const [phrase, expected] of cases) {
       expect(pill((await localStylist.respond(ask(phrase))).pills, 'style')?.value, phrase).toBe(expected);
@@ -179,5 +181,59 @@ describe('localStylist — jak prowadzi rozmowę', () => {
       const { reply } = await localStylist.respond(ask(phrase));
       expect(reply, phrase).not.toMatch(banned);
     }
+  });
+});
+
+describe('localStylist — kolor', () => {
+  /**
+   * Colour is the one criterion Paula used to recognise, display and then
+   * ignore. Asking for "czarna sukienka midi do 150 zł" produced a pill
+   * reading "Styl: Black" and a first result in an animal print, because
+   * `applyPills` filtered on budget, category and second-hand only.
+   *
+   * What makes colour different from the rest is how little of it the catalogue
+   * knows: on 2026-09-14, 8 of 57 products named a colour anywhere. A filter
+   * that dropped the other 49 would answer "nothing found" to almost every
+   * question, which is a worse lie than showing them.
+   */
+  const colored: Product[] = [
+    product('czarna-sukienka', 100, 'dresses', { name: 'Czarna sukienka midi' }),
+    product('czerwona-sukienka', 100, 'dresses', { name: 'Czerwona sukienka midi' }),
+    product('sukienka-bez-koloru', 100, 'dresses', { name: 'Lniana sukienka midi' }),
+  ];
+
+  it('wyłapuje kolor jako kolor, nie jako styl', async () => {
+    const { pills } = await localStylist.respond(ask('czarna sukienka', { catalog: colored }));
+    expect(pill(pills, 'color')?.value).toBe('czarny');
+    expect(pill(pills, 'style')).toBeUndefined();
+  });
+
+  it('odrzuca rzeczy w innym kolorze', async () => {
+    const { products } = await localStylist.respond(ask('czarna sukienka do 200 zł', { catalog: colored }));
+    expect(products!.map(p => p.name)).not.toContain('Czerwona sukienka midi');
+  });
+
+  it('zostawia rzeczy, o których kolorze nic nie wiadomo', async () => {
+    // "Lniana sukienka midi" is a real Reserved product: brown, and the name
+    // does not say so. Dropping it would be claiming it is not black.
+    const { products } = await localStylist.respond(ask('czarna sukienka do 200 zł', { catalog: colored }));
+    expect(products!.map(p => p.name)).toContain('Lniana sukienka midi');
+  });
+
+  it('pokazuje trafione w kolorze przed tymi bez koloru', async () => {
+    const { products } = await localStylist.respond(ask('czarna sukienka do 200 zł', { catalog: colored }));
+    expect(products![0].name).toBe('Czarna sukienka midi');
+  });
+
+  it('liczy w odpowiedzi, ile rzeczy jest w tym kolorze', async () => {
+    // The count is the honest part: two results, one of them actually black.
+    const { reply } = await localStylist.respond(ask('czarna sukienka do 200 zł', { catalog: colored }));
+    expect(reply).toContain('1');
+    expect(reply.toLowerCase()).toContain('czarny');
+  });
+
+  it('nie dokłada noty o kolorze, gdy o kolor nie pytała', async () => {
+    const { reply } = await localStylist.respond(ask('sukienka do 200 zł', { catalog: colored }));
+    expect(reply.toLowerCase()).not.toContain('czarny');
   });
 });
