@@ -31,7 +31,13 @@ export function FitBadge({ score, confidence, size = 'sm' }: FitBadgeProps) {
       role="img"
       aria-label={approximate ? t('fitBadgeApproximateLabel', score) : `${t('fit')} ${score}%`}
       className={`inline-flex items-center font-medium rounded-full ${
-        approximate ? 'border border-foreground/25 text-foreground' : 'bg-foreground text-background'
+        // Filled black reads as certain, so the thin version drops the fill —
+        // but it sits on top of a product photo, and an outline alone
+        // disappears over a dark garment. Same treated background the
+        // "second-hand" marker uses two elements over.
+        approximate
+          ? 'bg-background/85 backdrop-blur-sm border border-foreground/30 text-foreground'
+          : 'bg-foreground text-background'
       } ${size === 'sm' ? 'text-[11px] px-2.5 py-1' : 'text-sm px-3 py-1.5'}`}
     >
       {t('fit')} {approximate ? '~' : ''}{score}%
