@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Search, Heart, User, Bell, Globe, Sparkles, Shirt } from 'lucide-react';
+import { Home, Search, Heart, User, Bell, Globe, Camera, Shirt } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 
 export function AppShell() {
@@ -11,7 +11,10 @@ export function AppShell() {
   const tabs = [
     { path: '/app/search', icon: Search, label: t('search') },
     { path: '/app/for-you', icon: Home, label: t('forYou') },
-    { path: '/app/build-your-style', icon: Sparkles, label: t('buildYourStyle') },
+    // Fits take this slot, and "Twój styl" keeps its address without a way in
+    // from here: it renders "coming soon" and nothing else, while this is the
+    // screen Gabriela has to be able to find in the preview.
+    { path: '/app/fits', icon: Camera, label: t('fits') },
     { path: '/app/fitting-room', icon: Shirt, label: t('fittingRoom') },
     { path: '/app/saved', icon: Heart, label: t('saved') },
     { path: '/app/alerts', icon: Bell, label: t('alerts') },

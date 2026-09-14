@@ -30,6 +30,9 @@ const ProductDetail = lazy(() => import("./pages/ProductDetail"));
 const CollectionDetail = lazy(() => import("./pages/CollectionDetail"));
 const Alerts = lazy(() => import("./pages/Alerts"));
 const BuildYourStyle = lazy(() => import("./pages/BuildYourStyle"));
+const Fits = lazy(() => import("./pages/Fits"));
+const FitDetail = lazy(() => import("./pages/FitDetail"));
+const FitEditor = lazy(() => import("./pages/FitEditor"));
 const FittingRoom = lazy(() => import("./pages/FittingRoom"));
 const ImportProducts = lazy(() => import("./pages/ImportProducts"));
 const AddProduct = lazy(() => import("./pages/AddProduct"));
@@ -69,6 +72,12 @@ const App = () => (
                   <Route path="alerts" element={<Alerts />} />
                   <Route path="add" element={<AddProduct />} />
                   <Route path="build-your-style" element={<BuildYourStyle />} />
+                  {/* "new" before ":id" — otherwise /app/fits/new opens the
+                      detail screen looking for a fit called "new". */}
+                  <Route path="fits" element={<Fits />} />
+                  <Route path="fits/new" element={<FitEditor />} />
+                  <Route path="fits/:id" element={<FitDetail />} />
+                  <Route path="fits/:id/edit" element={<FitEditor />} />
                   <Route path="fitting-room" element={<FittingRoom />} />
                   <Route path="how-it-works" element={<HowItWorks />} />
                 </Route>

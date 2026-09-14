@@ -218,13 +218,23 @@ export default function FittingRoom() {
 
       {tab === 'outfits' && (
         <section>
-          <div className="flex justify-end mb-4">
+          {/* Two ways in, and the first one is the real one: a fit is photos
+              plus what she says she has on, and it does not need her to own
+              anything. The builder below combines things already in the
+              wardrobe and cannot hold a photo — it stays for that. */}
+          <div className="flex justify-end gap-2 mb-4">
+            <button
+              onClick={() => navigate('/app/fits/new')}
+              className="flex items-center gap-2 px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium"
+            >
+              <Plus className="w-4 h-4" />{t('addFit')}
+            </button>
             <button
               onClick={() => { setBuilding(true); setPicked([]); setOutfitName(''); }}
               disabled={items.length < 2}
-              className="flex items-center gap-2 px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium disabled:opacity-40"
+              className="px-4 py-2 rounded-full border border-border text-sm disabled:opacity-40"
             >
-              <Plus className="w-4 h-4" />{t('createOutfit')}
+              {t('createOutfit')}
             </button>
           </div>
 
