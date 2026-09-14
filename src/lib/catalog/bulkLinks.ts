@@ -2,7 +2,17 @@ import { fetchProductDraft } from './linkFetch';
 import type { LinkDraft } from './link';
 import type { FetchErrorCode } from './fetchErrors';
 
-export const BULK_LIMIT = 20;
+/**
+ * Raised from 20 to 100 on 2026-09-14: twenty was a guess, and the first real
+ * batch Antonio had ready was a hundred links.
+ *
+ * Nothing about the pacing changes — `fetchDrafts` still reads one page at a
+ * time with a pause between, so a hundred links is a hundred polite requests
+ * spread over several minutes, not a crawl. The cost of the higher ceiling is
+ * a longer wait with no partial result, which is why the button reports
+ * progress rather than just spinning.
+ */
+export const BULK_LIMIT = 100;
 
 export interface BulkRow {
   url: string;

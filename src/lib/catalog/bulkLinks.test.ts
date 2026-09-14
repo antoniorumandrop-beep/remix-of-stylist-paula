@@ -27,7 +27,10 @@ describe('lista linków', () => {
   });
 
   it('trzyma się limitu', () => {
-    const many = Array.from({ length: 40 }, (_, i) => `https://a.pl/${i}`).join('\n');
+    // Deliberately derived from the limit rather than hard-coded: the ceiling
+    // moved from 20 to 100 once there was a real batch that size, and a fixed
+    // 40 quietly stopped testing anything.
+    const many = Array.from({ length: BULK_LIMIT * 2 }, (_, i) => `https://a.pl/${i}`).join('\n');
     expect(parseUrlList(many)).toHaveLength(BULK_LIMIT);
   });
 });

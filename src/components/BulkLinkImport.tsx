@@ -9,7 +9,7 @@ import { fetchErrorKey } from '@/lib/catalog/fetchErrors';
 import { ProductImage } from './ProductImage';
 
 /**
- * Twenty links at once, because filling a catalogue one paste at a time is
+ * A hundred links at once, because filling a catalogue one paste at a time is
  * how a catalogue does not get filled.
  *
  * The single-link screen (`LinkImport`) stays: it shows where every field came
@@ -65,7 +65,7 @@ export function BulkLinkImport({ onAdd }: { onAdd: (products: RawProduct[]) => v
         <ListPlus className="w-4 h-4" />
         <h2 className="text-sm font-medium">{t('bulkTitle')}</h2>
       </div>
-      <p className="text-xs text-muted-foreground mb-4">{t('bulkDesc')}</p>
+      <p className="text-xs text-muted-foreground mb-4">{t('bulkDesc', BULK_LIMIT)}</p>
 
       <textarea
         value={text}
