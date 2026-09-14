@@ -26,6 +26,13 @@ export interface RawProduct {
   description?: string;
   /** Sizes the brand offers, as given: "XS, S, M" or "34-42". */
   sizes?: string;
+  /**
+   * Colour exactly as the shop names it: "Granatowy", "Jasnoniebieski denim",
+   * "brązowy". Kept raw, like every other `raw` field, and normalised at the
+   * point of use by `colorFromText` — "czekoladowy" and "brązowy" are the same
+   * colour to a filter and two different facts from a shop.
+   */
+  color?: string;
   fetchedAt: string;
 }
 
@@ -60,6 +67,8 @@ export interface Product {
   description?: string;
   material?: string;
   sizes?: string;
+  /** Colour as the shop names it; absent on the mock catalogue. */
+  color?: string;
   source?: string;
   /** When the source handed us this record. Absent on the mock catalogue. */
   fetchedAt?: string;

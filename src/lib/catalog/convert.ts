@@ -20,6 +20,7 @@ export function rawToProduct(raw: RawProduct): Product {
     description: raw.description,
     material: raw.material,
     sizes: raw.sizes,
+    color: raw.color,
     source: raw.source,
     fetchedAt: raw.fetchedAt,
   };

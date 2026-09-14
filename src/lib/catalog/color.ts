@@ -58,6 +58,9 @@ const COLOR_STEMS: Record<string, ColorId> = {
  */
 const NOT_COLORS = ['szarf', 'zloz', 'zlot-'];
 
+/** Shade prefixes shops compound onto a colour: "jasnoniebieski", "ciemnozielony". */
+const PREFIXES = ['jasno', 'ciemno', 'intensywnie', 'glęboko', 'gleboko'];
+
 const ACCENTS: Record<string, string> = {
   ą: 'a', ć: 'c', ę: 'e', ł: 'l', ń: 'n', ó: 'o', ś: 's', ź: 'z', ż: 'z',
 };
@@ -89,9 +92,17 @@ export function colorLabelPl(id: string): string {
 export function colorFromText(...texts: (string | undefined)[]): ColorId | null {
   for (const text of texts) {
     if (!text) continue;
-    for (const word of deaccent(text).split(/[^a-z0-9]+/)) {
-      if (!word) continue;
-      if (NOT_COLORS.some(bad => word.startsWith(bad))) continue;
+    for (const raw of deaccent(text).split(/[^a-z0-9]+/)) {
+      if (!raw) continue;
+      if (NOT_COLORS.some(bad => raw.startsWith(bad))) continue;
+      // Shops compound the shade onto the colour: H&M's variant for one jeans
+      // link is "Jasnoniebieski denim" and Zara writes "Ciemnozielony". The
+      // stem is there, just not at the front. Stripped only when something
+      // follows — "jasne spodnie" names no colour at all.
+      const word = PREFIXES.reduce(
+        (w, prefix) => (w.startsWith(prefix) && w.length > prefix.length ? w.slice(prefix.length) : w),
+        raw,
+      );
       for (const [stem, id] of Object.entries(COLOR_STEMS)) {
         if (word.startsWith(stem)) return id;
       }

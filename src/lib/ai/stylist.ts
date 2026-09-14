@@ -155,7 +155,9 @@ function applyColor(products: Product[], color: string): { products: Product[]; 
   const matches: Product[] = [];
   const unknown: Product[] = [];
   for (const p of products) {
-    const known = colorFromText(p.name, p.description);
+    // The shop's own colour first: it is a stated fact, while the name and the
+    // description are prose we are reading between the lines of.
+    const known = colorFromText(p.color, p.name, p.description);
     if (known === wanted) matches.push(p);
     else if (known === null) unknown.push(p);
   }

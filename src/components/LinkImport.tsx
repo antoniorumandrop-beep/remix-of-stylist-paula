@@ -134,6 +134,7 @@ export function LinkImport({ onAdd }: { onAdd: (product: RawProduct) => void }) 
               />
               <Field label={t('linkFieldSizes')} value={draft.sizes} source={draft.provenance.sizes} />
               <Field label={t('linkFieldMaterial')} value={draft.material} source={draft.provenance.material} />
+              <Field label={t('linkFieldColor')} value={draft.color} source={draft.provenance.color} />
               <Field label={t('linkFieldImage')} value={draft.imageUrl} source={draft.provenance.imageUrl} />
             </div>
           </div>

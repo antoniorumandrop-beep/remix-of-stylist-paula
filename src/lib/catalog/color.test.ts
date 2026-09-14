@@ -87,3 +87,19 @@ describe('colorLabelPl', () => {
     for (const id of COLOR_IDS) expect(colorFromText(colorLabelPl(id))).toBe(id);
   });
 });
+
+describe('colorFromText — złożenia, którymi sklepy nazywają kolory', () => {
+  it('czyta kolor przez przedrostek jasności', () => {
+    // H&M's variant for this link is "Jasnoniebieski denim" and Zara writes
+    // "Ciemnozielony". Neither word starts with the colour stem.
+    expect(colorFromText('Jasnoniebieski denim')).toBe('blue');
+    expect(colorFromText('Ciemnozielony sweter')).toBe('green');
+    expect(colorFromText('jasnoszary top')).toBe('grey');
+    expect(colorFromText('Ciemnogranatowa sukienka')).toBe('navy');
+  });
+
+  it('nie uznaje samego przedrostka za kolor', () => {
+    expect(colorFromText('Jasne spodnie slim')).toBeNull();
+    expect(colorFromText('Ciemna sukienka')).toBeNull();
+  });
+});

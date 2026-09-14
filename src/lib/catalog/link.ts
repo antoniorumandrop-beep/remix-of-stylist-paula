@@ -44,6 +44,7 @@ export interface LinkDraft {
   description?: string;
   material?: string;
   sizes?: string;
+  color?: string;
   category?: string;
   availability?: string;
   provenance: Partial<Record<keyof Omit<LinkDraft, 'provenance' | 'warnings'>, FieldSource>>;
@@ -350,6 +351,12 @@ function sizesFrom(offers: OfferLike[]): { sizes?: string; stock: 'unknown' | 'i
  * The parser
  * ------------------------------------------------------------------ */
 
+/** `"… midi Kolor brązowy - RESERVED - 838KB-88X"` → `"brązowy"`. */
+function colorFromTitle(title: string | undefined): string | undefined {
+  const match = title?.match(/\bkolor\s+([^-|–]+)/i);
+  return match?.[1].trim() || undefined;
+}
+
 /** Brand of last resort: `www.sklep-marki.pl` → `Sklep Marki`. */
 function brandFromHost(url: string): string | undefined {
   try {
@@ -405,6 +412,12 @@ export function parseProductPage(html: string, url: string): LinkDraft {
 
     set('name', asText(product.name), 'json-ld');
     set('brand', asText(product.brand ?? product.manufacturer), 'json-ld');
+    // The variant first, then the group. H&M's `hasVariant` lists every colour
+    // of the style and the first is usually not the one the link points at —
+    // the same trap that used to show the wrong photo. Zara repeats the colour
+    // in both places, so either order gives it the right answer.
+    set('color', variants.map(v => asText(v.color)).find(Boolean), 'json-ld');
+    set('color', asText(product.color), 'json-ld');
     set('description', asText(product.description), 'json-ld');
     // Percentages first, the bare fibre list second.
     set('material', compositionFrom(product) ?? asText(product.material), 'json-ld');
@@ -455,6 +468,10 @@ export function parseProductPage(html: string, url: string): LinkDraft {
   const ogPrice = parsePrice(readMeta(html, 'product:price:amount') ?? '');
   if (ogPrice !== null) set('price', ogPrice, 'open-graph');
   set('currency', readMeta(html, 'product:price:currency'), 'open-graph');
+  // The five LPP shops put the colour nowhere else: their page title reads
+  // "Lniana sukienka midi Kolor brązowy - RESERVED - 838KB-88X". Read only up
+  // to the dash, so the brand and the SKU stay out of it.
+  set('color', colorFromTitle(readMeta(html, 'og:title')), 'open-graph');
   if (!draft.imageUrl) {
     const og = readMeta(html, 'og:image') ?? readMeta(html, 'twitter:image');
     if (og) takeImage([og], 'open-graph');
@@ -545,6 +562,7 @@ export function draftToRawProduct(draft: LinkDraft, opts: DraftToRawOptions = {}
       material: draft.material,
       description: draft.description,
       sizes: draft.sizes,
+      color: draft.color,
       fetchedAt: opts.fetchedAt ?? new Date().toISOString(),
     },
   };

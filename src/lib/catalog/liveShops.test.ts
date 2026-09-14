@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseProductPage } from './link';
 import { parseComposition, naturalShare } from './composition';
+import { colorFromText } from './color';
 
 /**
  * Two real shops, captured from their live pages.
@@ -152,5 +153,35 @@ describe('Sinsay — na stronie są też rozmiary produktów polecanych', () => 
   it('czyta skład i kategorię z nazwy', () => {
     expect(draft.material).toBe('60% BAWEŁNA, 40% POLIESTER');
     expect(draft.category).toBe('bottoms');
+  });
+});
+
+describe('kolor — każdy sklep trzyma go gdzie indziej', () => {
+  it('H&M: bierze kolor wariantu, na który wskazuje link', () => {
+    // `hasVariant` opens with "Niebieski denim", a different colour with its
+    // own product page. Taking the first would name the wrong jeans.
+    const draft = parseProductPage(fixture('hm-jeans-0941666089.html'), HM_URL);
+    expect(draft.color).toBe('Jasnoniebieski denim');
+    expect(draft.provenance.color).toBe('json-ld');
+  });
+
+  it('Zara: bierze kolor z JSON-LD', () => {
+    const draft = parseProductPage(fixture('zara-spodnie-p02017305.html'), ZARA_URL);
+    expect(draft.color).toBe('Granatowy');
+  });
+
+  it('Reserved: bierze kolor z tytułu strony, bo nigdzie indziej go nie ma', () => {
+    const draft = parseProductPage(fixture('reserved-sukienka-838kb-88x.html'), RESERVED_URL);
+    expect(draft.color).toBe('brązowy');
+    expect(draft.provenance.color).toBe('open-graph');
+  });
+
+  it('a każdy z nich przechodzi przez nasz słownik kolorów', () => {
+    const hm = parseProductPage(fixture('hm-jeans-0941666089.html'), HM_URL);
+    const zara = parseProductPage(fixture('zara-spodnie-p02017305.html'), ZARA_URL);
+    const reserved = parseProductPage(fixture('reserved-sukienka-838kb-88x.html'), RESERVED_URL);
+    expect(colorFromText(hm.color)).toBe('blue');
+    expect(colorFromText(zara.color)).toBe('navy');
+    expect(colorFromText(reserved.color)).toBe('brown');
   });
 });
