@@ -4,6 +4,7 @@ import { Users } from 'lucide-react';
 import { getSimilarBodiesBought } from '@/data/mockData';
 import { ProductCard } from '@/components/ProductCard';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { useCatalog } from '@/lib/catalog/useCatalog';
 
 /**
  * "What people with proportions like yours added to their wardrobe."
@@ -29,12 +30,19 @@ export function SimilarBodiesRow({
 }) {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const { products } = useCatalog();
 
   // Computed here rather than at module load: it used to be frozen at import
   // time, before the catalogue existed.
+  //
+  // Kept to what Paula may recommend, which is where the mock catalogue stops
+  // once real clothes arrive — see `useCatalog`. The row was the last place
+  // showing the pictureless demo rows, eight at a time, under a heading about
+  // what other women bought.
+  const shown = useMemo(() => new Set(products.map(p => p.id)), [products]);
   const rows = useMemo(
-    () => getSimilarBodiesBought(excludeProductId, 75, limit),
-    [excludeProductId, limit],
+    () => getSimilarBodiesBought(excludeProductId, 75, limit).filter(r => shown.has(r.product.id)),
+    [excludeProductId, limit, shown],
   );
 
   if (rows.length === 0) return null;

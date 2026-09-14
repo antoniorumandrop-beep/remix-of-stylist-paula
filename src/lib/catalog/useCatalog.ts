@@ -6,6 +6,33 @@ import type { Product, RawProduct } from './types';
 const EMPTY: Product[] = [];
 
 /**
+ * Drop the mock catalogue once there are real products.
+ *
+ * Its thirty rows carry no photo, English names and a `fitScore` nobody can
+ * derive from anything. Standing among imported garments that have their own
+ * picture, composition and size chart, they read as broken products, and
+ * Antonio asked for them gone on 2026-09-14.
+ *
+ * A filter rather than a delete, because that same mock catalogue is the
+ * fixture the rest of the suite runs on — emptying the array failed fifteen
+ * tests across six files, half of them another session's. So the rule is
+ * stated the way it is meant: filler exists to stop an empty app looking
+ * broken, and stops the moment there is anything real to show.
+ *
+ * Keyed on `source` and not on the missing photo. A brand that fills the feed
+ * spreadsheet without an `image_url` column still gets a real product, and
+ * hiding it would be a silent no-show for the small brands Paula is for — the
+ * e2e import test is what caught that.
+ *
+ * Only the recommendation channel is filtered. `byId` keeps everything, so a
+ * piece already sitting in a wardrobe or a collection still opens.
+ */
+function withoutMockCatalogue(products: Product[]): Product[] {
+  const real = products.filter(p => p.source);
+  return real.length > 0 ? real : products;
+}
+
+/**
  * Two different questions, deliberately answered differently.
  *
  * `products` is the shared channel: what Paula may recommend, search and put
@@ -18,11 +45,12 @@ const EMPTY: Product[] = [];
 export function useCatalog() {
   const query = useQuery({ queryKey: qk.catalog, queryFn: () => backend.catalog.list() });
   const mine = useQuery({ queryKey: qk.catalogUser, queryFn: () => backend.catalog.listUserProducts() });
-  const products = query.data ?? EMPTY;
+  const all = query.data ?? EMPTY;
   const userProducts = mine.data ?? EMPTY;
+  const products = useMemo(() => withoutMockCatalogue(all), [all]);
   const byId = useMemo(
-    () => new Map([...products, ...userProducts].map(p => [p.id, p])),
-    [products, userProducts],
+    () => new Map([...all, ...userProducts].map(p => [p.id, p])),
+    [all, userProducts],
   );
   return { products, userProducts, byId, loading: query.isPending };
 }

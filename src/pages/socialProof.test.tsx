@@ -8,6 +8,7 @@ import { createQueryClient } from '@/lib/backend/queryClient';
 import { LanguageProvider } from '@/i18n/LanguageContext';
 import ProductDetail from './ProductDetail';
 import ForYou from './ForYou';
+import { backend } from '@/lib/backend';
 
 /**
  * Invented data about other people has to say that it is invented.
@@ -81,6 +82,22 @@ describe('wymyślone dane o innych osobach', () => {
     // fixtures unlabelled — the row existed twice, in two copies of the markup.
     renderFeed();
     expect(await screen.findByText(/Nikt jeszcze niczego przez Paulę nie kupił/)).toBeInTheDocument();
+  });
+
+  it('znika, gdy katalog ma prawdziwe ubrania', async () => {
+    // The fixtures behind this row are the mock catalogue, and `useCatalog`
+    // stops offering those the moment anything real is imported. A row headed
+    // "what women like you bought" has nothing to stand on then, so it goes
+    // rather than carrying eight pictureless demo rows into a real catalogue.
+    await backend.catalog.importRaw([{
+      id: 'link:z', source: 'link', externalId: 'z', name: 'Dwurzędowa marynarka',
+      brand: 'Reserved', price: 229.99, currency: 'PLN', category: 'outerwear',
+      imageUrl: 'https://static.reserved.com/1.jpg', fetchedAt: 'now',
+    }]);
+    renderFeed();
+    await screen.findByText('Dwurzędowa marynarka');
+    expect(screen.queryByText(/Nikt jeszcze niczego przez Paulę nie kupił/)).not.toBeInTheDocument();
+    await backend.catalog.clearImported();
   });
 });
 
