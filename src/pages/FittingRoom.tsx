@@ -171,7 +171,7 @@ export default function FittingRoom() {
                       <p className="text-sm truncate">{product!.name}</p>
                       <div className="flex items-center justify-between mt-1.5 text-xs text-muted-foreground">
                         <span>{timesWorn} {t('timesWorn').toLowerCase()}</span>
-                        {cpw !== null && <span>{cpw} PLN / wear</span>}
+                        {cpw !== null && <span>{t('pricePerWear', cpw)}</span>}
                       </div>
                       <div className="flex items-center gap-1.5 mt-2">
                         <button

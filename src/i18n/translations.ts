@@ -31,6 +31,7 @@ export const translations = {
     timesWorn: 'Times worn',
     markAsWorn: '+1 wear',
     costPerWear: 'Cost / wear',
+    pricePerWear: (n: number) => `${n} PLN / wear`,
     emptyWardrobe: 'Your wardrobe is empty. Tap "I bought this" on a product page to start.',
     emptyOutfits: 'No outfits yet. Combine items from your wardrobe into looks.',
 
@@ -742,6 +743,7 @@ export const translations = {
     timesWorn: 'Noszone',
     markAsWorn: '+1 noszenie',
     costPerWear: 'Koszt / noszenie',
+    pricePerWear: (n: number) => `${n} PLN za noszenie`,
     emptyWardrobe: 'Szafa jest pusta. Kliknij "Kupiłam to" na karcie produktu, by dodać.',
     emptyOutfits: 'Brak stylizacji. Połącz rzeczy z szafy w looki.',
 
