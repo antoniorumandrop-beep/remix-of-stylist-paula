@@ -46,6 +46,17 @@ export function normalizeCategory(value: string): string | null {
 }
 
 /**
+ * Relational adjectives, not garments.
+ *
+ * Polish builds "made of X" with -ow-, so "jeansowa kurtka" is a denim jacket
+ * and "dzinsowa spodnica" a denim skirt, while the bare noun "jeansy" really
+ * is trousers. Without this, the fabric outvoted the garment: "Jeansowa
+ * kurtka" imported as trousers on 2026-09-14, because "jeans" and "kurtk" are
+ * both five letters and the table's order broke the tie.
+ */
+const FABRIC_ADJECTIVES = ['jeansow', 'dzinsow'];
+
+/**
  * Stems, not dictionary forms, for the same reason the stylist's keyword
  * tables are stems: Polish inflects, and nobody names a product "sukienka" —
  * they name it "Żakardowa sukienka maxi w kwiaty".
@@ -96,6 +107,11 @@ function deaccent(text: string): string {
  * It also settles "spodnica" written without its accent, which contains
  * "spodni" whole: "spodnic" is longer, so a skirt stays a skirt.
  *
+ * When two stems of the same length point at different categories, nothing
+ * decides between them and we say so: no guess, and the human picks from the
+ * dropdown. Falling back to the table's order would be the very thing the
+ * paragraph above rejects.
+ *
  * This is a guess from prose and it is recorded as one — `parseProductPage`
  * marks the field `guess`, and the screen asks a human to confirm it before
  * the product is imported.
@@ -104,13 +120,20 @@ export function categoryFromName(name: string | undefined): string | null {
   if (!name) return null;
   const words = deaccent(name).split(/[^a-z0-9-]+/).filter(Boolean);
   let best: { category: string; length: number } | null = null;
+  let tied = false;
   for (const word of words) {
+    if (FABRIC_ADJECTIVES.some(adjective => word.startsWith(adjective))) continue;
     for (const [stem, category] of Object.entries(CATEGORY_STEMS)) {
       if (!word.startsWith(stem)) continue;
-      if (!best || stem.length > best.length) best = { category, length: stem.length };
+      if (!best || stem.length > best.length) {
+        best = { category, length: stem.length };
+        tied = false;
+      } else if (stem.length === best.length && category !== best.category) {
+        tied = true;
+      }
     }
   }
-  return best?.category ?? null;
+  return tied ? null : best?.category ?? null;
 }
 
 /** "129,99 zł" → 129.99; "1 299 PLN" → 1299; "abc" → null */

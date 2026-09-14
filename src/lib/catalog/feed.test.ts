@@ -125,6 +125,29 @@ describe('znaki niewidzialne w parserze', () => {
 });
 
 describe('categoryFromName — kategoria wyczytana z nazwy produktu', () => {
+  it('nie pozwala tkaninie przegłosować ubrania', () => {
+    // "jeansowa" is "made of denim"; the garment is the jacket. Both stems are
+    // five letters, so before this the table's order decided and a jacket
+    // imported as trousers.
+    expect(categoryFromName('Jeansowa kurtka')).toBe('outerwear');
+    expect(categoryFromName('Dżinsowa spódnica midi')).toBe('skirts');
+    // The bare noun is still trousers.
+    expect(categoryFromName('Jeansy mom fit')).toBe('bottoms');
+  });
+
+  it('nie zgaduje, gdy dwa równe rdzenie wskazują co innego', () => {
+    // "golf" (tops) and "buty" (shoes) are both four letters and neither is
+    // the head noun of the other. No answer is the honest answer.
+    expect(categoryFromName('Golf buty')).toBeNull();
+  });
+
+  it('dłuższy rdzeń rozstrzyga remis, który padł wcześniej', () => {
+    // Constructed rather than found: real ties are rare, and this is the one
+    // shape that tells "no answer" apart from "the longest stem wins". A tie
+    // that stays unresolved would swallow the sukienka standing right there.
+    expect(categoryFromName('Golf buty sukienka')).toBe('dresses');
+  });
+
   /**
    * None of the five LPP shops publishes a category the parser can map, so
    * every product imported from a link arrived with an empty one and a human
