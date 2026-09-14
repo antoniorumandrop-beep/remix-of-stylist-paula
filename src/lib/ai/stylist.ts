@@ -188,6 +188,61 @@ function applyColor(products: Product[], color: string): Ranked {
   return rankByKnown(products, wanted, p => colorFromText(p.color, p.name, p.description));
 }
 
+/**
+ * Ranking without dropping, for attributes a garment can have several of.
+ *
+ * Colour and length are exclusive: knowing a skirt is mini says it is not
+ * maxi. Style is not — a satin dress can be floral, and a dress whose page
+ * happens to say "satynowa" has not thereby said it is not boho. So nothing is
+ * ever removed here; matches simply move to the front and the reply says how
+ * many there were.
+ */
+function rankByMatch(products: Product[], isMatch: (product: Product) => boolean): Ranked {
+  const matches: Product[] = [];
+  const rest: Product[] = [];
+  for (const p of products) (isMatch(p) ? matches : rest).push(p);
+  return { products: [...matches, ...rest], matched: new Set(matches.map(p => p.id)) };
+}
+
+/**
+ * The words a shop actually writes when a garment is in one of these styles.
+ *
+ * Stems, like every other Polish table here, and all of them free of Polish
+ * diacritics, so lowercasing the product text is enough — a stem that needs an
+ * ogonek would have to strip accents on both sides, and none does.
+ *
+ * Five of the eight styles Paula recognises have no such word — nobody writes "minimalistyczna" on a product
+ * page — and that is the honest finding rather than a gap to paper over: for
+ * those, nothing matches, and the reply says the catalogue does not describe
+ * style rather than pretending the results were picked for it.
+ */
+const STYLE_STEMS: Record<string, string[]> = {
+  'Floral': ['kwiat', 'floral', 'kwiec'],
+  'Satin': ['satyn', 'satin'],
+  'Boho': ['boho'],
+  'Pastels': ['pastel'],
+  'Romantic': ['romantyczn', 'romantic'],
+  'Elegant': ['elegan'],
+  'Minimalist': ['minimalist'],
+  'Casual': ['casual', 'codzienn'],
+};
+
+/**
+ * Style, the third pill that was shown and thrown away.
+ *
+ * Read from the product's own words — its name, description and composition —
+ * because nothing in the catalogue records a style as a field. Never drops
+ * anything: see `rankByMatch`.
+ */
+function applyStyle(products: Product[], style: string): Ranked {
+  const stems = STYLE_STEMS[style];
+  if (!stems) return { products, matched: new Set<string>() };
+  return rankByMatch(products, p => {
+    const text = [p.name, p.description, p.material].filter(Boolean).join(' ').toLowerCase();
+    return stems.some(stem => text.includes(stem));
+  });
+}
+
 const LENGTH_TO_CLASS: Record<string, string> = { 'Mini': 'mini', 'Midi': 'midi', 'Maxi': 'maxi' };
 
 /**
@@ -261,9 +316,12 @@ export const localStylist: StylistProvider = {
       const lengthPill = nextPills.find(p => p.key === 'length');
       const byLength = lengthPill ? applyLength(ranked, lengthPill.value) : null;
       const afterLength = byLength?.products ?? ranked;
+      const stylePill = nextPills.find(p => p.key === 'style');
+      const byStyle = stylePill ? applyStyle(afterLength, stylePill.value) : null;
+      const afterStyle = byStyle?.products ?? afterLength;
       const colorPill = nextPills.find(p => p.key === 'color');
-      const byColor = colorPill ? applyColor(afterLength, colorPill.value) : null;
-      const products = (byColor?.products ?? afterLength).slice(0, 12);
+      const byColor = colorPill ? applyColor(afterStyle, colorPill.value) : null;
+      const products = (byColor?.products ?? afterStyle).slice(0, 12);
 
       // Counted inside what she can actually see. Before this, twenty results
       // with fifteen matches read as "I found 12 options, 15 of them black".
@@ -276,6 +334,7 @@ export const localStylist: StylistProvider = {
           : t('paulaFoundOptions', products.length),
       ];
       if (byLength) sentences.push(t('paulaFoundInLength', products.length, shown(byLength), lengthPill!.value));
+      if (byStyle) sentences.push(t('paulaFoundInStyle', shown(byStyle), stylePill!.value));
 
       return {
         reply: sentences.join(' '),

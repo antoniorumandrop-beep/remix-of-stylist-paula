@@ -293,3 +293,55 @@ describe('localStylist — długość', () => {
     expect(reply).not.toContain('15');
   });
 });
+
+describe('localStylist — styl', () => {
+  /**
+   * The third pill shown and thrown away, and the one where the honest answer
+   * is mostly "we do not know". Nothing in the catalogue records a style, so
+   * it is read from the product's own words — and five of the eight styles
+   * Paula recognises are words no shop ever writes on a product page.
+   *
+   * Nothing is dropped for style, because styles are not exclusive: a satin
+   * dress can be floral, and a page saying "satynowa" has not said it is not
+   * boho.
+   */
+  const dresses: Product[] = [
+    product('satyna', 100, 'dresses', { name: 'Satynowa sukienka midi' }),
+    product('kwiaty', 100, 'dresses', { name: 'Sukienka maxi w kwiaty' }),
+    product('zwykla', 100, 'dresses', { name: 'Lniana sukienka midi' }),
+  ];
+
+  it('wysuwa na przód rzeczy, które same się tak opisują', async () => {
+    const { products } = await localStylist.respond(ask('satynowa sukienka do 200 zł', { catalog: dresses }));
+    expect(products![0].name).toBe('Satynowa sukienka midi');
+  });
+
+  it('niczego nie odrzuca, bo styl nie wyklucza stylu', async () => {
+    const { products } = await localStylist.respond(ask('satynowa sukienka do 200 zł', { catalog: dresses }));
+    expect(products!.map(p => p.name)).toContain('Sukienka maxi w kwiaty');
+    expect(products!.map(p => p.name)).toContain('Lniana sukienka midi');
+  });
+
+  it('czyta styl także ze składu, nie tylko z nazwy', async () => {
+    // Listed second on purpose: if the composition were not read, nothing would
+    // move and this product would stay where it started.
+    const bySklad = [
+      product('lniana', 100, 'dresses', { name: 'Sukienka midi lniana' }),
+      product('satynowa', 100, 'dresses', { name: 'Sukienka midi', material: '100% satyna jedwabna' }),
+    ];
+    const { products } = await localStylist.respond(ask('satynowa sukienka do 200 zł', { catalog: bySklad }));
+    expect(products![0].id).toBe('stylist-test-satynowa');
+  });
+
+  it('mówi wprost, gdy katalog stylu nie opisuje', async () => {
+    // "Boho" is the honest case: Paula understands the word and no shop page
+    // in the catalogue carries it. Saying so beats implying these are boho.
+    const { reply } = await localStylist.respond(ask('boho sukienka do 200 zł', { catalog: dresses }));
+    expect(reply).toContain('nie opisuje stylu');
+  });
+
+  it('nie dokłada noty o stylu, gdy o styl nie pytała', async () => {
+    const { reply } = await localStylist.respond(ask('sukienka do 200 zł', { catalog: dresses }));
+    expect(reply).not.toContain('styl');
+  });
+});
