@@ -47,6 +47,9 @@ export default function SearchPage() {
   const [dupeMode, setDupeMode] = useState(restored.dupeMode);
   const [dupeReference, setDupeReference] = useState(restored.dupeReference);
   const [sortMode, setSortMode] = useState<SortMode>('fit');
+  // Ids the last turn matched to a colour, length or style she named. Kept next
+  // to the sort mode because that is the only thing that reads them.
+  const [askedFor, setAskedFor] = useState<string[]>([]);
   // Between sending and the answer nothing moved on screen, so a slow turn was
   // indistinguishable from a message that never sent.
   const [paulaThinking, setPaulaThinking] = useState(false);
@@ -170,10 +173,11 @@ export default function SearchPage() {
     setPaulaThinking(true);
     void stylist
       .respond({ text: text.trim(), history, pills: contextPills, profile, catalog, lang })
-      .then(({ reply, chips, products, pills }) => {
+      .then(({ reply, chips, products, pills, matched }) => {
         setPaulaThinking(false);
         setContextPills(pills);
         if (products) setCurrentProducts(products);
+        setAskedFor(matched ?? []);
         setMessages(prev => [...prev, {
           id: `p-${Date.now()}`,
           sender: 'paula',
@@ -238,8 +242,8 @@ export default function SearchPage() {
   }, [messages, contextPills, currentProducts, dupeMode, dupeReference]);
 
   const sortedProducts = useMemo(
-    () => sortProducts(currentProducts, profile, sortMode),
-    [currentProducts, profile, sortMode],
+    () => sortProducts(currentProducts, profile, sortMode, askedFor),
+    [currentProducts, profile, sortMode, askedFor],
   );
 
   const lastPaulaMsg = [...messages].reverse().find(m => m.sender === 'paula');

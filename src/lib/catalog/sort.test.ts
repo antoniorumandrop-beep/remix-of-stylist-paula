@@ -61,6 +61,41 @@ describe('sortProducts', () => {
     expect(sorted[0].id).toBe('sort-test-y');
   });
 
+  describe('to, o co poprosiła wprost', () => {
+    /**
+     * Paula printed "Z tego 1 w długości: midi" above a list whose midi was
+     * second, because this function re-sorted her ranking away by Fit Score.
+     * The ordering `rankByKnown` always claimed — what she named first, fit
+     * inside each group — only becomes true here.
+     */
+    const scoreable = (id: string, price: number) =>
+      product(id, price, { fit: { silhouette: attr('a-line' as const), stretchLevel: attr('none' as const) } });
+
+    it('trzyma na przodzie to, co trafiło w jej słowa', () => {
+      // 'plain' has no fit attributes, so by fit alone it sinks to the bottom.
+      const list = [scoreable('x', 400), product('plain', 50), scoreable('y', 120)];
+      const sorted = sortProducts(list, profile, 'fit', ['sort-test-plain']);
+      expect(sorted[0].id).toBe('sort-test-plain');
+    });
+
+    it('wewnątrz grup dalej decyduje dopasowanie', () => {
+      const list = [product('plain', 50), scoreable('x', 400), scoreable('y', 120)];
+      const sorted = sortProducts(list, profile, 'fit', ['sort-test-x', 'sort-test-y']);
+      expect(ids(sorted)).toEqual(['sort-test-y', 'sort-test-x', 'sort-test-plain']);
+    });
+
+    it('nie rusza sortowań, które są wprost jej poleceniem', () => {
+      // "Cena rosnąco" means cena rosnąco, whatever she also asked Paula for.
+      const list = [product('a', 300), product('b', 100)];
+      expect(prices(sortProducts(list, profile, 'price-asc', ['sort-test-a']))).toEqual([100, 300]);
+    });
+
+    it('zachowuje się jak dawniej, gdy nic nie trafiło', () => {
+      const list = [scoreable('x', 400), product('plain', 50), scoreable('y', 120)];
+      expect(ids(sortProducts(list, profile, 'fit', []))).toEqual(ids(sortProducts(list, profile, 'fit')));
+    });
+  });
+
   describe('newest', () => {
     it('orders by the date the import recorded, newest first', () => {
       const list = [

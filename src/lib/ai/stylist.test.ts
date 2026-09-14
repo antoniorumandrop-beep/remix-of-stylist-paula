@@ -277,6 +277,13 @@ describe('localStylist — długość', () => {
     expect(reply).toContain('1');
   });
 
+  it('oddaje id trafionych, żeby ekran nie przesortował ich na dno', async () => {
+    // The screen re-sorts by Fit Score, so the order built here does not
+    // survive the trip. The ids do — see `sortProducts`.
+    const { matched } = await localStylist.respond(ask('spódnica midi do 200 zł', { catalog: skirts }));
+    expect(matched).toEqual(['stylist-test-midi']);
+  });
+
   it('nie dokłada noty o długości, gdy o nią nie pytała', async () => {
     const { reply } = await localStylist.respond(ask('spódnica do 200 zł', { catalog: skirts }));
     expect(reply).not.toContain('długoś');

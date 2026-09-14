@@ -60,6 +60,17 @@ export interface StylistOutput {
   reply: string;
   chips?: Chip[];
   products?: Product[];
+  /**
+   * Ids of the products that actually matched what she named out loud —
+   * colour, length, style.
+   *
+   * `products` already arrives in the right order, and the screen throws that
+   * order away: its sort control re-sorts by Fit Score, so "1 w długości: midi"
+   * was printed above a list whose midi was second. The ids survive the
+   * re-sort, so the screen can keep them first and let fit decide inside each
+   * group — which is what `rankByKnown` always claimed to do.
+   */
+  matched?: string[];
   /** The full pill set after this turn (not a delta). */
   pills: ContextPill[];
 }
@@ -344,8 +355,16 @@ export const localStylist: StylistProvider = {
       // instead of implying the results were picked for the occasion.
       if (nextPills.some(p => p.key === 'occasion')) sentences.push(t('paulaOccasionNotMatched'));
 
+      const matched = [byLength, byStyle, byColor]
+        .filter(Boolean)
+        .reduce<Set<string>>((all, r) => {
+          for (const id of r!.matched) all.add(id);
+          return all;
+        }, new Set());
+
       return {
         reply: sentences.join(' '),
+        matched: [...matched],
         chips: [
           { id: 'second-hand', label: t('chipSecondHand') },
           { id: 'free-shipping', label: t('chipFreeShipping') },

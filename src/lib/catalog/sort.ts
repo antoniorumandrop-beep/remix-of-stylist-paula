@@ -17,10 +17,18 @@ import { sortByFit } from '@/lib/fit/product';
 export const SORT_MODES = ['fit', 'price-asc', 'price-desc', 'newest'] as const;
 export type SortMode = (typeof SORT_MODES)[number];
 
+/**
+ * @param matched Ids the stylist matched to what the user named out loud.
+ * Only "Dopasowanie" honours them, and only as the key above Fit Score: the
+ * other three modes are explicit instructions ("cena rosnąco" means cena
+ * rosnąco), while this one is ours to order sensibly. Without it the screen
+ * re-sorted by fit and buried the one skirt that was actually midi.
+ */
 export function sortProducts(
   products: Product[],
   profile: BodyProfile | null,
   mode: SortMode,
+  matched?: string[],
 ): Product[] {
   switch (mode) {
     case 'price-asc':
@@ -44,7 +52,14 @@ export function sortProducts(
         .map(entry => entry.product);
     }
     case 'fit':
-    default:
-      return sortByFit(products, profile, (a, b) => a.price - b.price);
+    default: {
+      const byFit = (items: Product[]) => sortByFit(items, profile, (a, b) => a.price - b.price);
+      if (!matched || matched.length === 0) return byFit(products);
+      const asked = new Set(matched);
+      return [
+        ...byFit(products.filter(p => asked.has(p.id))),
+        ...byFit(products.filter(p => !asked.has(p.id))),
+      ];
+    }
   }
 }
