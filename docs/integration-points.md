@@ -61,10 +61,18 @@ sprawdzają `robots.txt`, wysyłają własny User-Agent i pobierają jedną stro
 bez chodzenia po linkach. Parser, walidacja zdjęcia, konwersja na `RawProduct`
 i ekran zostały bez zmiany — o to chodziło w tym podziale.
 
-Adres wybiera `productFetchEndpoint()` w `src/lib/catalog/linkFetch.ts`, a gdy
-nie ma ani middleware'u, ani `VITE_SUPABASE_URL`, zwraca `null` i ekran mówi to
-wprost zamiast obwiniać sklep. Pilnują tego `linkFetchEndpoint.test.ts` i
-`src/pages/deadControls.test.tsx`.
+Adres wybiera `productFetchEndpoint()` w `src/lib/catalog/linkFetch.ts`: w dev
+middleware, w produkcji `VITE_FETCH_PRODUCT_ENDPOINT`, a gdy tej zmiennej nie
+ma — `null` i ekran mówi to wprost zamiast obwiniać sklep. Pilnują tego
+`linkFetchEndpoint.test.ts` i `src/pages/deadControls.test.tsx`.
+
+**Funkcja jest napisana, ale NIE jest wdrożona (stan 2026-09-15.)** Na projekcie
+`jandgkqczktqlzhqkjqp` nie stoi żadna edge function — `mcp` też nie — a brama
+odpowiada `404 NOT_FOUND`. Push na `main` przenosi kod funkcji do repo, ale jej
+nie wdraża. Dlatego adres bierze się z jawnej zmiennej, a nie z
+`VITE_SUPABASE_URL`: inaczej ekran pokazałby działający formularz nad funkcją,
+której nie ma. Po wdrożeniu wystarczy ustawić zmienną — kod klienta i funkcji
+jest gotowy i pokryty testami.
 
 Trzy rzeczy, które odróżniają edge function od middleware'u i o których trzeba
 pamiętać przy zmianach:

@@ -21,15 +21,25 @@ const DEV_ENDPOINT = '/__paula/fetch-product';
 /**
  * Dokąd wysłać żądanie o stronę sklepu — albo `null`, gdy nie ma dokąd.
  *
- * `null` to nie ostrożność na wyrost. Build bez `VITE_SUPABASE_URL` nie ma pod
- * tym adresem niczego, więc żądanie trafiłoby w SPA-fallback, dostało
- * `index.html` ze statusem 200 i obwiniło sklep o żądanie, które do sklepu
- * nigdy nie wyszło. Powód i dowód: `src/lib/catalog/linkFetchEndpoint.test.ts`.
+ * W produkcji adres bierze się z `VITE_FETCH_PRODUCT_ENDPOINT` i **nie jest
+ * wyliczany z `VITE_SUPABASE_URL`**. To wygląda na okrężną drogę i jest
+ * celowe: istnienie projektu Supabase nie znaczy, że funkcja jest w nim
+ * postawiona. Sprawdzone 2026-09-15 — na projekcie `jandgkqczktqlzhqkjqp` nie
+ * jest wdrożona ŻADNA edge function, `mcp` włącznie, a brama odpowiada
+ * `404 NOT_FOUND`. Gdyby adres brał się z samego istnienia projektu, ekran
+ * pokazałby działający formularz nad funkcją, której nie ma — czyli dokładnie
+ * to udawanie, którego ten projekt unika.
+ *
+ * Zmienna jest więc świadomym oświadczeniem „funkcja stoi pod tym adresem",
+ * ustawianym dopiero po wdrożeniu. Póki jest pusta, ekran mówi wprost, że
+ * czytanie linku nie jest podłączone.
+ *
+ * Powód i dowód: `src/lib/catalog/linkFetchEndpoint.test.ts`.
  */
 export function productFetchEndpoint(): string | null {
   if (import.meta.env.DEV) return DEV_ENDPOINT;
-  const base = String(import.meta.env.VITE_SUPABASE_URL ?? '').replace(/\/+$/, '');
-  return base ? `${base}/functions/v1/fetch-product` : null;
+  const configured = String(import.meta.env.VITE_FETCH_PRODUCT_ENDPOINT ?? '').trim();
+  return configured ? configured.replace(/\/+$/, '') : null;
 }
 
 /** String discriminant for the same reason as `DraftConversion` in `link.ts`. */

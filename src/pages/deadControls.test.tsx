@@ -88,14 +88,14 @@ describe('"dodaj z linku" i to, czy jest dokąd wysłać żądanie', () => {
 
   it('w produkcji z edge function też pokazuje formularz', async () => {
     vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_SUPABASE_URL', 'https://przyklad.supabase.co');
+    vi.stubEnv('VITE_FETCH_PRODUCT_ENDPOINT', 'https://przyklad.supabase.co/functions/v1/fetch-product');
     renderPage('add');
     expect(await screen.findByPlaceholderText('https://sklep.example.pl/produkt/...')).toBeInTheDocument();
   });
 
   it('bez edge function nie pokazuje formularza, tylko wyjaśnienie', async () => {
     vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_SUPABASE_URL', '');
+    vi.stubEnv('VITE_FETCH_PRODUCT_ENDPOINT', '');
     renderPage('add');
     expect(screen.queryByPlaceholderText('https://sklep.example.pl/produkt/...')).not.toBeInTheDocument();
     expect(await screen.findByText(/Jeszcze nie działa w tej wersji/)).toBeInTheDocument();
@@ -103,7 +103,7 @@ describe('"dodaj z linku" i to, czy jest dokąd wysłać żądanie', () => {
 
   it('bez edge function wyłącza wejście z ekranu zapisanych, zamiast prowadzić do martwego formularza', async () => {
     vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_SUPABASE_URL', '');
+    vi.stubEnv('VITE_FETCH_PRODUCT_ENDPOINT', '');
     renderPage('saved');
     const addButton = await screen.findByText('Dodaj z linku');
     expect(addButton.closest('button')).toBeDisabled();
@@ -111,7 +111,7 @@ describe('"dodaj z linku" i to, czy jest dokąd wysłać żądanie', () => {
 
   it('z edge function wejście z ekranu zapisanych jest otwarte', async () => {
     vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_SUPABASE_URL', 'https://przyklad.supabase.co');
+    vi.stubEnv('VITE_FETCH_PRODUCT_ENDPOINT', 'https://przyklad.supabase.co/functions/v1/fetch-product');
     renderPage('saved');
     const addButton = await screen.findByText('Dodaj z linku');
     expect(addButton.closest('button')).not.toBeDisabled();
