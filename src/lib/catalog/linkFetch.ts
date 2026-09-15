@@ -21,25 +21,27 @@ const DEV_ENDPOINT = '/__paula/fetch-product';
 /**
  * Dokąd wysłać żądanie o stronę sklepu — albo `null`, gdy nie ma dokąd.
  *
- * W produkcji adres bierze się z `VITE_FETCH_PRODUCT_ENDPOINT` i **nie jest
- * wyliczany z `VITE_SUPABASE_URL`**. To wygląda na okrężną drogę i jest
- * celowe: istnienie projektu Supabase nie znaczy, że funkcja jest w nim
- * postawiona. Sprawdzone 2026-09-15 — na projekcie `jandgkqczktqlzhqkjqp` nie
- * jest wdrożona ŻADNA edge function, `mcp` włącznie, a brama odpowiada
- * `404 NOT_FOUND`. Gdyby adres brał się z samego istnienia projektu, ekran
- * pokazałby działający formularz nad funkcją, której nie ma — czyli dokładnie
- * to udawanie, którego ten projekt unika.
+ * W produkcji pierwszeństwo ma `VITE_FETCH_PRODUCT_ENDPOINT`, a gdy jej nie
+ * ma, adres wylicza się z `VITE_SUPABASE_URL`. Jawna zmienna istnieje, bo
+ * funkcja nie musi stać w tym samym projekcie — ale **nie jest wymagana**:
+ * Lovable rezerwuje prefiks `VITE_` w swoim API sekretów i nie pozwala jej
+ * ustawić z zewnątrz, więc wymaganie jej znaczyłoby, że funkcja jest wdrożona,
+ * a ekran i tak twierdzi, że jej nie ma.
  *
- * Zmienna jest więc świadomym oświadczeniem „funkcja stoi pod tym adresem",
- * ustawianym dopiero po wdrożeniu. Póki jest pusta, ekran mówi wprost, że
- * czytanie linku nie jest podłączone.
+ * Istnienie projektu nadal nie dowodzi, że funkcja jest w nim postawiona —
+ * brama oddaje wtedy `404 {"code":"NOT_FOUND"}`. Tego nie da się rozstrzygnąć
+ * przy budowaniu, więc rozstrzyga się w locie: `fetchProductDraft` rozpoznaje
+ * brak funkcji i oddaje `not-wired`, czyli własne zdanie zamiast „coś poszło
+ * nie tak" i zamiast obwiniania sklepu.
  *
- * Powód i dowód: `src/lib/catalog/linkFetchEndpoint.test.ts`.
+ * Powód i dowód: `linkFetchEndpoint.test.ts` i `linkFetchMissing.test.ts`.
  */
 export function productFetchEndpoint(): string | null {
   if (import.meta.env.DEV) return DEV_ENDPOINT;
   const configured = String(import.meta.env.VITE_FETCH_PRODUCT_ENDPOINT ?? '').trim();
-  return configured ? configured.replace(/\/+$/, '') : null;
+  if (configured) return configured.replace(/\/+$/, '');
+  const base = String(import.meta.env.VITE_SUPABASE_URL ?? '').trim().replace(/\/+$/, '');
+  return base ? `${base}/functions/v1/fetch-product` : null;
 }
 
 /** String discriminant for the same reason as `DraftConversion` in `link.ts`. */
@@ -71,7 +73,13 @@ export async function fetchProductDraft(rawUrl: string): Promise<FetchDraftResul
     const res = await fetch(`${endpoint}?url=${encodeURIComponent(url.toString())}`, { headers });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const { error, shopStatus } = body as { error?: string; shopStatus?: number };
+      const { error, shopStatus, code } = body as { error?: string; shopStatus?: number; code?: string };
+      // Brama Supabase odpowiada tak, gdy funkcji pod tym adresem nie ma.
+      // `shopStatus` rozstrzyga pomyłkę, która byłaby tu łatwa: 404 od samego
+      // sklepu przychodzi jako 502 z `shopStatus`, więc nigdy nie wpadnie tutaj.
+      if (res.status === 404 && shopStatus === undefined && (code === 'NOT_FOUND' || !error)) {
+        return { status: 'error', error: 'edge function not deployed', code: 'not-wired' };
+      }
       const message = error ?? `HTTP ${res.status}`;
       return { status: 'error', error: message, code: classifyFetchError({ status: shopStatus, message }) };
     }

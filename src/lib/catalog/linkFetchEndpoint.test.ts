@@ -37,17 +37,24 @@ describe('adres pobrania strony sklepu', () => {
     expect(productFetchEndpoint()).toBe('https://przyklad.supabase.co/functions/v1/fetch-product');
   });
 
-  it('bez ustawionego adresu mówi, że nie ma dokąd', () => {
+  it('bez żadnego z dwóch źródeł mówi, że nie ma dokąd', () => {
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_FETCH_PRODUCT_ENDPOINT', '');
+    vi.stubEnv('VITE_SUPABASE_URL', '');
     expect(productFetchEndpoint()).toBeNull();
   });
 
-  it('samo istnienie projektu Supabase NIE otwiera formularza', () => {
+  it('bez jawnego adresu wylicza go z projektu Supabase', () => {
     vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_SUPABASE_URL', 'https://przyklad.supabase.co');
     vi.stubEnv('VITE_FETCH_PRODUCT_ENDPOINT', '');
-    // Funkcja może być niewdrożona, a wtedy brama oddaje 404.
-    expect(productFetchEndpoint()).toBeNull();
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://przyklad.supabase.co');
+    expect(productFetchEndpoint()).toBe('https://przyklad.supabase.co/functions/v1/fetch-product');
+  });
+
+  it('jawny adres wygrywa z wyliczonym', () => {
+    vi.stubEnv('DEV', false);
+    vi.stubEnv('VITE_FETCH_PRODUCT_ENDPOINT', 'https://gdzie-indziej.example/fetch');
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://przyklad.supabase.co');
+    expect(productFetchEndpoint()).toBe('https://gdzie-indziej.example/fetch');
   });
 });

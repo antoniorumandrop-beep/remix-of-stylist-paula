@@ -62,17 +62,30 @@ bez chodzenia po linkach. Parser, walidacja zdjęcia, konwersja na `RawProduct`
 i ekran zostały bez zmiany — o to chodziło w tym podziale.
 
 Adres wybiera `productFetchEndpoint()` w `src/lib/catalog/linkFetch.ts`: w dev
-middleware, w produkcji `VITE_FETCH_PRODUCT_ENDPOINT`, a gdy tej zmiennej nie
-ma — `null` i ekran mówi to wprost zamiast obwiniać sklep. Pilnują tego
-`linkFetchEndpoint.test.ts` i `src/pages/deadControls.test.tsx`.
+middleware, w produkcji `VITE_FETCH_PRODUCT_ENDPOINT`, a bez niej wyliczony z
+`VITE_SUPABASE_URL`. Pilnują tego `linkFetchEndpoint.test.ts` i
+`src/pages/deadControls.test.tsx`.
 
-**Funkcja jest napisana, ale NIE jest wdrożona (stan 2026-09-15.)** Na projekcie
-`jandgkqczktqlzhqkjqp` nie stoi żadna edge function — `mcp` też nie — a brama
-odpowiada `404 NOT_FOUND`. Push na `main` przenosi kod funkcji do repo, ale jej
-nie wdraża. Dlatego adres bierze się z jawnej zmiennej, a nie z
-`VITE_SUPABASE_URL`: inaczej ekran pokazałby działający formularz nad funkcją,
-której nie ma. Po wdrożeniu wystarczy ustawić zmienną — kod klienta i funkcji
-jest gotowy i pokryty testami.
+**Funkcja jest wdrożona (2026-09-15)** pod
+`https://jandgkqczktqlzhqkjqp.supabase.co/functions/v1/fetch-product`.
+Sprawdzone curl-em po wdrożeniu: brak `?url=` → `400 missing url`,
+`http://127.0.0.1/` → `400 refusing to fetch a private address`, strona główna
+Sinsay → `200`, 4 779 397 znaków, `truncated: false` (czyli limit 12 MB
+faktycznie mija z zapasem zmierzone 4,5 MB).
+
+Dwie rzeczy warte zapamiętania, bo obie kosztowały jedną pomyłkę:
+
+- **Push na `main` NIE wdraża funkcji.** Kod trafia do repo i tyle. Przed
+  wdrożeniem na projekcie nie stała żadna edge function, `mcp` włącznie, a
+  brama oddawała `404 NOT_FOUND`. Wdraża się to agentem Lovable
+  (`supabase--deploy_edge_functions`) albo CLI Supabase.
+- **`VITE_FETCH_PRODUCT_ENDPOINT` jest opcjonalna i nie da się jej ustawić z
+  zewnątrz.** Lovable rezerwuje prefiks `VITE_` w swoim API sekretów. Dlatego
+  adres wylicza się też z `VITE_SUPABASE_URL`, a brak funkcji rozstrzyga się w
+  locie: `404 {"code":"NOT_FOUND"}` z bramy daje kod `not-wired` i własne
+  zdanie w interfejsie. `shopStatus` odróżnia to od `404` od samego sklepu,
+  które przychodzi jako `502` z tym polem. Pilnuje tego
+  `linkFetchMissing.test.ts`.
 
 Trzy rzeczy, które odróżniają edge function od middleware'u i o których trzeba
 pamiętać przy zmianach:

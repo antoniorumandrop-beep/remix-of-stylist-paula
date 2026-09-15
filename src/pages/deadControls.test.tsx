@@ -93,17 +93,19 @@ describe('"dodaj z linku" i to, czy jest dokąd wysłać żądanie', () => {
     expect(await screen.findByPlaceholderText('https://sklep.example.pl/produkt/...')).toBeInTheDocument();
   });
 
-  it('bez edge function nie pokazuje formularza, tylko wyjaśnienie', async () => {
+  it('bez żadnego adresu nie pokazuje formularza, tylko wyjaśnienie', async () => {
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_FETCH_PRODUCT_ENDPOINT', '');
+    vi.stubEnv('VITE_SUPABASE_URL', '');
     renderPage('add');
     expect(screen.queryByPlaceholderText('https://sklep.example.pl/produkt/...')).not.toBeInTheDocument();
     expect(await screen.findByText(/Jeszcze nie działa w tej wersji/)).toBeInTheDocument();
   });
 
-  it('bez edge function wyłącza wejście z ekranu zapisanych, zamiast prowadzić do martwego formularza', async () => {
+  it('bez żadnego adresu wyłącza wejście z ekranu zapisanych, zamiast prowadzić do martwego formularza', async () => {
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_FETCH_PRODUCT_ENDPOINT', '');
+    vi.stubEnv('VITE_SUPABASE_URL', '');
     renderPage('saved');
     const addButton = await screen.findByText('Dodaj z linku');
     expect(addButton.closest('button')).toBeDisabled();
