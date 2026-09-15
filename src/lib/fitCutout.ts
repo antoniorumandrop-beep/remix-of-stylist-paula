@@ -53,7 +53,7 @@ export interface SubjectBox {
 }
 
 export class ScanFailed extends Error {
-  constructor(readonly kind: 'no-person' | 'not-configured' | 'failed') {
+  constructor(readonly kind: 'no-person' | 'not-configured' | 'no-dev-server' | 'failed') {
     super(`scan failed: ${kind}`);
     this.name = 'ScanFailed';
   }
@@ -136,6 +136,15 @@ interface Cut {
 }
 
 async function requestMask(photo: Blob): Promise<Blob> {
+  // Middleware, które liczy maskę, istnieje wyłącznie w `vite dev`. W zbudowanej
+  // aplikacji pod tym adresem odpowiada SPA-fallback: `index.html` ze statusem
+  // 200. `response.ok` jest wtedy prawdziwe, więc żadna gałąź błędu niżej się
+  // nie odpala i HTML wraca jako maska — a po zdekodowaniu wygląda jak zdjęcie
+  // bez osoby. Zatrzymujemy się tutaj, żeby nie zrzucić na jej zdjęcie winy za
+  // żądanie, które nigdy nie doszło do modelu. Powód i dowód:
+  // `src/lib/fitCutout.test.ts`.
+  if (!import.meta.env.DEV) throw new ScanFailed('no-dev-server');
+
   const image = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));

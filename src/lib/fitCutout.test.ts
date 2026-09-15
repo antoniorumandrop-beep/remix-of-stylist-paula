@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { alignScales, placeSubject } from '@/lib/fitCutout';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { alignScales, placeSubject, scanFit, ScanFailed } from '@/lib/fitCutout';
 
 /**
  * Wyrównanie kadrów — czyli to, co decyduje, czy obrót czyta się jako obrót.
@@ -69,5 +69,48 @@ describe('wyrównanie klatek skanu', () => {
     expect(200 * 1.28 + niska.dy).toBeCloseTo(160, 6);
     expect(100 * 1.28 + wysoka.dx).toBeCloseTo(600, 6);
     expect(600 * 1.28 + niska.dx).toBeCloseTo(600, 6);
+  });
+});
+
+/**
+ * Skan poza serwerem deweloperskim.
+ *
+ * Maskę liczy middleware `vite-plugins/cutout-photo.ts`, a middleware istnieje
+ * wyłącznie w `vite dev`. W zbudowanej aplikacji pod tym adresem odpowiada
+ * **SPA-fallback**: `index.html` ze statusem 200. To jest cała pułapka —
+ * `response.ok` jest wtedy prawdziwe, kod omija gałąź błędu i oddaje HTML jako
+ * maskę. Po dekodowaniu nie ma w niej ani jednego nieprzezroczystego piksela,
+ * więc `alphaBox` zwraca `null` i użytkowniczka dostaje „nie widać osoby na
+ * zdjęciu" — wina zrzucona na jej zdjęcie za żądanie, które nigdy nie doszło
+ * do modelu.
+ *
+ * Ta sama pomyłka co przy imporcie z linku, gdzie aplikacja obwiniała sklep o
+ * żądanie, które do sklepu nie wyszło (`src/pages/deadControls.test.tsx`), i
+ * gating jest ten sam: `import.meta.env.DEV` to dokładnie ten sygnał, którym
+ * Vite decyduje, czy middleware w ogóle zarejestrować — więc nie ma czego
+ * ręcznie utrzymywać w zgodzie.
+ */
+describe('skan poza serwerem deweloperskim', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it('mówi, że skan działa tylko w dev, zamiast obwiniać zdjęcie', async () => {
+    vi.stubEnv('DEV', false);
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const blad = await scanFit([new Blob(['x'], { type: 'image/jpeg' })]).then(
+      () => null,
+      (e: unknown) => e,
+    );
+
+    expect(blad).toBeInstanceOf(ScanFailed);
+    expect((blad as ScanFailed).kind).toBe('no-dev-server');
+    // To jest ta konkretna wiadomość, której użytkowniczka NIE ma zobaczyć.
+    expect((blad as ScanFailed).kind).not.toBe('no-person');
+    // I żadne żądanie nie ma prawa wyjść — nie ma dokąd.
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

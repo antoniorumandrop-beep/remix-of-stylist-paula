@@ -77,6 +77,7 @@ export default function FitDetail() {
       const kind = error instanceof ScanFailed ? error.kind : 'failed';
       toast(kind === 'no-person' ? t('scanNoPerson')
         : kind === 'not-configured' ? t('scanNotConfigured')
+        : kind === 'no-dev-server' ? t('scanNoDevServer')
         : t('scanFailed'));
     } finally {
       setScanning(null);
@@ -116,7 +117,8 @@ export default function FitDetail() {
             <>
               <button
                 onClick={() => void handleScan()}
-                disabled={Boolean(scanning)}
+                disabled={Boolean(scanning) || !import.meta.env.DEV}
+                title={import.meta.env.DEV ? undefined : t('scanNoDevServer')}
                 className="flex items-center gap-2 px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium disabled:opacity-60"
               >
                 <ScanLine className="w-4 h-4" />
@@ -124,8 +126,13 @@ export default function FitDetail() {
               </button>
               {/* Nad przyciskiem byłoby ładniej, pod nim jest uczciwiej: to jest
                   zdanie o tym, że jej zdjęcie wyjeżdża z telefonu, i ma być
-                  widoczne bez przewijania, obok tego, co je wysyła. */}
-              <p className="text-xs text-muted-foreground mt-2 max-w-prose">{t('scanNotice')}</p>
+                  widoczne bez przewijania, obok tego, co je wysyła.
+                  Poza dev-serwerem zdjęcie nigdzie nie jedzie, bo nie ma dokąd —
+                  więc tamto zdanie byłoby wtedy nieprawdą i ustępuje miejsca
+                  informacji, dlaczego przycisk nie działa. */}
+              <p className="text-xs text-muted-foreground mt-2 max-w-prose">
+                {import.meta.env.DEV ? t('scanNotice') : t('scanNoDevServer')}
+              </p>
             </>
           )}
         </div>
