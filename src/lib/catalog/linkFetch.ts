@@ -8,14 +8,29 @@ import { classifyFetchError, type FetchErrorCode } from './fetchErrors';
  * network is the only part of this feature that cannot be covered by a test
  * with a fixture.
  *
- * PLUG(supabase): replace the dev endpoint with an edge function that does the
- * same three things (robots.txt check, our own User-Agent, one page per user
- * request) and returns `{ html, finalUrl }`. The parser and everything above
- * it stay exactly as they are — that is the point of the split. Details in
+ * Gniazdo PLUG(supabase) jest zapięte: w dev pobiera middleware dev-serwera, w
+ * produkcji edge function `supabase/functions/fetch-product`. Obie robią te
+ * same trzy rzeczy — sprawdzenie robots.txt, własny User-Agent, jedna strona na
+ * żądanie — i oddają `{ html, finalUrl, truncated }`. Parser i wszystko nad nim
+ * zostaje bez zmiany; o to właśnie chodziło w tym podziale. Szczegóły w
  * `docs/integration-points.md`.
  */
 
 const DEV_ENDPOINT = '/__paula/fetch-product';
+
+/**
+ * Dokąd wysłać żądanie o stronę sklepu — albo `null`, gdy nie ma dokąd.
+ *
+ * `null` to nie ostrożność na wyrost. Build bez `VITE_SUPABASE_URL` nie ma pod
+ * tym adresem niczego, więc żądanie trafiłoby w SPA-fallback, dostało
+ * `index.html` ze statusem 200 i obwiniło sklep o żądanie, które do sklepu
+ * nigdy nie wyszło. Powód i dowód: `src/lib/catalog/linkFetchEndpoint.test.ts`.
+ */
+export function productFetchEndpoint(): string | null {
+  if (import.meta.env.DEV) return DEV_ENDPOINT;
+  const base = String(import.meta.env.VITE_SUPABASE_URL ?? '').replace(/\/+$/, '');
+  return base ? `${base}/functions/v1/fetch-product` : null;
+}
 
 /** String discriminant for the same reason as `DraftConversion` in `link.ts`. */
 export type FetchDraftResult =
@@ -34,8 +49,16 @@ export async function fetchProductDraft(rawUrl: string): Promise<FetchDraftResul
     return { status: 'error', error: 'notAUrl', code: 'not-a-url' };
   }
 
+  const endpoint = productFetchEndpoint();
+  if (!endpoint) return { status: 'error', error: 'not wired up', code: 'not-wired' };
+
+  // Brama Supabase wymaga klucza publikowalnego także przy `verify_jwt = false`.
+  // W dev nagłówek jest zbędny, ale nieszkodliwy — middleware go nie czyta.
+  const key = String(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? '');
+  const headers = key ? { apikey: key, authorization: `Bearer ${key}` } : undefined;
+
   try {
-    const res = await fetch(`${DEV_ENDPOINT}?url=${encodeURIComponent(url.toString())}`);
+    const res = await fetch(`${endpoint}?url=${encodeURIComponent(url.toString())}`, { headers });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
       const { error, shopStatus } = body as { error?: string; shopStatus?: number };

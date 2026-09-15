@@ -6,6 +6,7 @@ import { ProductCard } from '@/components/ProductCard';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useUserProducts } from '@/lib/catalog/useCatalog';
 import type { RawProduct } from '@/lib/catalog/types';
+import { productFetchEndpoint } from '@/lib/catalog/linkFetch';
 
 /**
  * The user's own side of the link importer.
@@ -49,17 +50,17 @@ export default function AddProduct() {
       <h1 className="font-display text-2xl lg:text-3xl mb-1">{t('addYourOwn')}</h1>
       <p className="text-sm text-muted-foreground mb-8">{t('addYourOwnDesc')}</p>
 
-      {import.meta.env.DEV ? (
+      {productFetchEndpoint() ? (
         <>
           <LinkImport onAdd={handleAdd} />
           <BulkLinkImport onAdd={products => void handleAddMany(products)} />
         </>
       ) : (
-        // Reading a shop link goes through a dev-server middleware
-        // (docs/integration-points.md, PLUG(supabase) in linkFetch.ts) that
-        // does not exist in a built app — pasting a link here would fail
-        // with a message that blames the shop for a page we never asked for.
-        // Saying so honestly beats pretending the field works.
+        // Czytanie linku ze sklepu potrzebuje czegoś, co nie jest przeglądarką:
+        // w dev middleware'u dev-serwera, w produkcji edge function. Gdy nie ma
+        // ani jednego, ani drugiego, wklejony link uderzyłby w SPA-fallback i
+        // dostał komunikat obwiniający sklep o stronę, o którą nikt nie prosił.
+        // Powiedzieć to wprost jest uczciwiej niż udawać, że pole działa.
         <div className="bg-card rounded-2xl p-5 sm:p-6 mb-8 flex items-start gap-3">
           <Wrench className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
           <p className="text-sm text-muted-foreground leading-relaxed">{t('addYourOwnUnavailable')}</p>

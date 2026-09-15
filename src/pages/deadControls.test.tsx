@@ -59,19 +59,23 @@ describe('kontrolki, które jeszcze nie działają', () => {
 });
 
 /**
- * "Dodaj z linku" — same problem, one build away rather than one backend
- * away. `/fetch-product` runs as dev-server middleware
- * (`vite-plugins/fetch-product.ts`); a built app has nothing there, so
- * `vite preview` was used to confirm what actually happens: the static host
- * answers with its SPA-fallback `index.html` (200, `text/html`), the fetch's
- * `res.json()` throws, `linkFetch.ts` catches it into an empty body, and the
- * screen ends up showing "Sklep zwrócił pustą stronę" — blaming the shop for
- * a request that never reached one. `import.meta.env.DEV` is the same signal
- * Vite itself uses to decide whether that middleware is even registered, so
- * it is what gates this screen too, rather than a flag we would have to keep
- * in sync by hand.
+ * „Dodaj z linku" — ekran, który przestał już być martwy.
+ *
+ * Pobranie strony sklepu żyło wyłącznie w middlewarze dev-serwera
+ * (`vite-plugins/fetch-product.ts`), więc w zbudowanej aplikacji nie było pod
+ * tym adresem niczego: statyczny host oddawał SPA-fallback `index.html` (200,
+ * `text/html`), `res.json()` się wywracał, `linkFetch.ts` łapał to jako pustą
+ * treść i ekran pokazywał „Sklep zwrócił pustą stronę" — obwiniając sklep o
+ * żądanie, które do sklepu nie wyszło.
+ *
+ * Od czasu edge function `supabase/functions/fetch-product` warunek jest już
+ * inny i to jest sedno tych testów: **nie chodzi o to, czy jesteśmy w dev,
+ * tylko czy jest dokąd wysłać żądanie**. W dev to middleware, w produkcji edge
+ * function, a gdy nie ma ani jednego, ani drugiego — ekran mówi to wprost,
+ * zamiast udawać działające pole. Sam wybór adresu pilnuje
+ * `src/lib/catalog/linkFetchEndpoint.test.ts`.
  */
-describe('"dodaj z linku" poza serwerem deweloperskim', () => {
+describe('"dodaj z linku" i to, czy jest dokąd wysłać żądanie', () => {
   afterEach(() => vi.unstubAllEnvs());
 
   it('w dev pokazuje prawdziwy formularz', async () => {
@@ -82,17 +86,34 @@ describe('"dodaj z linku" poza serwerem deweloperskim', () => {
     expect(await screen.findByPlaceholderText('https://sklep.example.pl/produkt/...')).toBeInTheDocument();
   });
 
-  it('poza devem nie pokazuje formularza, tylko wyjaśnienie', async () => {
+  it('w produkcji z edge function też pokazuje formularz', async () => {
     vi.stubEnv('DEV', false);
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://przyklad.supabase.co');
+    renderPage('add');
+    expect(await screen.findByPlaceholderText('https://sklep.example.pl/produkt/...')).toBeInTheDocument();
+  });
+
+  it('bez edge function nie pokazuje formularza, tylko wyjaśnienie', async () => {
+    vi.stubEnv('DEV', false);
+    vi.stubEnv('VITE_SUPABASE_URL', '');
     renderPage('add');
     expect(screen.queryByPlaceholderText('https://sklep.example.pl/produkt/...')).not.toBeInTheDocument();
     expect(await screen.findByText(/Jeszcze nie działa w tej wersji/)).toBeInTheDocument();
   });
 
-  it('poza devem wyłącza wejście z ekranu zapisanych, zamiast prowadzić do martwego formularza', async () => {
+  it('bez edge function wyłącza wejście z ekranu zapisanych, zamiast prowadzić do martwego formularza', async () => {
     vi.stubEnv('DEV', false);
+    vi.stubEnv('VITE_SUPABASE_URL', '');
     renderPage('saved');
     const addButton = await screen.findByText('Dodaj z linku');
     expect(addButton.closest('button')).toBeDisabled();
+  });
+
+  it('z edge function wejście z ekranu zapisanych jest otwarte', async () => {
+    vi.stubEnv('DEV', false);
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://przyklad.supabase.co');
+    renderPage('saved');
+    const addButton = await screen.findByText('Dodaj z linku');
+    expect(addButton.closest('button')).not.toBeDisabled();
   });
 });

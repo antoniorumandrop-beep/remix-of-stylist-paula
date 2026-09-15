@@ -37,7 +37,7 @@ a po każdej udanej mutacji odświeżają się wszystkie zapytania
 | Własne rzeczy z linku | localStorage `paula.catalog.user`, ekran `/app/add` | `CatalogRepository.addUserProduct` | tabela `user_products` (per użytkowniczka, RLS) — **nie** wspólne `products` |
 | Katalog | mocki + import w localStorage `paula.catalog.imported` | `CatalogRepository` | tabele `products` (raw) + `product_fit_attributes` (enriched) |
 | Import od marki | ekran `/admin/import` (CSV/JSON → `parseBrandFeed`) | `src/lib/catalog/feed.ts`, `src/pages/ImportProducts.tsx` | ten sam ekran, zapis do `products`, polityka RLS „tylko admin" |
-| Import z linku produktowego | ekran `/admin/import`, pobranie przez middleware dev-serwera (`vite-plugins/fetch-product.ts`) | parser `src/lib/catalog/link.ts` (czysty, bez sieci), pobranie `src/lib/catalog/linkFetch.ts` | edge function `/fetch-product` — te same trzy reguły: sprawdzenie `robots.txt`, własny User-Agent, jedna strona na żądanie |
+| Import z linku produktowego | **zapięte** — w dev middleware (`vite-plugins/fetch-product.ts`), w produkcji edge function (`supabase/functions/fetch-product`) | parser `src/lib/catalog/link.ts` (czysty, bez sieci), wybór adresu `productFetchEndpoint()` w `src/lib/catalog/linkFetch.ts` | bez zmian — te same trzy reguły po obu stronach |
 | Wzbogacanie atrybutów | reguły (`src/lib/catalog/enrich.ts`) | `EnrichmentProvider` w `src/lib/ai/enrichment.ts`, env `VITE_AI_ENDPOINT` | edge function `/enrich` z modelem wizyjnym |
 | Rozmowa z Paulą | reguły słów kluczowych (`src/lib/ai/stylist.ts`, `localStylist`) | `StylistProvider`, env `VITE_AI_ENDPOINT` | edge function `/stylist` z modelem językowym |
 | Zdjęcia produktów | URL z feedu marki (`imageUrl`), mocki bez zdjęć | `src/components/ProductImage.tsx` | bez zmian; ewentualnie bucket na kopie |
@@ -46,18 +46,42 @@ a po każdej udanej mutacji odświeżają się wszystkie zapytania
 Schemat bazy do tego wszystkiego: `docs/supabase-schema.draft.sql`.
 Szablon feedu dla marki: `docs/brand-feed-template.csv`.
 
-## Import z linku — co dokładnie trzeba przenieść
+## Import z linku — przeniesione 2026-09-15
 
-Jedyna część, która nie działa poza dev-serwerem, to **pobranie HTML**.
-Przeglądarka nie pobierze strony cudzego sklepu (CORS blokuje żądanie, zanim
-wyjdzie), więc robi to coś, co nie jest przeglądarką. Dziś: middleware
-`vite-plugins/fetch-product.ts` (`apply: 'serve'`, czyli **nie trafia do
-builda produkcyjnego**). Docelowo: edge function.
+**Pobranie HTML** to jedyna część, która nie mogła żyć w przeglądarce: CORS
+blokuje żądanie na cudzy origin, zanim ono wyjdzie. Robi to więc coś, co
+przeglądarką nie jest, i są tego dwie implementacje tej samej rzeczy:
 
-Do przeniesienia jest wyłącznie ten jeden endpoint. Ma przyjąć `?url=` i
-oddać `{ html, finalUrl, truncated }`. Cała reszta — parser, walidacja
-zdjęcia, konwersja na `RawProduct`, ekran — zostaje bez zmiany. Po stronie
-klienta zmienia się jedna stała `DEV_ENDPOINT` w `src/lib/catalog/linkFetch.ts`.
+- w dev — middleware `vite-plugins/fetch-product.ts` (`apply: 'serve'`, czyli
+  **nie trafia do builda produkcyjnego**);
+- w produkcji — edge function `supabase/functions/fetch-product`.
+
+Obie przyjmują `?url=` i oddają `{ html, finalUrl, truncated }`, obie
+sprawdzają `robots.txt`, wysyłają własny User-Agent i pobierają jedną stronę
+bez chodzenia po linkach. Parser, walidacja zdjęcia, konwersja na `RawProduct`
+i ekran zostały bez zmiany — o to chodziło w tym podziale.
+
+Adres wybiera `productFetchEndpoint()` w `src/lib/catalog/linkFetch.ts`, a gdy
+nie ma ani middleware'u, ani `VITE_SUPABASE_URL`, zwraca `null` i ekran mówi to
+wprost zamiast obwiniać sklep. Pilnują tego `linkFetchEndpoint.test.ts` i
+`src/pages/deadControls.test.tsx`.
+
+Trzy rzeczy, które odróżniają edge function od middleware'u i o których trzeba
+pamiętać przy zmianach:
+
+- **`robots.ts` istnieje w dwóch kopiach.** Bundler Supabase pakuje to, co leży
+  pod `supabase/functions/`, a na tej maszynie nie ma czym tego sprawdzić (brak
+  deno i CLI Supabase), więc zamiast stawiać na niesprawdzone zachowanie kopia
+  leży w `supabase/functions/_shared/robots.ts`. Rozjazd łapie
+  `src/lib/catalog/robotsCopy.test.ts` — zmieniasz jeden plik, zmieniasz oba.
+- **Ochrona przed adresem prywatnym jest słabsza niż w dev.** Middleware
+  rozwiązywał nazwę przez `node:dns`; funkcja próbuje `Deno.resolveDns`, a gdy
+  go nie ma, zostaje sprawdzenie samej nazwy — co nie zatrzyma nazwy
+  wskazującej na adres prywatny dopiero w DNS-ie.
+- **`verify_jwt = false`** (`supabase/config.toml`), bo aplikacja chodzi na
+  `VITE_BACKEND=local` i nie ma sesji, którą można by to podpisać. Bramką
+  zostaje klucz publikowalny wymagany przez bramę Supabase. Funkcja nie czyta
+  ani nie zapisuje żadnych danych — pobiera publiczną stronę i oddaje jej HTML.
 
 Edge function musi robić dokładnie to samo, co middleware, bo każde z tych
 zachowań ma powód:

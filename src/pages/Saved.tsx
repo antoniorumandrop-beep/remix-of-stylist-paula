@@ -7,6 +7,7 @@ import { useSaved } from '@/lib/saved';
 import { useCatalog } from '@/lib/catalog/useCatalog';
 import { useCollections } from '@/lib/collections';
 import { ProductImage } from '@/components/ProductImage';
+import { productFetchEndpoint } from '@/lib/catalog/linkFetch';
 
 export default function Saved() {
   const [tab, setTab] = useState<'saved' | 'collections'>('saved');
@@ -84,8 +85,8 @@ export default function Saved() {
 
       <button
         onClick={() => navigate('/app/add')}
-        disabled={!import.meta.env.DEV}
-        title={import.meta.env.DEV ? undefined : t('featureNotReady')}
+        disabled={!productFetchEndpoint()}
+        title={productFetchEndpoint() ? undefined : t('featureNotReady')}
         className="w-full bg-card rounded-xl p-4 mb-6 flex items-center gap-3 text-left hover:bg-card/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-card"
       >
         <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0">

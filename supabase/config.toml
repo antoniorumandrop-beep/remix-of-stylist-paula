@@ -1,1 +1,9 @@
 project_id = "jandgkqczktqlzhqkjqp"
+
+# Aplikacja chodzi z `VITE_BACKEND=local`, czyli bez sesji Supabase — nie ma
+# więc tokenu użytkowniczki, którym można by to żądanie podpisać. Funkcja nie
+# czyta ani nie zapisuje żadnych danych: pobiera publiczną stronę sklepu i
+# oddaje jej HTML. Bramką zostaje klucz publikowalny wymagany przez bramę
+# Supabase — czyli tyle samo, ile chroni resztę publicznej powierzchni projektu.
+[functions.fetch-product]
+verify_jwt = false

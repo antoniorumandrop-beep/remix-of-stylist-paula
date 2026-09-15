@@ -30,6 +30,8 @@ export type FetchErrorCode =
   | 'not-a-url'
   | 'private-address'
   | 'no-content'
+  /** Nie ma dokąd wysłać żądania — ani middleware'u, ani edge function. */
+  | 'not-wired'
   | 'unknown';
 
 const KEYS: Record<FetchErrorCode, TranslationKey> = {
@@ -40,6 +42,7 @@ const KEYS: Record<FetchErrorCode, TranslationKey> = {
   'not-a-url': 'importErrorNotAUrl',
   'private-address': 'importErrorPrivate',
   'no-content': 'importErrorEmpty',
+  'not-wired': 'importErrorNotWired',
   'unknown': 'importErrorUnknown',
 };
 
