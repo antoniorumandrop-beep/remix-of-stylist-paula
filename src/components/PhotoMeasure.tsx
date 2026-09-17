@@ -80,6 +80,22 @@ export function PhotoMeasure({ onMeasured }: Props) {
     setState({ phase: 'done', measurements: anchored });
   }
 
+  // Poza serwerem deweloperskim nie ma czym tego policzyć, więc karta nie
+  // prosi o zdjęcie i nie pokazuje noty o AI Act — ta nota mówi, że zdjęcie
+  // staje przed systemem rozpoznającym cechy z obrazu, a tutaj nic takiego by
+  // się nie stało. Zostaje sama nazwa funkcji i zdanie dlaczego jej nie ma.
+  if (!import.meta.env.DEV) {
+    return (
+      <div className="border border-border rounded-2xl p-5 mb-6">
+        <div className="flex items-center gap-3 mb-2">
+          <Camera className="w-4 h-4 flex-shrink-0" />
+          <span className="text-sm font-medium">{t('photoMeasure')}</span>
+        </div>
+        <p className="text-xs text-muted-foreground">{t('photoErrNoDevServer')}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="border border-border rounded-2xl p-5 mb-6">
       <div className="flex items-center gap-3 mb-2">

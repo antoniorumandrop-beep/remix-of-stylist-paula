@@ -77,6 +77,13 @@ export function checkPhotoFile(file: File): PhotoMeasureError | null {
 }
 
 export async function measureFromPhoto(file: File): Promise<PhotoMeasureResult> {
+  // Przed odczytem pliku, nie po. Middleware liczące pomiar istnieje wyłącznie
+  // w `vite dev`, więc poza nim wiadomo z góry, że nic z tego nie będzie —
+  // a wtedy wczytanie jej zdjęcia całej sylwetki do pamięci i wysłanie go w
+  // żądaniu jest pracą wykonaną po to, żeby na końcu odmówić. Powód i dowód:
+  // `src/lib/body/devOnly.test.ts`.
+  if (!import.meta.env.DEV) return { status: 'error', code: 'no-dev-server' };
+
   const badFile = checkPhotoFile(file);
   if (badFile) return { status: 'error', code: badFile };
 

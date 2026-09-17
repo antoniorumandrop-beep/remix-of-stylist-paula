@@ -43,6 +43,17 @@ export function BodyAvatar({ bust, waist, hips, heightCm }: Props) {
   useEffect(() => {
     const host = mount.current;
     if (!host) return;
+
+    // Poza serwerem deweloperskim sylwetki nie ma czym policzyć, więc nie ma po
+    // co budować sceny: renderer WebGL, OrbitControls i ResizeObserver
+    // powstawałyby tylko po to, żeby za chwilę pokazać zdanie o tym, że nic z
+    // tego nie będzie. Bramka stoi w efekcie, a nie przed nim, bo hooka nie
+    // wolno wywołać warunkowo.
+    if (!import.meta.env.DEV) {
+      setState({ phase: 'error', code: 'no-dev-server' });
+      return;
+    }
+
     let disposed = false;
     setState({ phase: 'working' });
 

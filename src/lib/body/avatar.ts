@@ -31,6 +31,11 @@ function decodeBase64(data: string): ArrayBuffer {
 }
 
 export async function buildAvatar(wanted: AvatarRequest): Promise<AvatarResult> {
+  // Sylwetkę liczy Python z `body-lab/` przez middleware dev-serwera, którego
+  // w zbudowanej aplikacji nie ma. Odpowiedź i tak kończyła się `no-dev-server`,
+  // ale dopiero po żądaniu — a Profil czeka na ten wynik, więc czekał na nic.
+  if (!import.meta.env.DEV) return { status: 'error', code: 'no-dev-server' };
+
   let res: Response;
   try {
     res = await fetch(DEV_ENDPOINT, {
