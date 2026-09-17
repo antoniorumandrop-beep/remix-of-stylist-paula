@@ -539,11 +539,21 @@ export default function Onboarding() {
                     </button>
                   </div>
                 ))}
-                <label className="aspect-square rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-foreground/30 transition-colors">
+                {/* Wyłączone, nie usunięte. `uploadedInspoPhotos` żyło wyłącznie
+                    w stanie komponentu i nic go nie zapisywało: wrzucała zdjęcia,
+                    widziała je na ekranie, klikała „dalej" — i przepadały bez
+                    słowa. Kontrolka, która przyjmuje jej pracę i ją wyrzuca, jest
+                    gorsza niż kontrolka wyłączona; ta druga przynajmniej mówi
+                    prawdę. Ten sam wybór, co przy alertach cenowych. */}
+                <label
+                  title={t('featureNotReady')}
+                  className="aspect-square rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 opacity-40 cursor-not-allowed"
+                >
                   <ImagePlus className="w-6 h-6 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">{t('add')}</span>
+                  <span className="text-xs text-muted-foreground">{t('featureNotReady')}</span>
                   <input
                     type="file"
+                    disabled
                     aria-label={t('addInspirationPhoto')}
                     accept="image/*"
                     multiple

@@ -302,6 +302,47 @@ describe('Onboarding — sensowność wpisanych wymiarów', () => {
   });
 });
 
+/**
+ * Krok inspiracji obiecywał więcej, niż robi.
+ *
+ * Copy mówiło „Paula przeanalizuje Twoje inspiracje i automatycznie
+ * skonfiguruje profil stylu" oraz „Paula automatycznie określi Twój styl".
+ * Nic tego nie robi: `inspirations` i `pinterestLinks` są zapisywane i
+ * wyświetlane z powrotem (Profil, plakietka w wyszukiwarce), a `aesthetics`
+ * bierze się WYŁĄCZNIE z ręcznego wyboru w następnym kroku.
+ *
+ * Wgrane zdjęcia inspiracji były jeszcze gorsze: `uploadedInspoPhotos` to sam
+ * stan komponentu, nigdzie nie zapisywany. Wrzucała je, widziała na ekranie,
+ * klikała „dalej" — i przepadały bez słowa. Kontrolka, która przyjmuje jej
+ * pracę i ją wyrzuca, jest gorsza niż kontrolka wyłączona: ta druga przynajmniej
+ * mówi prawdę. Ten sam wybór, który projekt zrobił już przy alertach cenowych.
+ */
+describe('Onboarding — krok inspiracji nie obiecuje analizy', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    // Angielski, jak w reszcie pliku: pomocniki klikają po angielskich napisach,
+    // a `coverage.test.ts` i tak pilnuje, żeby oba języki miały te same klucze.
+    localStorage.setItem('paula-lang', 'en');
+  });
+
+  const goToInspiration = () => {
+    renderOnboarding();
+    fireEvent.change(screen.getByPlaceholderText('Your name'), { target: { value: 'Gabriela' } });
+    continueThrough(3);
+  };
+
+  it('nie twierdzi, że sam przeanalizuje inspiracje', () => {
+    goToInspiration();
+    expect(screen.queryByText(/will analyze/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/automatically/i)).not.toBeInTheDocument();
+  });
+
+  it('nie przyjmuje zdjęć, których nie ma gdzie zapisać', () => {
+    goToInspiration();
+    expect(screen.getByLabelText('Add an inspiration photo')).toBeDisabled();
+  });
+});
+
 describe('Onboarding — dostępność', () => {
   beforeEach(() => {
     localStorage.clear();
