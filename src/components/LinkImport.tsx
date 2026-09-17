@@ -6,6 +6,7 @@ import { fetchErrorKey } from '@/lib/catalog/fetchErrors';
 import { draftToRawProduct, type LinkDraft } from '@/lib/catalog/link';
 import { CATEGORIES, type RawProduct } from '@/lib/catalog/types';
 import { categoryLabel } from '@/lib/catalog/categories';
+import { warningText } from '@/lib/catalog/linkWarnings';
 
 /**
  * Paste a shop link, get a product.
@@ -144,7 +145,7 @@ export function LinkImport({ onAdd }: { onAdd: (product: RawProduct) => void }) 
               {draft.warnings.map((warning, i) => (
                 <li key={i} className="flex gap-2">
                   <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                  <span>{warning}</span>
+                  <span>{warningText(t, warning)}</span>
                 </li>
               ))}
             </ul>

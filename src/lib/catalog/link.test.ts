@@ -12,6 +12,13 @@ import {
 import { parseRobots, isAllowed } from './robots';
 
 /**
+ * Ostrzeżenia są kodami, nie zdaniami — słowa dokłada interfejs
+ * (`src/lib/catalog/linkWarnings.ts`). Testy sprawdzają więc kod, przez co
+ * przestały zależeć od języka, w którym ekran akurat mówi.
+ */
+const kody = (draft: { warnings: { code: string }[] }) => draft.warnings.map(w => w.code);
+
+/**
  * The fixtures below are trimmed from the pages measured in
  * `research/bodytech-09-og-image-test.md`. Each one carries the shape that
  * broke a naive parser during that test, so these are regression tests for
@@ -132,7 +139,7 @@ describe('parseProductPage', () => {
     const stripped = ANSWEAR.replace('"image":["https://img2.ans-media.com/i/700x1050/AW26-SUDZ33-99X_F1.avif"],', '');
     const draft = parseProductPage(stripped, 'https://answear.com/k/p/sukienka-123');
     expect(draft.imageUrl).toBeUndefined();
-    expect(draft.warnings.join(' ')).toContain('no usable product photo');
+    expect(kody(draft)).toContain('no-usable-photo');
   });
 
   it('reads a Product out of @graph and keeps only the sizes in stock', () => {
@@ -150,7 +157,7 @@ describe('parseProductPage', () => {
     expect(draft.material).toBe('100% poliester');
     expect(draft.category).toBe('skirts'); // "spódnice" normalised through the feed's synonyms
     expect(draft.currency).toBe('PLN');
-    expect(draft.warnings.join(' ')).not.toContain('no fabric');
+    expect(kody(draft)).not.toContain('no-fabric');
   });
 
   it('falls back to Open Graph and says so', () => {
@@ -160,7 +167,7 @@ describe('parseProductPage', () => {
     expect(draft.imageUrl).toBe('https://sklep-malej-marki.pl/img/800x1200/bluzka.jpg');
     expect(draft.brand).toBe('Sklep Malej Marki'); // from the hostname, last resort
     expect(draft.provenance.brand).toBe('url');
-    expect(draft.warnings.join(' ')).toContain('no JSON-LD Product');
+    expect(kody(draft)).toContain('no-json-ld');
   });
 
   it('does not call a product sold out just because the shop is silent about stock', () => {
@@ -172,7 +179,7 @@ describe('parseProductPage', () => {
        "offers":{"@type":"Offer","price":"49.99","priceCurrency":"PLN"}}</script>`;
     const draft = parseProductPage(html, 'https://www.reserved.com/pl/pl/sukienka-1');
     expect(draft.availability).toBeUndefined();
-    expect(draft.warnings.join(' ')).not.toContain('out of stock');
+    expect(kody(draft)).not.toContain('out-of-stock');
   });
 
   it('still reports a genuine sell-out, when the page says so', () => {
@@ -182,13 +189,13 @@ describe('parseProductPage', () => {
         {"@type":"Offer","price":"10","size":"38","availability":"https://schema.org/SoldOut"}]}</script>`;
     const draft = parseProductPage(html, 'https://x.pl/p/1');
     expect(draft.availability).toBe('out-of-stock');
-    expect(draft.warnings.join(' ')).toContain('out of stock');
+    expect(kody(draft)).toContain('out-of-stock');
   });
 
   it('flags a missing composition every time, because no shop publishes one', () => {
     const draft = parseProductPage(ZALANDO, 'https://www.zalando.pl/x.html');
     expect(draft.material).toBeUndefined();
-    expect(draft.warnings.join(' ')).toContain('no fabric composition');
+    expect(kody(draft)).toContain('no-fabric');
   });
 
   it('resolves relative image URLs against the page', () => {

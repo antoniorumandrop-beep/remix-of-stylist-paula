@@ -89,7 +89,7 @@ export async function fetchProductDraft(rawUrl: string): Promise<FetchDraftResul
     if (truncated) {
       // Shops put structured data at the very end of the document, so a cut-off
       // page loses the best source first. Never let that pass as a clean read.
-      draft.warnings.unshift('the page was too large to read in full, so some fields may be missing');
+      draft.warnings.unshift({ code: 'truncated' });
     }
     return { status: 'ok', draft };
   } catch (e) {

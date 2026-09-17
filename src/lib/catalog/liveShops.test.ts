@@ -6,6 +6,13 @@ import { parseComposition, naturalShare } from './composition';
 import { colorFromText } from './color';
 
 /**
+ * Ostrzeżenia są kodami, nie zdaniami — słowa dokłada interfejs
+ * (`src/lib/catalog/linkWarnings.ts`). Testy sprawdzają więc kod, przez co
+ * przestały zależeć od języka, w którym ekran akurat mówi.
+ */
+const kody = (draft: { warnings: { code: string }[] }) => draft.warnings.map(w => w.code);
+
+/**
  * Two real shops, captured from their live pages.
  *
  * `research/bodytech-09-og-image-test.md` measured five Polish shops and found
@@ -60,7 +67,7 @@ describe('H&M — ProductGroup z wariantami', () => {
 
   it('nie ogłasza braku towaru, bo obcy kolor jest wyprzedany', () => {
     expect(draft.availability).toBeUndefined();
-    expect(draft.warnings.join(' ')).not.toContain('out of stock');
+    expect(kody(draft)).not.toContain('out-of-stock');
   });
 });
 
@@ -93,7 +100,7 @@ describe('Zara — ProductGroup ze składem w additionalProperty', () => {
   });
 
   it('nie ostrzega o braku składu, skoro skład jest', () => {
-    expect(draft.warnings.join(' ')).not.toContain('no fabric composition');
+    expect(kody(draft)).not.toContain('no-fabric');
   });
 });
 
@@ -127,12 +134,12 @@ describe('Reserved — skład i rozmiary leżą poza JSON-LD', () => {
   });
 
   it('nie ostrzega o braku składu, skoro skład jest', () => {
-    expect(draft.warnings.join(' ')).not.toContain('no fabric composition');
+    expect(kody(draft)).not.toContain('no-fabric');
   });
 
   it('nie ogłasza wyprzedania, skoro jeden rozmiar został', () => {
     expect(draft.availability).toBeUndefined();
-    expect(draft.warnings.join(' ')).not.toContain('out of stock');
+    expect(kody(draft)).not.toContain('out-of-stock');
   });
 });
 

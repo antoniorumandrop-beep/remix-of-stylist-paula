@@ -1,6 +1,7 @@
 import type { RawProduct } from './types';
 import { categoryFromName, normalizeCategory, parsePrice, slugify } from './feed';
 import { readShopJson, type SizeChartRow } from './shopJson';
+import type { LinkWarning } from './linkWarnings';
 
 /**
  * "Paste a link, get the product."
@@ -49,8 +50,12 @@ export interface LinkDraft {
   category?: string;
   availability?: string;
   provenance: Partial<Record<keyof Omit<LinkDraft, 'provenance' | 'warnings'>, FieldSource>>;
-  /** Things a human should look at before importing. Never thrown, always shown. */
-  warnings: string[];
+  /**
+   * Things a human should look at before importing. Never thrown, always shown.
+   * Kody, nie zdania: parser nie zna języka, w którym ona czyta ekran.
+   * Słowa dokłada `warningText` z `linkWarnings.ts`.
+   */
+  warnings: LinkWarning[];
 }
 
 /* ------------------------------------------------------------------ *
@@ -438,11 +443,11 @@ export function parseProductPage(html: string, url: string): LinkDraft {
     const { sizes, stock } = sizesFrom(offers);
     set('sizes', sizes, 'json-ld');
     if (stock === 'out') {
-      draft.warnings.push('every size the page lists reads as out of stock');
+      draft.warnings.push({ code: 'out-of-stock' });
       set('availability', 'out-of-stock', 'json-ld');
     }
   } else {
-    draft.warnings.push('no JSON-LD Product on the page — falling back to Open Graph, which is the weaker source');
+    draft.warnings.push({ code: 'no-json-ld' });
   }
 
   // The shop's own page JSON, after JSON-LD and before Open Graph. The five
@@ -459,7 +464,7 @@ export function parseProductPage(html: string, url: string): LinkDraft {
   set('sizes', shop.sizes, 'shop-json');
   set('sizeChart', shop.sizeChart, 'shop-json');
   if (shop.stock === 'out' && !draft.availability) {
-    draft.warnings.push('every size the page lists reads as out of stock');
+    draft.warnings.push({ code: 'out-of-stock' });
     set('availability', 'out-of-stock', 'shop-json');
   }
 
@@ -490,21 +495,21 @@ export function parseProductPage(html: string, url: string): LinkDraft {
   if (!draft.currency) set('currency', 'PLN', 'guess');
 
   if (rejectedImages.length > 0 && !draft.imageUrl) {
-    draft.warnings.push(`no usable product photo — rejected ${rejectedImages.join('; ')}`);
+    draft.warnings.push({ code: 'no-usable-photo', rejected: rejectedImages.join('; ') });
   } else if (rejectedImages.length > 0) {
-    draft.warnings.push(`skipped a non-product image (${rejectedImages[0]})`);
+    draft.warnings.push({ code: 'skipped-image', rejected: rejectedImages[0] });
   }
   if (!draft.material) {
     // Expected, not exceptional: 0 of 30 pages in the test published composition.
-    draft.warnings.push('no fabric composition published — stretch will be inferred from the name');
+    draft.warnings.push({ code: 'no-fabric' });
   }
   if (draft.currency && draft.currency !== 'PLN') {
-    draft.warnings.push(`price is in ${draft.currency}; Paula stores PLN only`);
+    draft.warnings.push({ code: 'foreign-currency', currency: draft.currency });
   }
   if (!draft.category) {
-    draft.warnings.push('category not published — pick one before importing');
+    draft.warnings.push({ code: 'no-category' });
   } else if (draft.provenance.category === 'guess') {
-    draft.warnings.push('category read from the product name — check it before importing');
+    draft.warnings.push({ code: 'category-guessed' });
   }
 
   return draft;
