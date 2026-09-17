@@ -39,6 +39,26 @@ const clickContinue = () => {
   fireEvent.click(button);
 };
 
+/**
+ * Krok proporcji (indeks 2) nie przepuszcza pustych pól, więc każdy przechód
+ * przez onboarding musi podać obwody — tak samo jak człowiek. Wcześniej pola
+ * startowały wypełnione, więc walkery mogły je minąć; komentarz „defaults are
+ * already valid" opisywał wtedy błąd jako cechę.
+ */
+const fillProportions = () => {
+  fireEvent.change(screen.getByLabelText('Bust (cm)'), { target: { value: '92' } });
+  fireEvent.change(screen.getByLabelText('Waist (cm)'), { target: { value: '74' } });
+  fireEvent.change(screen.getByLabelText('Hips (cm)'), { target: { value: '100' } });
+};
+
+/** Przechodzi `steps` kroków od początku, podając obwody tam, gdzie trzeba. */
+const continueThrough = (steps: number) => {
+  for (let i = 0; i < steps; i++) {
+    if (i === 2) fillProportions();
+    clickContinue();
+  }
+};
+
 describe('Onboarding — the whole walk', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -54,8 +74,9 @@ describe('Onboarding — the whole walk', () => {
     fireEvent.change(screen.getByPlaceholderText('Your name'), { target: { value: 'Gabriela' } });
     clickContinue();
 
-    clickContinue(); // 1 — proportions (defaults are already valid)
-    clickContinue(); // 2 — height
+    clickContinue(); // 1 — height
+    fillProportions();
+    clickContinue(); // 2 — proportions
     clickContinue(); // 3 — style inspiration
 
     // 4 — aesthetics
@@ -88,10 +109,7 @@ describe('Onboarding — the whole walk', () => {
     renderOnboarding();
 
     fireEvent.change(screen.getByPlaceholderText('Your name'), { target: { value: 'Gabriela' } });
-    clickContinue();
-    clickContinue();
-    clickContinue();
-    clickContinue();
+    continueThrough(4);
 
     clickText('Bohemian');
     clickContinue();
@@ -120,7 +138,7 @@ describe('Onboarding — budżet', () => {
   const goToBudget = () => {
     renderOnboarding();
     fireEvent.change(screen.getByPlaceholderText('Your name'), { target: { value: 'Gabriela' } });
-    for (let i = 0; i < 7; i++) clickContinue();
+    continueThrough(7);
     expect(screen.getByText("What's your usual budget per item?")).toBeInTheDocument();
   };
 
@@ -190,8 +208,80 @@ describe('Onboarding — sensowność wpisanych wymiarów', () => {
     expect(screen.queryByText(/looks like a slip/)).not.toBeInTheDocument();
   });
 
+  /**
+   * Trzy obwody startowały z 88/68/96 i to wystarczało, żeby przejść dalej —
+   * `measurementsValid` sprawdza `> 0`, więc był prawdziwy od pierwszego
+   * renderu. Kto kliknął „dalej", nie dotykając pól, dostawał zapisany profil
+   * `source: "measured"` z liczbami, których nigdy nie podał, sylwetkę
+   * wyliczoną z tych liczb i Fit Score liczony z nich na każdym produkcie.
+   *
+   * Przy produkcie, którego całą obietnicą jest „trzy wymiary zamiast rozmiaru
+   * z metki", to jest najcięższa postać udawania, jakie ten projekt sobie
+   * zabronił: nie „nie umiemy policzyć", tylko „policzyliśmy z czegoś, czego
+   * nie masz". Zero znaczy teraz „nie podano" — ta sama konwencja, którą
+   * `highHip` miał od początku.
+   */
+  it('nie przepuszcza dalej, póki obwody nie są podane', async () => {
+    goToProportions();
+
+    expect(screen.getByText('Continue').closest('button')).toBeDisabled();
+    // I nic nie zdążyło się zapisać jako zmierzone.
+    await waitFor(async () => expect(await backend.profile.get()).toBeNull());
+  });
+
+  it('odblokowuje dalej dopiero po trzecim obwodzie', () => {
+    goToProportions();
+    fireEvent.change(field('Bust'), { target: { value: '92' } });
+    expect(screen.getByText('Continue').closest('button')).toBeDisabled();
+    fireEvent.change(field('Waist'), { target: { value: '74' } });
+    expect(screen.getByText('Continue').closest('button')).toBeDisabled();
+    fireEvent.change(field('Hips'), { target: { value: '100' } });
+    expect(screen.getByText('Continue').closest('button')).not.toBeDisabled();
+  });
+
+  /**
+   * Wzrost startował z '165' — ten sam błąd co obwody, tylko cichszy, bo krok
+   * wzrostu nikogo nie blokuje. Kto go przeklikał, dostawał zapisane 165 cm
+   * jako swój wzrost, a wzrost wchodzi do Fit Score i do sylwetki. Pusty wzrost
+   * ma zostać pusty: `heightCm` jest w profilu opcjonalny i kod już to obsługuje.
+   */
+  it('nie zmyśla wzrostu, gdy nikt go nie podał', async () => {
+    goToProportions();
+    fillProportions();
+    clickContinue();
+
+    await waitFor(async () => {
+      const profil = await backend.profile.get();
+      expect(profil).not.toBeNull();
+      expect(profil && 'heightCm' in profil ? profil.heightCm : undefined).toBeUndefined();
+    });
+  });
+
+  it('zapisuje wzrost, gdy został podany', async () => {
+    renderOnboarding();
+    fireEvent.change(screen.getByPlaceholderText('Your name'), { target: { value: 'Gabriela' } });
+    clickContinue();
+    fireEvent.change(screen.getByLabelText('Height (cm)'), { target: { value: '171' } });
+    clickContinue();
+    fillProportions();
+    clickContinue();
+
+    await waitFor(async () => {
+      const profil = await backend.profile.get();
+      expect(profil && 'heightCm' in profil ? profil.heightCm : undefined).toBe(171);
+    });
+  });
+
+  it('nie orzeka sylwetki, zanim dostanie obwody', () => {
+    goToProportions();
+    expect(screen.queryByText('Hourglass')).not.toBeInTheDocument();
+  });
+
   it('points out a slipped digit without blocking the step', () => {
     goToProportions();
+    // Komplet obwodów, żeby sprawdzać ostrzeżenie, a nie brak danych.
+    fireEvent.change(field('Bust'), { target: { value: '92' } });
+    fireEvent.change(field('Hips'), { target: { value: '100' } });
     fireEvent.change(field('Waist'), { target: { value: '7' } });
 
     expect(screen.getByText(/looks like a slip/)).toBeInTheDocument();
@@ -221,7 +311,7 @@ describe('Onboarding — dostępność', () => {
   const walkTo = (steps: number) => {
     renderOnboarding();
     fireEvent.change(screen.getByPlaceholderText('Your name'), { target: { value: 'Gabriela' } });
-    for (let i = 0; i < steps; i++) clickContinue();
+    continueThrough(steps);
   };
 
   it('names each measurement field for a screen reader', () => {

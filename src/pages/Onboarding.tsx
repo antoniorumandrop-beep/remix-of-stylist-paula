@@ -30,10 +30,21 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
   const [proportions, setProportions] = useState({
+    // Rysunek sylwetki potrzebuje barków, a o barki nie pytamy — to jedyna
+    // liczba, która ma tu prawo być z góry.
     shoulders: 38,
-    bust: 88,
-    waist: 68,
-    hips: 96,
+    // 0 znaczy "nie podano" — ta sama konwencja, co przy `highHip` niżej.
+    //
+    // Startowały z 88/68/96 i to jedno wystarczało, żeby `measurementsValid`
+    // (`> 0`) był prawdziwy od pierwszego renderu: kto kliknął "dalej", nie
+    // dotykając pól, dostawał profil `source: "measured"` z liczbami, których
+    // nigdy nie podał, i Fit Score liczony z nich na każdym produkcie. Przy
+    // produkcie obiecującym "trzy wymiary zamiast rozmiaru z metki" to była
+    // najcięższa postać udawania, jaką ten projekt sobie zabronił.
+    // Dowód: `src/pages/Onboarding.test.tsx`.
+    bust: 0,
+    waist: 0,
+    hips: 0,
     // 0 means "not given". FFIT falls back to merging Spoon into Bottom
     // Hourglass without it, so it stays optional and never blocks the step.
     highHip: 0,
@@ -43,7 +54,12 @@ export default function Onboarding() {
   const [showHighHip, setShowHighHip] = useState(false);
   const [guide, setGuide] = useState<{ open: boolean; focus?: MeasureKey }>({ open: false });
   const openGuide = (focus?: MeasureKey) => setGuide({ open: true, focus });
-  const [height, setHeight] = useState('165');
+  // Pusty, nie '165'. Krok wzrostu nikogo nie blokuje, więc wartość startowa
+  // zapisywała się każdemu, kto go przeklikał — a wzrost wchodzi do Fit Score
+  // i do sylwetki. `heightCm` jest w profilu opcjonalny i kod to obsługuje
+  // (`Number(height) > 0 ? ... : undefined`), więc brak zostaje brakiem.
+  // Dowód: `src/pages/Onboarding.test.tsx`.
+  const [height, setHeight] = useState('');
   const [selectedAesthetics, setSelectedAesthetics] = useState<string[]>([]);
   const [selectedFit, setSelectedFit] = useState<string[]>([]);
   const [selectedOccasions, setSelectedOccasions] = useState<string[]>([]);
@@ -257,6 +273,10 @@ export default function Onboarding() {
             ) : (
               <>
                 <div className="bg-card rounded-2xl p-6 mb-4">
+                  {/* Sylwetka i odczyt pojawiają się dopiero z prawdziwymi
+                      obwodami. Wcześniej rysunek powstawałby z zer, a liczby
+                      obok niego czytałyby się jak jej wymiary. */}
+                  {measurementsValid && (
                   <div className="flex gap-6 items-center mb-6">
                     <div className="w-16 flex-shrink-0">
                       <svg viewBox="0 0 40 80" className="w-full text-foreground">
@@ -280,6 +300,7 @@ export default function Onboarding() {
                       </div>
                     </div>
                   </div>
+                  )}
 
                   <div className="space-y-3">
                     {[
@@ -719,7 +740,7 @@ export default function Onboarding() {
                 )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t('height')}</span>
-                  <span className="font-medium">{height} cm</span>
+                  <span className="font-medium">{height ? `${height} cm` : t('notSet')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t('style')}</span>
